@@ -5,19 +5,19 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZuluIA_Back.Api", "src\KlappenEvo.Api\ZuluIA_Back.Api.csproj", "{E2B08A00-1AFA-4183-B948-C4B7EC29378B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZuluIA_Back.Api", "src\ZuluIA_Back.Api\ZuluIA_Back.Api.csproj", "{E2B08A00-1AFA-4183-B948-C4B7EC29378B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZuluIA_Back.Domain", "src\KlappenEvo.Domain\ZuluIA_Back.Domain.csproj", "{95D4AB3A-7584-4BBE-9AF3-12FC733C5CBF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZuluIA_Back.Domain", "src\ZuluIA_Back.Domain\ZuluIA_Back.Domain.csproj", "{95D4AB3A-7584-4BBE-9AF3-12FC733C5CBF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZuluIA_Back.Application", "src\KlappenEvo.Application\ZuluIA_Back.Application.csproj", "{6040DEE5-3A15-46E1-8E17-72AE816D32C5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZuluIA_Back.Application", "src\ZuluIA_Back.Application\ZuluIA_Back.Application.csproj", "{6040DEE5-3A15-46E1-8E17-72AE816D32C5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZuluIA_Back.Infrastructure", "src\KlappenEvo.Infrastructure\ZuluIA_Back.Infrastructure.csproj", "{4515484B-43CB-413A-93A5-80A7B3DB79BB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZuluIA_Back.Infrastructure", "src\ZuluIA_Back.Infrastructure\ZuluIA_Back.Infrastructure.csproj", "{4515484B-43CB-413A-93A5-80A7B3DB79BB}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZuluIA_Back.UnitTests", "tests\KlappenEvo.UnitTests\ZuluIA_Back.UnitTests.csproj", "{12B867CA-FC3E-4B28-B565-CD0E5A3B2F4E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZuluIA_Back.UnitTests", "tests\ZuluIA_Back.UnitTests\ZuluIA_Back.UnitTests.csproj", "{12B867CA-FC3E-4B28-B565-CD0E5A3B2F4E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZuluIA_Back.Architecture.Tests", "tests\KlappenEvo.Architecture.Tests\ZuluIA_Back.Architecture.Tests.csproj", "{82D3A09D-C059-452F-8E6B-36E5965CCA42}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZuluIA_Back.Architecture.Tests", "tests\ZuluIA_Back.Architecture.Tests\ZuluIA_Back.Architecture.Tests.csproj", "{82D3A09D-C059-452F-8E6B-36E5965CCA42}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
