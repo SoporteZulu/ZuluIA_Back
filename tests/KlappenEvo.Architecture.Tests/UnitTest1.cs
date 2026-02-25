@@ -1,4 +1,4 @@
-﻿namespace KlappenEvo.Architecture.Tests;
+﻿namespace ZuluIA_Back.Architecture.Tests;
 
 public class UnitTest1
 {
