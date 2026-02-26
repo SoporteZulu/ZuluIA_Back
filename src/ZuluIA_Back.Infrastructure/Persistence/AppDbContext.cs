@@ -11,9 +11,7 @@ using ZuluIA_Back.Domain.Entities.Terceros;
 
 namespace ZuluIA_Back.Infrastructure.Persistence;
 
-public class AppDbContext(
-    DbContextOptions<AppDbContext> options,
-    ICurrentUserService currentUser)
+public class AppDbContext(DbContextOptions<AppDbContext> options)
     : DbContext(options), IApplicationDbContext
 {
     public DbSet<Pais> Paises => Set<Pais>();
