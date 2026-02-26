@@ -1,0 +1,118 @@
+# Arquitectura del Sistema
+
+## Clean Architecture
+
+```
+┌─────────────────────────────────────────┐
+│             ZuluIA_Back.Api             │
+│  Controllers  │  Middleware  │  Program │
+└──────────────────┬──────────────────────┘
+                   │ usa
+┌──────────────────▼──────────────────────┐
+│        ZuluIA_Back.Infrastructure       │
+│  AppDbContext  │  Repositories          │
+│  Configurations │  Services             │
+└──────────────────┬──────────────────────┘
+                   │ implementa
+┌──────────────────▼──────────────────────┐
+│         ZuluIA_Back.Application         │
+│  Commands  │  Queries  │  Handlers      │
+│  DTOs  │  Validators  │  Interfaces     │
+└──────────────────┬──────────────────────┘
+                   │ usa
+┌──────────────────▼──────────────────────┐
+│           ZuluIA_Back.Domain            │
+│  Entities  │  ValueObjects  │  Events   │
+│  Interfaces  │  Enums  │  Common        │
+└─────────────────────────────────────────┘
+```
+
+## Flujo de un request
+
+```
+HTTP POST /api/terceros
+    │
+    ▼
+TercerosController.Create(CreateTerceroCommand)
+    │
+    ▼
+ValidationBehavior<CreateTerceroCommand, Result<long>>
+    │  (FluentValidation)
+    ▼
+LoggingBehavior<CreateTerceroCommand, Result<long>>
+    │  (Serilog)
+    ▼
+CreateTerceroCommandHandler.Handle(...)
+    │
+    ├── ITerceroRepository.ExisteLegajoAsync(...)
+    ├── Tercero.Crear(...)           ← Domain logic
+    ├── ITerceroRepository.AddAsync(...)
+    └── IUnitOfWork.SaveChangesAsync(...)
+              │
+              ▼
+         AppDbContext → Supabase PostgreSQL
+              │
+              ▼
+    Domain Events dispatched
+              │
+              ▼
+    Result<long> → 201 Created
+```
+
+## Domain Events
+
+Los domain events se usan para efectos secundarios desacoplados:
+
+| Evento | Cuándo se dispara | Para qué |
+|---|---|---|
+| `TerceroCreadoEvent` | Al crear un tercero | Log, notificaciones |
+| `TerceroDesactivadoEvent` | Al desactivar | Auditoría |
+| `ItemCreadoEvent` | Al crear un ítem | Log |
+| `PrecioItemActualizadoEvent` | Al cambiar precio | Invalidar caché de listas de precios |
+| `StockAjustadoEvent` | Al ajustar stock | Alertas de stock mínimo |
+| `ComprobanteEmitidoEvent` | Al emitir | Generar asiento contable, actualizar cta cte |
+| `ComprobanteAnuladoEvent` | Al anular | Revertir stock, revertir asiento |
+| `CobroRegistradoEvent` | Al registrar cobro | Actualizar cta cte, actualizar saldo comprobante |
+| `PagoRegistradoEvent` | Al registrar pago | Actualizar cta cte proveedor |
+
+## Decisiones de diseño
+
+### ¿Por qué Result<T> en lugar de excepciones?
+
+Las excepciones son costosas en .NET para flujos de negocio.
+`Result<T>` permite manejar errores de negocio sin `try/catch`:
+
+```csharp
+var result = await mediator.Send(new CreateTerceroCommand(...));
+
+if (result.IsFailure)
+    return BadRequest(result.Error);
+
+return Created(result.Value);
+```
+
+### ¿Por qué Value Objects?
+
+Encapsulan lógica de validación y comparación:
+
+```csharp
+var nro = new NroComprobante(1, 1);
+Console.WriteLine(nro.Formateado); // "0001-00000001"
+
+var d1 = new Domicilio("San Martín", "123", ...);
+var d2 = new Domicilio("San Martín", "123", ...);
+d1 == d2; // true (comparación por valor, no referencia)
+```
+
+### ¿Por qué constructores privados en entidades?
+
+Para asegurar que las entidades siempre se creen en un estado válido:
+
+```csharp
+// ❌ No se puede hacer esto
+var t = new Tercero();  // constructor privado
+
+// ✅ Solo se puede crear así
+var t = Tercero.Crear("CLI001", "Empresa", ...);
+// El método Crear valida y emite el domain event
+```

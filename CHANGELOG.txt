@@ -1,0 +1,40 @@
+# Changelog
+
+Todos los cambios notables del proyecto se documentan en este archivo.
+
+El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
+
+---
+
+## [1.0.0] - 2026-02-26
+
+### Agregado
+- Clean Architecture con 4 capas: Domain, Application, Infrastructure, Api
+- CQRS con MediatR — Commands y Queries separados
+- FluentValidation para validaciones de Commands
+- AutoMapper para mapeo Entidad → DTO
+- EF Core 8 + Npgsql para acceso a datos con PostgreSQL (Supabase)
+- Autenticación JWT con Supabase Auth
+- Serilog para logging estructurado con soporte a Seq
+- Result Pattern para manejo de errores sin excepciones
+- Domain Events para efectos secundarios desacoplados
+- Docker + docker-compose para containerización
+
+### Módulos
+- **Terceros** — CRUD completo con paginación y búsqueda
+- **Items** — CRUD completo con actualización de precios
+- **Stock** — Consulta de saldo y movimientos por ítem/depósito
+- **Comprobantes** — Crear, emitir y anular comprobantes
+- **Cobros** — Registrar y anular cobros con medios de pago
+- **Pagos** — Registrar y anular pagos con medios de pago
+- **Contabilidad** — Asientos contables con validación de balance
+- **Geografía** — Países, provincias, localidades y barrios
+- **Cuenta Corriente** — Consulta de movimientos y saldo por tercero
+
+### Tests
+- 11 Unit Tests cubriendo Domain + Application
+- 10 Architecture Tests con NetArchTest validando Clean Architecture
+- Cobertura de entidades: Tercero, Item, StockItem, Comprobante, Asiento
+- Cobertura de value objects: Domicilio, Dinero, NroComprobante
+- Cobertura de validators: CreateTercero, CreateItem, CreateAsiento
+

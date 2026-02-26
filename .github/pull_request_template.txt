@@ -1,0 +1,30 @@
+## 📋 Descripción
+
+<!-- Describí brevemente qué hace este PR -->
+
+## 🔗 Issue relacionado
+
+<!-- Fixes #número_de_issue -->
+
+## 🧪 Tipo de cambio
+
+- [ ] 🐛 Bug fix
+- [ ] ✨ Nueva funcionalidad
+- [ ] ♻️ Refactoring
+- [ ] 📝 Documentación
+- [ ] 🔧 Configuración
+- [ ] 🧪 Tests
+
+## ✅ Checklist
+
+- [ ] Los tests pasan (`dotnet test`)
+- [ ] No hay warnings de compilación
+- [ ] Se agregaron tests para la nueva funcionalidad
+- [ ] Los architecture tests pasan
+- [ ] El código sigue las convenciones del proyecto
+- [ ] Se actualizó el README si corresponde
+- [ ] Se actualizó el CHANGELOG
+
+## 📸 Screenshots (si aplica)
+
+<!-- Agregá capturas del Swagger o logs si es relevante -->

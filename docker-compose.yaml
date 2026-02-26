@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zulusia_back_api
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      - seq
+    networks:
+      - zulusia_net
+
+  seq:
+    image: datalust/seq:latest
+    container_name: zulusia_seq
+    ports:
+      - "5341:80"
+    environment:
+      - ACCEPT_EULA=Y
+    networks:
+      - zulusia_net
+
+networks:
+  zulusia_net:
+    driver: bridge
