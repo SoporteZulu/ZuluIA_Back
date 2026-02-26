@@ -116,7 +116,7 @@ public class Tercero : AuditableEntity
     public void SetNroIngresosBrutos(string? nro) =>
         NroIngresosBrutos = nro?.Trim();
 
-    private DateTimeOffset? DeletedAt
+    private new DateTimeOffset? DeletedAt
     {
         set => base.SetDeleted();
     }

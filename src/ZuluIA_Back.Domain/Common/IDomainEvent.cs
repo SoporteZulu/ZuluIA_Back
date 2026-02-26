@@ -1,8 +1,6 @@
-﻿using MediatR;
+﻿namespace ZuluIA_Back.Domain.Common;
 
-namespace ZuluIA_Back.Domain.Common;
-
-public interface IDomainEvent : INotification
+public interface IDomainEvent
 {
     Guid EventId { get; }
     DateTimeOffset OccurredOn { get; }
