@@ -62,7 +62,7 @@ public class Tercero : AuditableEntity
         };
 
         tercero.SetCreated(userId);
-        tercero.AddDomainEvent(new TerceroCreadoEvent(tercero.Legajo, esCliente, esProveedor));
+        tercero.AddDomainEvent(new TerceroCreadoEvent(tercero.Id, tercero.RazonSocial));
 
         return tercero;
     }

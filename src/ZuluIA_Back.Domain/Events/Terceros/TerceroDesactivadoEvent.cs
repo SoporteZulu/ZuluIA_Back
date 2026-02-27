@@ -2,14 +2,11 @@
 
 namespace ZuluIA_Back.Domain.Events.Terceros;
 
-public sealed class TerceroDesactivadoEvent : DomainEvent
+public sealed record TerceroDesactivadoEvent(
+    long TerceroId,
+    string Legajo
+) : IDomainEvent
 {
-    public long TerceroId { get; }
-    public string Legajo { get; }
-
-    public TerceroDesactivadoEvent(long terceroId, string legajo)
-    {
-        TerceroId = terceroId;
-        Legajo    = legajo;
-    }
+    public Guid EventId { get; } = Guid.NewGuid();
+    public DateTimeOffset OccurredOn { get; } = DateTimeOffset.UtcNow;
 }

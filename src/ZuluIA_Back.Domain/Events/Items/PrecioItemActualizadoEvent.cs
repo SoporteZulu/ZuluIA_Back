@@ -2,18 +2,13 @@
 
 namespace ZuluIA_Back.Domain.Events.Items;
 
-public sealed class PrecioItemActualizadoEvent : DomainEvent
+public sealed record PrecioItemActualizadoEvent(
+    long ItemId,
+    string Codigo,
+    decimal PrecioAnterior,
+    decimal PrecioNuevo
+) : IDomainEvent
 {
-    public long ItemId { get; }
-    public string Codigo { get; }
-    public decimal PrecioAnterior { get; }
-    public decimal PrecioNuevo { get; }
-
-    public PrecioItemActualizadoEvent(long itemId, string codigo, decimal precioAnterior, decimal precioNuevo)
-    {
-        ItemId         = itemId;
-        Codigo         = codigo;
-        PrecioAnterior = precioAnterior;
-        PrecioNuevo    = precioNuevo;
-    }
+    public Guid EventId { get; } = Guid.NewGuid();
+    public DateTimeOffset OccurredOn { get; } = DateTimeOffset.UtcNow;
 }

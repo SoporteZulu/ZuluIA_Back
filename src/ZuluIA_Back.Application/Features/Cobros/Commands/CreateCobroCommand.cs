@@ -1,16 +1,8 @@
 ﻿using MediatR;
 using ZuluIA_Back.Domain.Common;
+using ZuluIA_Back.Application.Features.Cobros.DTOs;
 
 namespace ZuluIA_Back.Application.Features.Cobros.Commands;
-
-public record CreateCobroMedioDto(
-    long CajaId,
-    long FormaPagoId,
-    decimal Importe,
-    long MonedaId,
-    decimal Cotizacion,
-    long? ChequeId = null
-);
 
 public record CreateCobroCommand(
     long SucursalId,

@@ -1,16 +1,8 @@
 ﻿using MediatR;
 using ZuluIA_Back.Domain.Common;
+using ZuluIA_Back.Application.Features.Contabilidad.DTOs;
 
 namespace ZuluIA_Back.Application.Features.Contabilidad.Commands;
-
-public record CreateAsientoLineaDto(
-    long CuentaId,
-    decimal Debe,
-    decimal Haber,
-    string? Descripcion,
-    short Orden,
-    long? CentroCostoId = null
-);
 
 public record CreateAsientoCommand(
     long EjercicioId,

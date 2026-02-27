@@ -1,6 +1,7 @@
 ﻿using FluentValidation.TestHelper;
 using Xunit;
 using ZuluIA_Back.Application.Features.Contabilidad.Commands;
+using ZuluIA_Back.Application.Features.Contabilidad.DTOs;
 
 namespace ZuluIA_Back.UnitTests.Application;
 

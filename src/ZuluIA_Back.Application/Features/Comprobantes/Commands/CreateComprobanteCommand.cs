@@ -1,20 +1,8 @@
 ﻿using MediatR;
 using ZuluIA_Back.Domain.Common;
+using ZuluIA_Back.Application.Features.Comprobantes.DTOs;
 
 namespace ZuluIA_Back.Application.Features.Comprobantes.Commands;
-
-public record CreateComprobanteItemDto(
-    long ItemId,
-    string Descripcion,
-    decimal Cantidad,
-    decimal PrecioUnitario,
-    decimal DescuentoPct,
-    long AlicuotaIvaId,
-    decimal PorcentajeIva,
-    long? DepositoId,
-    short Orden,
-    decimal CantidadBonif = 0
-);
 
 public record CreateComprobanteCommand(
     long SucursalId,

@@ -8,7 +8,7 @@ using ZuluIA_Back.Domain.Entities.Items;
 using ZuluIA_Back.Domain.Entities.Stock;
 using ZuluIA_Back.Domain.Entities.Terceros;
 
-namespace ZuluIA_Back.Application.Common.Interfaces;
+namespace ZuluIA_Back.Infrastructure.Common.Interfaces;
 
 public interface IApplicationDbContext
 {

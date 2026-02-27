@@ -2,16 +2,11 @@
 
 namespace ZuluIA_Back.Domain.Events.Terceros;
 
-public sealed class TerceroCreadoEvent : DomainEvent
+public sealed record TerceroCreadoEvent(
+    long TerceroId,
+    string RazonSocial
+) : IDomainEvent
 {
-    public string Legajo { get; }
-    public bool EsCliente { get; }
-    public bool EsProveedor { get; }
-
-    public TerceroCreadoEvent(string legajo, bool esCliente, bool esProveedor)
-    {
-        Legajo      = legajo;
-        EsCliente   = esCliente;
-        EsProveedor = esProveedor;
-    }
+    public Guid EventId { get; } = Guid.NewGuid();
+    public DateTimeOffset OccurredOn { get; } = DateTimeOffset.UtcNow;
 }

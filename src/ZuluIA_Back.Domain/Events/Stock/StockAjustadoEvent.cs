@@ -2,20 +2,14 @@
 
 namespace ZuluIA_Back.Domain.Events.Stock;
 
-public sealed class StockAjustadoEvent : DomainEvent
+public sealed record StockAjustadoEvent(
+    long ItemId,
+    long DepositoId,
+    decimal Anterior,
+    decimal Nuevo,
+    string Motivo
+) : IDomainEvent
 {
-    public long ItemId { get; }
-    public long DepositoId { get; }
-    public decimal Anterior { get; }
-    public decimal Nuevo { get; }
-    public string Motivo { get; }
-
-    public StockAjustadoEvent(long itemId, long depositoId, decimal anterior, decimal nuevo, string motivo)
-    {
-        ItemId     = itemId;
-        DepositoId = depositoId;
-        Anterior   = anterior;
-        Nuevo      = nuevo;
-        Motivo     = motivo;
-    }
+    public Guid EventId { get; } = Guid.NewGuid();
+    public DateTimeOffset OccurredOn { get; } = DateTimeOffset.UtcNow;
 }

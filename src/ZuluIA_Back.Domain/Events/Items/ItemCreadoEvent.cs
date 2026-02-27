@@ -2,14 +2,11 @@
 
 namespace ZuluIA_Back.Domain.Events.Items;
 
-public sealed class ItemCreadoEvent : DomainEvent
+public sealed record ItemCreadoEvent(
+    string Codigo,
+    string Descripcion
+) : IDomainEvent
 {
-    public string Codigo { get; }
-    public string Descripcion { get; }
-
-    public ItemCreadoEvent(string codigo, string descripcion)
-    {
-        Codigo      = codigo;
-        Descripcion = descripcion;
-    }
+    public Guid EventId { get; } = Guid.NewGuid();
+    public DateTimeOffset OccurredOn { get; } = DateTimeOffset.UtcNow;
 }

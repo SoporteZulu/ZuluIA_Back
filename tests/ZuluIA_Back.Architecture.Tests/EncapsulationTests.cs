@@ -13,7 +13,8 @@ public class EncapsulationTests
             .GetTypes()
             .Where(t => t.Namespace?.Contains(".Entities") == true
                      && t.IsClass
-                     && !t.IsAbstract)
+                     && !t.IsAbstract
+                     && !t.Name.Contains("<>"))
             .Where(t => t.GetConstructors()
                 .Any(c => c.IsPublic && c.GetParameters().Length == 0))
             .Select(t => t.Name)
