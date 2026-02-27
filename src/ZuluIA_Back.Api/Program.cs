@@ -1,4 +1,4 @@
-using ZuluIA_Back.Api.Middleware;
+﻿using ZuluIA_Back.Api.Middleware;
 using ZuluIA_Back.Application;
 using ZuluIA_Back.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -13,6 +13,7 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
+    DotNetEnv.Env.Load();
     Log.Information("Iniciando ZuluIA Back API...");
 
     var builder = WebApplication.CreateBuilder(args);
@@ -29,16 +30,16 @@ try
         {
             Title       = "ZuluIA Back API",
             Version     = "v1",
-            Description = "API del sistema de gesti�n ZuluIA"
+            Description = "API del sistema de gestión ZuluIA"
         });
         c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
         {
-            Name        = "Authorization",
-            Type        = SecuritySchemeType.Http,
-            Scheme      = "Bearer",
+            Name         = "Authorization",
+            Type         = SecuritySchemeType.Http,
+            Scheme       = "Bearer",
             BearerFormat = "JWT",
-            In          = ParameterLocation.Header,
-            Description = "Ingrese el token JWT de Supabase Auth"
+            In           = ParameterLocation.Header,
+            Description  = "Ingrese el token JWT de Supabase Auth"
         });
         c.AddSecurityRequirement(new OpenApiSecurityRequirement
         {
@@ -59,31 +60,31 @@ try
     var jwtSecret = Environment.GetEnvironmentVariable("SUPABASE_JWT_SECRET")
                  ?? builder.Configuration["Supabase:JwtSecret"]!;
 
-    var jwtAuthority = Environment.GetEnvironmentVariable("JWT_AUTHORITY")
-                    ?? builder.Configuration["Jwt:Authority"]!;
-
     var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
                  ?? builder.Configuration["Jwt:Issuer"]!;
 
     var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
                    ?? builder.Configuration["Jwt:Audience"]!;
 
+    var isDevelopment = builder.Environment.IsDevelopment();
+
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
-            options.Authority = jwtAuthority;
-            options.Audience  = jwtAudience;
+            // ✅ Sin Authority — usamos validación por clave simétrica directamente
+            // Authority causa que intente descargar metadatos OIDC y falla con HTTP
+            options.RequireHttpsMetadata = !isDevelopment; // false en Development, true en Production
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(jwtSecret)),
-                ValidateIssuer   = true,
-                ValidIssuer      = jwtIssuer,
-                ValidateAudience = true,
-                ValidAudience    = jwtAudience,
-                ValidateLifetime = true,
-                ClockSkew        = TimeSpan.Zero
+                IssuerSigningKey         = new SymmetricSecurityKey(
+                                               Encoding.UTF8.GetBytes(jwtSecret)),
+                ValidateIssuer           = true,
+                ValidIssuer              = jwtIssuer,
+                ValidateAudience         = true,
+                ValidAudience            = jwtAudience,
+                ValidateLifetime         = true,
+                ClockSkew                = TimeSpan.Zero
             };
         });
 
@@ -115,7 +116,7 @@ try
     app.UseSerilogRequestLogging(opts =>
     {
         opts.MessageTemplate =
-            "HTTP {RequestMethod} {RequestPath} respondi� {StatusCode} en {Elapsed:0.0000} ms";
+            "HTTP {RequestMethod} {RequestPath} respondió {StatusCode} en {Elapsed:0.0000} ms";
     });
 
     app.UseSwagger();
@@ -143,7 +144,7 @@ try
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "La aplicaci�n fall� al iniciar");
+    Log.Fatal(ex, "La aplicación falló al iniciar");
 }
 finally
 {
