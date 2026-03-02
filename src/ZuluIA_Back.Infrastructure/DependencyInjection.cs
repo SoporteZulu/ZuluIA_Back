@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Application.Common.Interfaces;
-using ZuluIA_Back.Infrastructure.Common.Interfaces;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Contabilidad;
 using ZuluIA_Back.Domain.Entities.Finanzas;

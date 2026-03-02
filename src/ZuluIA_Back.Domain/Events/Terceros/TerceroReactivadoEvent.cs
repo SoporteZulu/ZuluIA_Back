@@ -3,10 +3,12 @@
 namespace ZuluIA_Back.Domain.Events.Terceros;
 
 /// <summary>
-/// Se dispara cuando se crea un nuevo tercero (cliente, proveedor o ambos).
-/// Equivalente al momento en que el VB6 ejecutaba Guardar() por primera vez.
+/// Se dispara cuando se reactiva un tercero que estaba dado de baja.
+/// No existía en VB6 (la reactivación era manual en la BD),
+/// pero es necesario para mantener consistencia con CuentaCorriente
+/// y otros módulos que filtran por activo.
 /// </summary>
-public sealed record TerceroCreadoEvent(
+public sealed record TerceroReactivadoEvent(
     long TerceroId,
     string Legajo,
     string RazonSocial

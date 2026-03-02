@@ -27,4 +27,12 @@ public abstract class AuditableEntity : BaseEntity
     {
         DeletedAt = DateTimeOffset.UtcNow;
     }
+
+    /// <summary>
+    /// Permite limpiar el DeletedAt al reactivar una entidad (soft-undelete).
+    /// </summary>
+    protected void SetDeletedAt(DateTimeOffset? value)
+    {
+        DeletedAt = value;
+    }
 }

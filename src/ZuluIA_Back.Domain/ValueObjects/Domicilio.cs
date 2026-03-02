@@ -32,6 +32,26 @@ public sealed class Domicilio : ValueObject
         BarrioId     = barrioId;
     }
 
+    public static Domicilio Crear(
+    string? calle,
+    string? nro,
+    string? piso,
+    string? dpto,
+    string? codigoPostal,
+    long? localidadId,
+    long? barrioId)
+    {
+        return new Domicilio(
+            calle,
+            nro,
+            piso,
+            dpto,
+            codigoPostal,
+            localidadId,
+            barrioId
+        );
+    }
+
     public static Domicilio Vacio() => new(null, null, null, null, null, null, null);
 
     public string Completo =>
