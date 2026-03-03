@@ -4,6 +4,7 @@ using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Configuracion;
 using ZuluIA_Back.Domain.Entities.Contabilidad;
+using ZuluIA_Back.Domain.Entities.Facturacion;
 using ZuluIA_Back.Domain.Entities.Finanzas;
 using ZuluIA_Back.Domain.Entities.Geografia;
 using ZuluIA_Back.Domain.Entities.Items;
@@ -74,6 +75,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Cheque> Cheques => Set<Cheque>();
     public DbSet<CotizacionMoneda> CotizacionesMoneda => Set<CotizacionMoneda>();
     public DbSet<FormaPagoCaja> FormasPagoCaja => Set<FormaPagoCaja>();
+
+    // ── Módulo 5 — Facturación ────────────────────────────────────
+    public DbSet<TipoPuntoFacturacion> TiposPuntoFacturacion => Set<TipoPuntoFacturacion>();
+    public DbSet<PuntoFacturacion> PuntosFacturacion => Set<PuntoFacturacion>();
+    public DbSet<CartaPorte> CartasPorte => Set<CartaPorte>();
+    public DbSet<PeriodoIva> PeriodosIva => Set<PeriodoIva>();
 
     // ─── EF Core / Dominio ────────────────────────────────────────────────────
     protected override void OnModelCreating(ModelBuilder modelBuilder)

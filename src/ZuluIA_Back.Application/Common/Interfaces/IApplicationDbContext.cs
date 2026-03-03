@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Configuracion;
 using ZuluIA_Back.Domain.Entities.Contabilidad;
+using ZuluIA_Back.Domain.Entities.Facturacion;
 using ZuluIA_Back.Domain.Entities.Finanzas;
 using ZuluIA_Back.Domain.Entities.Geografia;
 using ZuluIA_Back.Domain.Entities.Items;
@@ -82,6 +83,11 @@ public interface IApplicationDbContext
     DbSet<Cheque> Cheques { get; }
     DbSet<CotizacionMoneda> CotizacionesMoneda { get; }
     DbSet<FormaPagoCaja> FormasPagoCaja { get; }
+    // ✅ Módulo 5 — Facturación
+    DbSet<TipoPuntoFacturacion> TiposPuntoFacturacion { get; }
+    DbSet<PuntoFacturacion> PuntosFacturacion { get; }
+    DbSet<CartaPorte> CartasPorte { get; }
+    DbSet<PeriodoIva> PeriodosIva { get; }
 
     // ─── Persistencia ─────────────────────────────────────────────────────────
     Task<int> SaveChangesAsync(CancellationToken ct = default);

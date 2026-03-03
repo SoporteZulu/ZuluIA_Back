@@ -66,6 +66,10 @@ public static class DependencyInjection
                            typeof(BaseRepository<FormaPagoCaja>));
         services.AddScoped(typeof(IRepository<TipoCajaCuenta>),
                            typeof(BaseRepository<TipoCajaCuenta>));
+        // Módulo 5 — Facturación
+        services.AddScoped<IPuntoFacturacionRepository, PuntoFacturacionRepository>();
+        services.AddScoped<ICartaPorteRepository, CartaPorteRepository>();
+        services.AddScoped<IPeriodoIvaRepository, PeriodoIvaRepository>();
 
         services.AddScoped(typeof(IRepository<Cobro>), typeof(BaseRepository<Cobro>));
         services.AddScoped(typeof(IRepository<CobroMedio>), typeof(BaseRepository<CobroMedio>));

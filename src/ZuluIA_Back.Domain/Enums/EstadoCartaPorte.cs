@@ -3,6 +3,7 @@
 public enum EstadoCartaPorte
 {
     Pendiente,
-    Confirmado,
-    Anulado
+    Activa,
+    Confirmada,
+    Anulada
 }
