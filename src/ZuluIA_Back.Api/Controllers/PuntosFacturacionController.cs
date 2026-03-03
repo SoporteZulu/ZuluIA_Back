@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Facturacion.Commands;
 using ZuluIA_Back.Application.Features.Facturacion.Queries;
-using ZuluIA_Back.Infrastructure.Common.Interfaces;
 
 namespace ZuluIA_Back.Api.Controllers;
 

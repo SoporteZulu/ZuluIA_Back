@@ -13,6 +13,7 @@ using ZuluIA_Back.Domain.Entities.Precios;
 using ZuluIA_Back.Domain.Entities.Stock;
 using ZuluIA_Back.Domain.Entities.Sucursales;
 using ZuluIA_Back.Domain.Entities.Terceros;
+using ZuluIA_Back.Domain.Entities.Usuarios;
 using ZuluIA_Back.Domain.Entities.Ventas;
 using ZuluIA_Back.Domain.Enums;
 
@@ -41,7 +42,6 @@ public interface IApplicationDbContext
     DbSet<CondicionIva> CondicionesIva { get; }
     DbSet<CategoriaTercero> CategoriasTerceros { get; }
     DbSet<Moneda> Monedas { get; }
-    DbSet<Usuario> Usuarios { get; }
     DbSet<TipoComprobante> TiposComprobante { get; }
     DbSet<AlicuotaIva> AlicuotasIva { get; }
     DbSet<UnidadMedida> UnidadesMedida { get; }
@@ -88,6 +88,14 @@ public interface IApplicationDbContext
     DbSet<PuntoFacturacion> PuntosFacturacion { get; }
     DbSet<CartaPorte> CartasPorte { get; }
     DbSet<PeriodoIva> PeriodosIva { get; }
+    // Módulo 6 — Usuarios, Menú y Seguridad
+    DbSet<Usuario> Usuarios { get; }
+    DbSet<UsuarioSucursal> UsuariosSucursal { get; }
+    DbSet<MenuItem> Menu { get; }
+    DbSet<MenuUsuario> MenuUsuario { get; }
+    DbSet<Seguridad> Seguridad { get; }
+    DbSet<SeguridadUsuario> SeguridadUsuario { get; }
+    DbSet<ParametroUsuario> ParametrosUsuario { get; }
 
     // ─── Persistencia ─────────────────────────────────────────────────────────
     Task<int> SaveChangesAsync(CancellationToken ct = default);

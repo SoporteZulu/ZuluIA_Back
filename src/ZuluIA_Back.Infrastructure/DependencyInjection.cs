@@ -9,6 +9,7 @@ using ZuluIA_Back.Domain.Entities.Items;
 using ZuluIA_Back.Domain.Entities.Stock;
 using ZuluIA_Back.Domain.Entities.Terceros;
 using ZuluIA_Back.Domain.Interfaces;
+using ZuluIA_Back.Domain.Services;
 using ZuluIA_Back.Infrastructure.Persistence;
 using ZuluIA_Back.Infrastructure.Persistence.Repositories;
 using ZuluIA_Back.Infrastructure.Services;
@@ -70,6 +71,14 @@ public static class DependencyInjection
         services.AddScoped<IPuntoFacturacionRepository, PuntoFacturacionRepository>();
         services.AddScoped<ICartaPorteRepository, CartaPorteRepository>();
         services.AddScoped<IPeriodoIvaRepository, PeriodoIvaRepository>();
+        // ── M6 — Usuarios, Menú y Seguridad ───────────────────────
+        services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+        services.AddScoped<IMenuRepository, MenuRepository>();
+        services.AddScoped<ISeguridadRepository, SeguridadRepository>();
+        services.AddScoped<IParametroUsuarioRepository, ParametroUsuarioRepository>();
+        // ── Servicios de Dominio ──────────────────────────────────
+        services.AddScoped<NumeracionComprobanteService>();
+        services.AddScoped<PermisoService>();
 
         services.AddScoped(typeof(IRepository<Cobro>), typeof(BaseRepository<Cobro>));
         services.AddScoped(typeof(IRepository<CobroMedio>), typeof(BaseRepository<CobroMedio>));

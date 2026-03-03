@@ -5,7 +5,6 @@ using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Cheques.Commands;
 using ZuluIA_Back.Application.Features.Cheques.Queries;
 using ZuluIA_Back.Domain.Enums;
-using ZuluIA_Back.Infrastructure.Common.Interfaces;
 
 namespace ZuluIA_Back.Api.Controllers;
 

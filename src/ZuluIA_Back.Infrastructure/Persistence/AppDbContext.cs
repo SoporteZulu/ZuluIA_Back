@@ -13,6 +13,7 @@ using ZuluIA_Back.Domain.Entities.Referencia;
 using ZuluIA_Back.Domain.Entities.Stock;
 using ZuluIA_Back.Domain.Entities.Sucursales;
 using ZuluIA_Back.Domain.Entities.Terceros;
+using ZuluIA_Back.Domain.Entities.Usuarios;
 using ZuluIA_Back.Domain.Entities.Ventas;
 
 namespace ZuluIA_Back.Infrastructure.Persistence;
@@ -81,6 +82,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<PuntoFacturacion> PuntosFacturacion => Set<PuntoFacturacion>();
     public DbSet<CartaPorte> CartasPorte => Set<CartaPorte>();
     public DbSet<PeriodoIva> PeriodosIva => Set<PeriodoIva>();
+
+    // ── Módulo 6 — Usuarios, Menú y Seguridad ────────────────────
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<UsuarioSucursal> UsuariosSucursal => Set<UsuarioSucursal>();
+    public DbSet<MenuItem> Menu => Set<MenuItem>();
+    public DbSet<MenuUsuario> MenuUsuario => Set<MenuUsuario>();
+    public DbSet<Seguridad> Seguridad => Set<Seguridad>();
+    public DbSet<SeguridadUsuario> SeguridadUsuario => Set<SeguridadUsuario>();
+    public DbSet<ParametroUsuario> ParametrosUsuario => Set<ParametroUsuario>();
 
     // ─── EF Core / Dominio ────────────────────────────────────────────────────
     protected override void OnModelCreating(ModelBuilder modelBuilder)
