@@ -12,51 +12,38 @@ public class UpdateTerceroCommandHandler(
     ICurrentUserService currentUser)
     : IRequestHandler<UpdateTerceroCommand, Result>
 {
-    public async Task<Result> Handle(
-        UpdateTerceroCommand command,
-        CancellationToken ct)
+    public async Task<Result> Handle(UpdateTerceroCommand command, CancellationToken ct)
     {
         // ── 1. Obtener entidad ────────────────────────────────────────────────
         var tercero = await repo.GetByIdAsync(command.Id, ct);
-
         if (tercero is null)
-            return Result.Failure(
-                $"No se encontró el tercero con Id {command.Id}.");
+            return Result.Failure($"No se encontró el tercero con Id {command.Id}.");
 
         if (tercero.IsDeleted)
-            return Result.Failure(
-                $"El tercero '{tercero.Legajo}' está dado de baja y no puede modificarse.");
+            return Result.Failure($"El tercero '{tercero.Legajo}' está dado de baja y no puede modificarse.");
 
         // ── 2. Validar cambio de NroDocumento (si viene) ───────────────────────
-        // VB6: al cambiar el CUIT/DNI mostraba advertencia y verificaba
-        // que no existiera otro tercero con ese documento.
         if (!string.IsNullOrWhiteSpace(command.NroDocumento) &&
             command.NroDocumento != tercero.NroDocumento)
         {
-            if (await repo.ExisteNroDocumentoAsync(
-                    command.NroDocumento, excludeId: command.Id, ct))
-                return Result.Failure(
-                    $"Ya existe un tercero con el documento '{command.NroDocumento}'.");
+            if (await repo.ExisteNroDocumentoAsync(command.NroDocumento, excludeId: command.Id, ct))
+                return Result.Failure($"Ya existe un tercero con el documento '{command.NroDocumento}'.");
 
             tercero.ActualizarNroDocumento(command.NroDocumento, currentUser.UserId);
         }
 
         // ── 3. Validar cambio de roles ─────────────────────────────────────────
-        // Si cambió algún rol, verificar que el cambio sea válido.
-        // Ej: no se puede quitar EsEmpleado si tiene empleado activo asociado.
         var rolesChanged = command.EsCliente   != tercero.EsCliente   ||
                            command.EsProveedor != tercero.EsProveedor ||
                            command.EsEmpleado  != tercero.EsEmpleado;
 
         if (rolesChanged)
         {
-            // Si está quitando EsEmpleado, verificar que no tenga empleado activo
             if (tercero.EsEmpleado && !command.EsEmpleado)
             {
                 if (await repo.TieneEmpleadoActivoAsync(command.Id, ct))
                     return Result.Failure(
-                        "No se puede quitar el rol Empleado porque el tercero " +
-                        "tiene un legajo laboral activo. Dé de baja el empleado primero.");
+                        "No se puede quitar el rol Empleado porque el tercero tiene un legajo laboral activo. Dé de baja el empleado primero.");
             }
 
             try
@@ -84,7 +71,6 @@ public class UpdateTerceroCommandHandler(
             command.BarrioId);
 
         // ── 5. Actualizar datos principales ────────────────────────────────────
-        // Equivalente al Guardar() en modo edición del VB6.
         try
         {
             tercero.Actualizar(

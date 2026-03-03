@@ -36,35 +36,25 @@ public class Tercero : AuditableEntity
     public string? Web { get; private set; }
 
     // ─── Comercial ────────────────────────────────────────────────────────────
-    /// <summary>Moneda preferida para comprobantes (FK a monedas.id)</summary>
     public long? MonedaId { get; private set; }
-    /// <summary>Límite de crédito otorgado al cliente.</summary>
     public decimal? LimiteCredito { get; private set; }
-    /// <summary>Permite emitir comprobantes contra este tercero.</summary>
     public bool Facturable { get; private set; } = true;
-    /// <summary>Usuario responsable de cobrar a este cliente (FK a usuarios.id).</summary>
-    public long? CobradorId { get; private set; }
-    /// <summary>Porcentaje de comisión del cobrador (0-100).</summary>
-    public decimal PctComisionCobrador { get; private set; }
-    /// <summary>Usuario vendedor asignado (FK a usuarios.id).</summary>
-    public long? VendedorId { get; private set; }
-    /// <summary>Porcentaje de comisión del vendedor (0-100).</summary>
-    public decimal PctComisionVendedor { get; private set; }
-    /// <summary>Observaciones internas libres.</summary>
+    public long? SucursalId { get; private set; }
     public string? Observacion { get; private set; }
 
+    // ─── Cobrador/Vendedor ────────────────────────────────────────────────────
+    public long? CobradorId { get; private set; }
+    public decimal PctComisionCobrador { get; private set; }
+    public long? VendedorId { get; private set; }
+    public decimal PctComisionVendedor { get; private set; }
+
     // ─── Control ──────────────────────────────────────────────────────────────
-    public long? SucursalId { get; private set; }
     public bool Activo { get; private set; } = true;
 
     // ─── Constructor privado (EF Core) ────────────────────────────────────────
     private Tercero() { }
 
     // ─── Factory ──────────────────────────────────────────────────────────────
-    /// <summary>
-    /// Crea un nuevo tercero validando las reglas de negocio básicas.
-    /// Equivalente al clsCliente.agregarNuevo() / Guardar() del VB6.
-    /// </summary>
     public static Tercero Crear(
         string legajo,
         string razonSocial,
@@ -73,6 +63,7 @@ public class Tercero : AuditableEntity
         long condicionIvaId,
         bool esCliente,
         bool esProveedor,
+        bool esEmpleado,
         long? sucursalId,
         long? userId)
     {
@@ -80,9 +71,9 @@ public class Tercero : AuditableEntity
         ArgumentException.ThrowIfNullOrWhiteSpace(razonSocial, nameof(razonSocial));
         ArgumentException.ThrowIfNullOrWhiteSpace(nroDocumento, nameof(nroDocumento));
 
-        if (!esCliente && !esProveedor)
+        if (!esCliente && !esProveedor && !esEmpleado)
             throw new ArgumentException(
-                "El tercero debe ser cliente, proveedor o ambos.", nameof(esCliente));
+                "El tercero debe tener al menos un rol activo.");
 
         var t = new Tercero
         {
@@ -93,6 +84,7 @@ public class Tercero : AuditableEntity
             CondicionIvaId  = condicionIvaId,
             EsCliente       = esCliente,
             EsProveedor     = esProveedor,
+            EsEmpleado      = esEmpleado,
             SucursalId      = sucursalId,
             Activo          = true,
             Facturable      = true
@@ -105,10 +97,6 @@ public class Tercero : AuditableEntity
     }
 
     // ─── Comando Actualizar ───────────────────────────────────────────────────
-    /// <summary>
-    /// Actualiza los datos editables. Equivalente al Guardar() en modo edición del VB6.
-    /// No permite cambiar Legajo ni NroDocumento (esos tienen su propio método).
-    /// </summary>
     public void Actualizar(
         string razonSocial,
         string? nombreFantasia,
@@ -154,6 +142,37 @@ public class Tercero : AuditableEntity
         SetUpdated(userId);
     }
 
+    // ─── Actualización simple (setter alternativo, útil para migraciones/tests) ──
+    public void Actualizar(
+        string razonSocial,
+        string? nombreFantasia,
+        string? telefono,
+        string? celular,
+        string? email,
+        string? web,
+        Domicilio domicilio,
+        string? nroIngresosBrutos,
+        string? nroMunicipal,
+        decimal? limiteCredito,
+        bool facturable,
+        string? observacion,
+        long? userId)
+    {
+        RazonSocial       = razonSocial.Trim();
+        NombreFantasia    = nombreFantasia?.Trim();
+        Telefono          = telefono?.Trim();
+        Celular           = celular?.Trim();
+        Email             = email?.Trim().ToLowerInvariant();
+        Web               = web?.Trim();
+        Domicilio         = domicilio;
+        NroIngresosBrutos = nroIngresosBrutos?.Trim();
+        NroMunicipal      = nroMunicipal?.Trim();
+        LimiteCredito     = limiteCredito;
+        Facturable        = facturable;
+        Observacion       = observacion?.Trim();
+        SetUpdated(userId);
+    }
+
     // ─── Roles ────────────────────────────────────────────────────────────────
     public void ActualizarRoles(
         bool esCliente,
@@ -174,10 +193,6 @@ public class Tercero : AuditableEntity
     }
 
     // ─── Datos de identificación sensibles ───────────────────────────────────
-    /// <summary>
-    /// Cambia el número de documento. Solo permitido cuando no hay
-    /// comprobantes asociados (validación a nivel de Handler).
-    /// </summary>
     public void ActualizarNroDocumento(string nroDocumento, long? userId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nroDocumento, nameof(nroDocumento));
@@ -185,11 +200,14 @@ public class Tercero : AuditableEntity
         SetUpdated(userId);
     }
 
-    // ─── Asignación de opcionales ────────────────────────────────────────��────
+    // ─── Asignación de opcionales ─────────────────────────────────────────────
     public void SetMoneda(long? monedaId) => MonedaId    = monedaId;
     public void SetCategoria(long? categoriaId) => CategoriaId = categoriaId;
     public void SetSucursal(long? sucursalId) => SucursalId  = sucursalId;
+    public void SetDomicilio(Domicilio domicilio) => Domicilio = domicilio;
+    public void SetNroIngresosBrutos(string? nro) => NroIngresosBrutos = nro?.Trim();
 
+    // ─── Cobrador/Vendedor con validación ─────────────────────────────────────
     public void SetCobrador(long? cobradorId, decimal pctComision)
     {
         ValidarPorcentaje(pctComision, nameof(pctComision));
@@ -197,11 +215,27 @@ public class Tercero : AuditableEntity
         PctComisionCobrador = pctComision;
     }
 
+    public void SetCobrador(long? cobradorId, decimal pctComision, long? userId)
+    {
+        ValidarPorcentaje(pctComision, nameof(pctComision));
+        CobradorId           = cobradorId;
+        PctComisionCobrador  = pctComision;
+        SetUpdated(userId);
+    }
+
     public void SetVendedor(long? vendedorId, decimal pctComision)
     {
         ValidarPorcentaje(pctComision, nameof(pctComision));
         VendedorId          = vendedorId;
         PctComisionVendedor = pctComision;
+    }
+
+    public void SetVendedor(long? vendedorId, decimal pctComision, long? userId)
+    {
+        ValidarPorcentaje(pctComision, nameof(pctComision));
+        VendedorId           = vendedorId;
+        PctComisionVendedor  = pctComision;
+        SetUpdated(userId);
     }
 
     // ─── Activar / Desactivar ─────────────────────────────────────────────────
@@ -229,8 +263,5 @@ public class Tercero : AuditableEntity
                 "El porcentaje debe estar entre 0 y 100.");
     }
 
-    /// <summary>
-    /// Limpia el DeletedAt heredado de AuditableEntity al reactivar.
-    /// </summary>
     private void ClearDeletedAt() => base.SetDeletedAt(null);
 }

@@ -31,6 +31,18 @@ public class TerceroDto
     // ─── Domicilio ────────────────────────────────────────────────────────────
     public DomicilioDto Domicilio { get; set; } = new();
 
+    // ─── Domicilio aplanado (opcional, útil para mapeos directos) ─────────────
+    public string? Calle { get; set; }
+    public string? Nro { get; set; }
+    public string? Piso { get; set; }
+    public string? Dpto { get; set; }
+    public string? CodigoPostal { get; set; }
+    public long? LocalidadId { get; set; }
+    public string? LocalidadDescripcion { get; set; }
+    public long? BarrioId { get; set; }
+    public string? BarrioDescripcion { get; set; }
+    public string Completo { get; set; } = string.Empty;
+
     // ─── Datos fiscales ───────────────────────────────────────────────────────
     public string? NroIngresosBrutos { get; set; }
     public string? NroMunicipal { get; set; }
@@ -80,18 +92,8 @@ public class DomicilioDto
     public string? Dpto { get; set; }
     public string? CodigoPostal { get; set; }
     public long? LocalidadId { get; set; }
-
-    /// <summary>Nombre de la localidad resuelto (ej: "Córdoba Capital")</summary>
     public string? LocalidadDescripcion { get; set; }
-
     public long? BarrioId { get; set; }
-
-    /// <summary>Nombre del barrio resuelto (ej: "Nueva Córdoba")</summary>
     public string? BarrioDescripcion { get; set; }
-
-    /// <summary>
-    /// Dirección completa formateada para mostrar en grillas/labels.
-    /// Ej: "Av. Colón 123 P2 D4, Córdoba Capital (5000)"
-    /// </summary>
     public string Completo { get; set; } = string.Empty;
 }

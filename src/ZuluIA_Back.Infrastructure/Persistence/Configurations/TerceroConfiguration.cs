@@ -16,7 +16,11 @@ public class TerceroConfiguration : IEntityTypeConfiguration<Tercero>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id)
                .HasColumnName("id")
-               .UseIdentityAlwaysColumn();          // bigint GENERATED ALWAYS AS IDENTITY
+#if NET8_0_OR_GREATER
+               .UseIdentityAlwaysColumn(); // PostgreSQL: GENERATED ALWAYS AS IDENTITY
+#else
+               .UseIdentityColumn();
+#endif
 
         // ─── Identificación ───────────────────────────────────────────────────
         builder.Property(x => x.Legajo)
@@ -67,9 +71,6 @@ public class TerceroConfiguration : IEntityTypeConfiguration<Tercero>
                .IsRequired();
 
         // ─── Domicilio (Value Object → columnas propias de la tabla) ──────────
-        // UseSnakeCaseNamingConvention() ya convierte las propiedades,
-        // pero se nombran explícitamente para garantizar el mapeo exacto
-        // contra la tabla `terceros` de Supabase.
         builder.OwnsOne(x => x.Domicilio, d =>
         {
             d.Property(p => p.Calle)
@@ -188,24 +189,19 @@ public class TerceroConfiguration : IEntityTypeConfiguration<Tercero>
                .HasColumnName("updated_by");
 
         // ─── Índices ──────────────────────────────────────────────────────────
-        // Legajo: único y el más frecuente en búsqueda (ABM principal)
         builder.HasIndex(x => x.Legajo)
                .IsUnique()
                .HasDatabaseName("ix_terceros_legajo");
 
-        // NroDocumento: búsqueda frecuente (validación de CUIT duplicado)
         builder.HasIndex(x => x.NroDocumento)
                .HasDatabaseName("ix_terceros_nro_documento");
 
-        // Activo: casi todos los listados filtran por activo = true
         builder.HasIndex(x => x.Activo)
                .HasDatabaseName("ix_terceros_activo");
 
-        // Email: búsqueda por email desde el módulo de notificaciones
         builder.HasIndex(x => x.Email)
                .HasDatabaseName("ix_terceros_email");
 
-        // Índices compuestos para los filtros más usados del listado paginado
         builder.HasIndex(x => new { x.EsCliente, x.Activo })
                .HasDatabaseName("ix_terceros_es_cliente_activo");
 

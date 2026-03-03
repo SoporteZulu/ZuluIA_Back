@@ -13,22 +13,15 @@ public class CreateTerceroCommandHandler(
     ICurrentUserService currentUser)
     : IRequestHandler<CreateTerceroCommand, Result<long>>
 {
-    public async Task<Result<long>> Handle(
-        CreateTerceroCommand command,
-        CancellationToken ct)
+    public async Task<Result<long>> Handle(CreateTerceroCommand command, CancellationToken ct)
     {
         // ── 1. Validar unicidad de Legajo ──────────────────────────────────────
-        // Equivalente al validarDatos() del VB6 que chequeaba duplicados
-        // de legajo antes de permitir el alta.
-        if (await repo.ExisteLegajoAsync(command.Legajo, excludeId: null, ct))
-            return (Result<long>)Result<long>.Failure(
-                $"Ya existe un tercero con el legajo '{command.Legajo.ToUpperInvariant()}'.");
+        if (await repo.ExisteLegajoAsync(command.Legajo, null, ct))
+            return Result.Failure<long>($"Ya existe un tercero con el legajo '{command.Legajo.ToUpperInvariant()}'.");
 
         // ── 2. Validar unicidad de NroDocumento ────────────────────────────────
-        // VB6: "Ya existe un cliente/proveedor con ese CUIT/DNI."
-        if (await repo.ExisteNroDocumentoAsync(command.NroDocumento, excludeId: null, ct))
-            return (Result<long>)Result<long>.Failure(
-                $"Ya existe un tercero con el documento '{command.NroDocumento}'.");
+        if (await repo.ExisteNroDocumentoAsync(command.NroDocumento, null, ct))
+            return Result.Failure<long>($"Ya existe un tercero con el documento '{command.NroDocumento}'.");
 
         // ── 3. Construir el Value Object Domicilio ─────────────────────────────
         var domicilio = Domicilio.Crear(
@@ -41,8 +34,6 @@ public class CreateTerceroCommandHandler(
             command.BarrioId);
 
         // ── 4. Crear la entidad usando el factory method ───────────────────────
-        // Tercero.Crear() valida las reglas de negocio internas (roles, campos
-        // requeridos) y dispara TerceroCreadoEvent.
         Tercero tercero;
         try
         {
@@ -54,16 +45,16 @@ public class CreateTerceroCommandHandler(
                 command.CondicionIvaId,
                 command.EsCliente,
                 command.EsProveedor,
+                command.EsEmpleado,
                 command.SucursalId,
                 currentUser.UserId);
         }
         catch (ArgumentException ex)
         {
-            return (Result<long>)Result<long>.Failure(ex.Message);
+            return Result.Failure<long>(ex.Message);
         }
 
-        // ── 5. Aplicar datos opcionales ────────────────────────────────────────
-        // Actualizar() aplica todos los campos editables de una vez.
+        // ── 5. Aplicar datos opcionales y comerciales ──────────────────────────
         tercero.Actualizar(
             command.RazonSocial,
             command.NombreFantasia,
@@ -84,21 +75,21 @@ public class CreateTerceroCommandHandler(
             command.Observacion,
             currentUser.UserId);
 
-        // Opcionales con setter propio
         tercero.SetMoneda(command.MonedaId);
         tercero.SetCategoria(command.CategoriaId);
 
+        // ── 6. Roles (si es empleado, asegura el estado correcto) ──────────────
         if (command.EsEmpleado)
             tercero.ActualizarRoles(
                 command.EsCliente,
                 command.EsProveedor,
-                esEmpleado: true,
+                true,
                 currentUser.UserId);
 
-        // ── 6. Persistir ───────────────────────────────────────────────────────
+        // ── 7. Persistir ───────────────────────────────────────────────────────
         await repo.AddAsync(tercero, ct);
         await uow.SaveChangesAsync(ct);
 
-        return Result<long>.Success(tercero.Id);
+        return Result.Success(tercero.Id);
     }
 }

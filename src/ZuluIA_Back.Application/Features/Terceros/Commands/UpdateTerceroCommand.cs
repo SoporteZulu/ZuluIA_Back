@@ -7,7 +7,7 @@ namespace ZuluIA_Back.Application.Features.Terceros.Commands;
 /// Actualiza los datos de un tercero existente.
 /// Equivalente al flujo editar() → cargarDatos() → Guardar() en modo edición
 /// del formulario de ABM de Clientes/Proveedores del VB6.
-///
+/// 
 /// Diseño de campos:
 /// - NroDocumento es opcional aquí: si viene null, NO se modifica.
 ///   Cambiar el documento requiere lógica adicional (validar que no haya

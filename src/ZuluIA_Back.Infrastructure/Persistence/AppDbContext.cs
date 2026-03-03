@@ -2,13 +2,17 @@
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
+using ZuluIA_Back.Domain.Entities.Configuracion;
 using ZuluIA_Back.Domain.Entities.Contabilidad;
 using ZuluIA_Back.Domain.Entities.Finanzas;
 using ZuluIA_Back.Domain.Entities.Geografia;
 using ZuluIA_Back.Domain.Entities.Items;
-//using ZuluIA_Back.Domain.Entities.Referencia;   // <- descomentar cuando los agregues
+using ZuluIA_Back.Domain.Entities.Precios;
+using ZuluIA_Back.Domain.Entities.Referencia;
 using ZuluIA_Back.Domain.Entities.Stock;
+using ZuluIA_Back.Domain.Entities.Sucursales;
 using ZuluIA_Back.Domain.Entities.Terceros;
+using ZuluIA_Back.Domain.Entities.Ventas;
 
 namespace ZuluIA_Back.Infrastructure.Persistence;
 
@@ -21,36 +25,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Localidad> Localidades => Set<Localidad>();
     public DbSet<Barrio> Barrios => Set<Barrio>();
 
+    // ─── Sucursales y Configuración ───────────────────────────────────────────
+    public DbSet<Sucursal> Sucursales => Set<Sucursal>();
+    public DbSet<ConfiguracionSistema> Config => Set<ConfiguracionSistema>();
+
     // ─── Terceros ─────────────────────────────────────────────────────────────
     public DbSet<Tercero> Terceros => Set<Tercero>();
 
     // ─── Catálogos de referencia ──────────────────────────────────────────────
-    // Descomenta cuando existan los modelos reales
-    // public DbSet<TipoDocumento>    TiposDocumento    => Set<TipoDocumento>();
-    // public DbSet<CondicionIva>     CondicionesIva    => Set<CondicionIva>();
-    // public DbSet<CategoriaTercero> CategoriasTerceros=> Set<CategoriaTercero>();
-    // public DbSet<Moneda>           Monedas           => Set<Moneda>();
-    // public DbSet<Usuario>          Usuarios          => Set<Usuario>();
-    // public DbSet<Sucursal>         Sucursales        => Set<Sucursal>();
-
-    // Métodos temporales de consulta raw (NO los dejes cuando tengas los modelos)
-    public async Task<IReadOnlyList<string>> GetTipoDocumentosRawAsync(CancellationToken ct = default)
-        => await Database.SqlQueryRaw<string>("SELECT descripcion FROM tipos_documento").ToListAsync(ct);
-
-    public async Task<IReadOnlyList<string>> GetCondicionesIvaRawAsync(CancellationToken ct = default)
-        => await Database.SqlQueryRaw<string>("SELECT descripcion FROM condiciones_iva").ToListAsync(ct);
-
-    public async Task<IReadOnlyList<string>> GetCategoriasTerceroRawAsync(CancellationToken ct = default)
-        => await Database.SqlQueryRaw<string>("SELECT descripcion FROM categorias_terceros").ToListAsync(ct);
-
-    public async Task<IReadOnlyList<string>> GetMonedasRawAsync(CancellationToken ct = default)
-        => await Database.SqlQueryRaw<string>("SELECT descripcion FROM monedas").ToListAsync(ct);
-
-    public async Task<IReadOnlyList<string>> GetUsuariosRawAsync(CancellationToken ct = default)
-        => await Database.SqlQueryRaw<string>("SELECT usuario FROM usuarios").ToListAsync(ct);
-
-    public async Task<IReadOnlyList<string>> GetSucursalesRawAsync(CancellationToken ct = default)
-        => await Database.SqlQueryRaw<string>("SELECT nombre_fantasia FROM sucursales").ToListAsync(ct);
+    public DbSet<TipoDocumento> TiposDocumento => Set<TipoDocumento>();
+    public DbSet<CondicionIva> CondicionesIva => Set<CondicionIva>();
+    public DbSet<CategoriaTercero> CategoriasTerceros => Set<CategoriaTercero>();
+    public DbSet<Moneda> Monedas => Set<Moneda>();
+    public DbSet<TipoComprobante> TiposComprobante => Set<TipoComprobante>();
+    public DbSet<AlicuotaIva> AlicuotasIva => Set<AlicuotaIva>();
+    public DbSet<UnidadMedida> UnidadesMedida => Set<UnidadMedida>();
+    public DbSet<FormaPago> FormasPago => Set<FormaPago>();
 
     // ─── Items ────────────────────────────────────────────────────────────────
     public DbSet<Item> Items => Set<Item>();
@@ -69,9 +59,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Pago> Pagos => Set<Pago>();
     public DbSet<PagoMedio> PagosMedios => Set<PagoMedio>();
 
-    // ─── Contabilidad ────────────────────────────────���────────────────────────
+    // ─── Contabilidad ─────────────────────────────────────────────────────────
     public DbSet<Asiento> Asientos => Set<Asiento>();
     public DbSet<AsientoLinea> AsientosLineas => Set<AsientoLinea>();
+
+    // ── Módulo 3 — Precios y Ventas ──────────────────────────────
+    public DbSet<ListaPrecios> ListasPrecios => Set<ListaPrecios>();
+    public DbSet<ListaPreciosItem> ListaPreciosItems => Set<ListaPreciosItem>();
+    public DbSet<PlanPago> PlanesPago => Set<PlanPago>();
+
+    // ── Módulo 4 — Financiero ────────────────────────────────────
+    public DbSet<CajaCuentaBancaria> CajasCuentasBancarias => Set<CajaCuentaBancaria>();
+    public DbSet<TipoCajaCuenta> TiposCajaCuenta => Set<TipoCajaCuenta>();
+    public DbSet<Cheque> Cheques => Set<Cheque>();
+    public DbSet<CotizacionMoneda> CotizacionesMoneda => Set<CotizacionMoneda>();
+    public DbSet<FormaPagoCaja> FormasPagoCaja => Set<FormaPagoCaja>();
 
     // ─── EF Core / Dominio ────────────────────────────────────────────────────
     protected override void OnModelCreating(ModelBuilder modelBuilder)

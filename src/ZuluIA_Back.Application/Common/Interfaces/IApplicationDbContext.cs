@@ -1,13 +1,19 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
+using ZuluIA_Back.Domain.Entities.Configuracion;
 using ZuluIA_Back.Domain.Entities.Contabilidad;
 using ZuluIA_Back.Domain.Entities.Finanzas;
 using ZuluIA_Back.Domain.Entities.Geografia;
 using ZuluIA_Back.Domain.Entities.Items;
+using ZuluIA_Back.Domain.Entities.Precios;
+
 //using ZuluIA_Back.Domain.Entities.Referencia;   // <- descomentar cuando tengas esos modelos
 using ZuluIA_Back.Domain.Entities.Stock;
+using ZuluIA_Back.Domain.Entities.Sucursales;
 using ZuluIA_Back.Domain.Entities.Terceros;
+using ZuluIA_Back.Domain.Entities.Ventas;
+using ZuluIA_Back.Domain.Enums;
 
 // SÓLO la interfaz, nunca implementaciones aquí
 namespace ZuluIA_Back.Application.Common.Interfaces;
@@ -30,21 +36,15 @@ public interface IApplicationDbContext
     DbSet<Tercero> Terceros { get; }
 
     // ─── Catálogos de referencia ──────────────────────────────────────────────
-    // Descomenta cuando agregues los modelos en Domain.Entities.Referencia
-    // DbSet<TipoDocumento>    TiposDocumento    { get; }
-    // DbSet<CondicionIva>     CondicionesIva    { get; }
-    // DbSet<CategoriaTercero> CategoriasTerceros{ get; }
-    // DbSet<Moneda>           Monedas           { get; }
-    // DbSet<Usuario>          Usuarios          { get; }
-    // DbSet<Sucursal>         Sucursales        { get; }
-
-    // Métodos temporales para acceso raw, elimina cuando agregues los modelos reales
-    Task<IReadOnlyList<string>> GetTipoDocumentosRawAsync(CancellationToken ct = default);
-    Task<IReadOnlyList<string>> GetCondicionesIvaRawAsync(CancellationToken ct = default);
-    Task<IReadOnlyList<string>> GetCategoriasTerceroRawAsync(CancellationToken ct = default);
-    Task<IReadOnlyList<string>> GetMonedasRawAsync(CancellationToken ct = default);
-    Task<IReadOnlyList<string>> GetUsuariosRawAsync(CancellationToken ct = default);
-    Task<IReadOnlyList<string>> GetSucursalesRawAsync(CancellationToken ct = default);
+    DbSet<TipoDocumento> TiposDocumento { get; }
+    DbSet<CondicionIva> CondicionesIva { get; }
+    DbSet<CategoriaTercero> CategoriasTerceros { get; }
+    DbSet<Moneda> Monedas { get; }
+    DbSet<Usuario> Usuarios { get; }
+    DbSet<TipoComprobante> TiposComprobante { get; }
+    DbSet<AlicuotaIva> AlicuotasIva { get; }
+    DbSet<UnidadMedida> UnidadesMedida { get; }
+    DbSet<FormaPago> FormasPago { get; }
 
     // ─── Items ────────────────────────────────────────────────────────────────
     DbSet<Item> Items { get; }
@@ -66,6 +66,22 @@ public interface IApplicationDbContext
     // ─── Contabilidad ─────────────────────────────────────────────────────────
     DbSet<Asiento> Asientos { get; }
     DbSet<AsientoLinea> AsientosLineas { get; }
+
+    // Sucursales y Configuración
+    DbSet<Sucursal> Sucursales { get; }
+    DbSet<ConfiguracionSistema> Config { get; }
+
+    // ✅ Módulo 3 — Precios y Ventas
+    DbSet<ListaPrecios> ListasPrecios { get; }
+    DbSet<ListaPreciosItem> ListaPreciosItems { get; }
+    DbSet<PlanPago> PlanesPago { get; }
+
+    // ✅ Módulo 4 — Financiero (Cajas, Cheques, Cotizaciones)
+    DbSet<CajaCuentaBancaria> CajasCuentasBancarias { get; }
+    DbSet<TipoCajaCuenta> TiposCajaCuenta { get; }
+    DbSet<Cheque> Cheques { get; }
+    DbSet<CotizacionMoneda> CotizacionesMoneda { get; }
+    DbSet<FormaPagoCaja> FormasPagoCaja { get; }
 
     // ─── Persistencia ─────────────────────────────────────────────────────────
     Task<int> SaveChangesAsync(CancellationToken ct = default);

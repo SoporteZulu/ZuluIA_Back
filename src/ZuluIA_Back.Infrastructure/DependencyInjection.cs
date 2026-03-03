@@ -45,11 +45,27 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+        // Módulo 1 — Terceros
         services.AddScoped<ITerceroRepository, TerceroRepository>();
+        // Módulo Items/Stock/Comprobantes/Contabilidad
         services.AddScoped<IItemRepository, ItemRepository>();
         services.AddScoped<IComprobanteRepository, ComprobanteRepository>();
         services.AddScoped<IStockRepository, StockRepository>();
         services.AddScoped<IAsientoRepository, AsientoRepository>();
+        // Módulo 2 — Sucursales y Configuración
+        services.AddScoped<ISucursalRepository, SucursalRepository>();
+        services.AddScoped<IConfiguracionRepository, ConfiguracionRepository>();
+        // Módulo 3 — Precios y Planes de Pago
+        services.AddScoped<IListaPreciosRepository, ListaPreciosRepository>();
+        services.AddScoped<IPlanPagoRepository, PlanPagoRepository>();
+        // Módulo 4 — Financiero
+        services.AddScoped<ICajaRepository, CajaRepository>();
+        services.AddScoped<IChequeRepository, ChequeRepository>();
+        services.AddScoped<ICotizacionMonedaRepository, CotizacionMonedaRepository>();
+        services.AddScoped(typeof(IRepository<FormaPagoCaja>),
+                           typeof(BaseRepository<FormaPagoCaja>));
+        services.AddScoped(typeof(IRepository<TipoCajaCuenta>),
+                           typeof(BaseRepository<TipoCajaCuenta>));
 
         services.AddScoped(typeof(IRepository<Cobro>), typeof(BaseRepository<Cobro>));
         services.AddScoped(typeof(IRepository<CobroMedio>), typeof(BaseRepository<CobroMedio>));

@@ -7,7 +7,7 @@ namespace ZuluIA_Back.Application.Features.Terceros.Commands;
 /// Crea un nuevo tercero (cliente, proveedor o ambos).
 /// Equivalente al flujo agregarNuevo() → cargarDatos() → Guardar()
 /// del formulario de ABM de Clientes/Proveedores del VB6.
-/// Retorna Result&lt;long&gt; con el Id generado en caso de éxito.
+/// Retorna Result<long> con el Id generado en caso de éxito.
 /// </summary>
 public record CreateTerceroCommand(
     // ─── Identificación obligatoria ───────────────────────────────────────────
