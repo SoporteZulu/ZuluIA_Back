@@ -45,10 +45,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<FormaPago> FormasPago => Set<FormaPago>();
 
 
-    // ─── Stock ────────────────────────────────────────────────────────────────
-    public DbSet<StockItem> Stock => Set<StockItem>();
-    public DbSet<MovimientoStock> MovimientosStock => Set<MovimientoStock>();
-
     // ─── Comprobantes ─────────────────────────────────────────────────────────
     public DbSet<Comprobante> Comprobantes => Set<Comprobante>();
     public DbSet<ComprobanteItem> ComprobantesItems => Set<ComprobanteItem>();
@@ -94,6 +90,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<CategoriaItem> CategoriasItems => Set<CategoriaItem>();
     public DbSet<Item> Items => Set<Item>();
     public DbSet<Deposito> Depositos => Set<Deposito>();
+    // ── M8 — Stock ────────────────────────────────────────────────
+    public DbSet<StockItem> Stock => Set<StockItem>();
+    public DbSet<MovimientoStock> MovimientosStock => Set<MovimientoStock>();
 
     // ─── EF Core / Dominio ────────────────────────────────────────────────────
     protected override void OnModelCreating(ModelBuilder modelBuilder)

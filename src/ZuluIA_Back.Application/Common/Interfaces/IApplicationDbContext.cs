@@ -47,10 +47,6 @@ public interface IApplicationDbContext
     DbSet<UnidadMedida> UnidadesMedida { get; }
     DbSet<FormaPago> FormasPago { get; }
 
-    // ─── Stock ────────────────────────────────────────────────────────────────
-    DbSet<StockItem> Stock { get; }
-    DbSet<MovimientoStock> MovimientosStock { get; }
-
     // ─── Comprobantes ─────────────────────────────────────────────────────────
     DbSet<Comprobante> Comprobantes { get; }
     DbSet<ComprobanteItem> ComprobantesItems { get; }
@@ -97,6 +93,9 @@ public interface IApplicationDbContext
     DbSet<CategoriaItem> CategoriasItems { get; }
     DbSet<Item> Items { get; }
     DbSet<Deposito> Depositos { get; }
+    // ── M8 — Stock ────────────────────────────────────────────────
+    DbSet<StockItem> Stock { get; }
+    DbSet<MovimientoStock> MovimientosStock { get; }
 
     // ─── Persistencia ─────────────────────────────────────────────────────────
     Task<int> SaveChangesAsync(CancellationToken ct = default);

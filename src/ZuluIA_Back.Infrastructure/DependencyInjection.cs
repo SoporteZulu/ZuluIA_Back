@@ -82,6 +82,9 @@ public static class DependencyInjection
         services.AddScoped<ICategoriaItemRepository, CategoriaItemRepository>();
         services.AddScoped<IItemRepository, ItemRepository>();
         services.AddScoped<IDepositoRepository, DepositoRepository>();
+        // ── M8 — Stock ────────────────────────────────────────────
+        services.AddScoped<IStockRepository, StockRepository>();
+        services.AddScoped<IMovimientoStockRepository, MovimientoStockRepository>();
 
         services.AddScoped(typeof(IRepository<Cobro>), typeof(BaseRepository<Cobro>));
         services.AddScoped(typeof(IRepository<CobroMedio>), typeof(BaseRepository<CobroMedio>));

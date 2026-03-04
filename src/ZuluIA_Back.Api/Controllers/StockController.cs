@@ -2,40 +2,195 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
-using ZuluIA_Back.Domain.Interfaces;
+using ZuluIA_Back.Application.Features.Stock.Commands;
+using ZuluIA_Back.Application.Features.Stock.Queries;
 
 namespace ZuluIA_Back.Api.Controllers;
 
-public class StockController(
-    IMediator mediator,
-    IStockRepository stockRepo,
-    IApplicationDbContext db)
+public class StockController(IMediator mediator, IApplicationDbContext db)
     : BaseController(mediator)
 {
+    /// <summary>
+    /// Retorna el stock total de un ítem con el detalle por depósito.
+    /// </summary>
     [HttpGet("item/{itemId:long}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByItem(long itemId, CancellationToken ct)
     {
-        var stock = await stockRepo.GetByItemAsync(itemId, ct);
-        return Ok(stock.Select(s => new
-        {
-            s.Id,
-            s.ItemId,
-            s.DepositoId,
-            s.Cantidad,
-            s.UpdatedAt
-        }));
+        var result = await Mediator.Send(new GetStockByItemQuery(itemId), ct);
+        return OkOrNotFound(result);
     }
 
+    /// <summary>
+    /// Retorna todos los ítems con su stock para un depósito dado.
+    /// </summary>
+    [HttpGet("deposito/{depositoId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetByDeposito(long depositoId, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new GetStockByDepositoQuery(depositoId), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Retorna el stock actual de un ítem en un depósito específico.
+    /// </summary>
     [HttpGet("item/{itemId:long}/deposito/{depositoId:long}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetSaldo(long itemId, long depositoId, CancellationToken ct)
+    public async Task<IActionResult> GetByItemDeposito(
+        long itemId,
+        long depositoId,
+        CancellationToken ct)
     {
-        var saldo = await stockRepo.GetSaldoAsync(itemId, depositoId, ct);
-        return Ok(new { itemId, depositoId, saldo });
+        var stock = await db.Stock
+            .AsNoTracking()
+            .Where(x => x.ItemId == itemId && x.DepositoId == depositoId)
+            .Select(x => new
+            {
+                x.Id,
+                x.ItemId,
+                x.DepositoId,
+                x.Cantidad,
+                x.UpdatedAt
+            })
+            .FirstOrDefaultAsync(ct);
+
+        return OkOrNotFound(stock);
     }
 
+    /// <summary>
+    /// Retorna los ítems con stock por debajo del mínimo.
+    /// Opcionalmente filtra por sucursal o depósito.
+    /// </summary>
+    [HttpGet("bajo-minimo")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetBajoMinimo(
+        [FromQuery] long? sucursalId = null,
+        [FromQuery] long? depositoId = null,
+        CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(
+            new GetStockBajoMinimoQuery(sucursalId, depositoId), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Retorna un resumen general de stock por sucursal.
+    /// </summary>
+    [HttpGet("resumen")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetResumen(
+        [FromQuery] long sucursalId,
+        CancellationToken ct)
+    {
+        var depositoIds = await db.Depositos
+            .AsNoTracking()
+            .Where(x => x.SucursalId == sucursalId && x.Activo)
+            .Select(x => x.Id)
+            .ToListAsync(ct);
+
+        var totalItems = await db.Stock
+            .AsNoTracking()
+            .Where(x => depositoIds.Contains(x.DepositoId) && x.Cantidad > 0)
+            .Select(x => x.ItemId)
+            .Distinct()
+            .CountAsync(ct);
+
+        var itemsBajoMinimo = await (
+            from s in db.Stock.AsNoTracking()
+            join i in db.Items.AsNoTracking() on s.ItemId equals i.Id
+            where depositoIds.Contains(s.DepositoId) &&
+                  i.ManejaStock &&
+                  i.Activo &&
+                  s.Cantidad < i.StockMinimo
+            select s.ItemId)
+            .Distinct()
+            .CountAsync(ct);
+
+        var itemsSinStock = await (
+            from s in db.Stock.AsNoTracking()
+            join i in db.Items.AsNoTracking() on s.ItemId equals i.Id
+            where depositoIds.Contains(s.DepositoId) &&
+                  i.ManejaStock &&
+                  i.Activo &&
+                  s.Cantidad <= 0
+            select s.ItemId)
+            .Distinct()
+            .CountAsync(ct);
+
+        return Ok(new
+        {
+            sucursalId,
+            totalItemsConStock = totalItems,
+            itemsBajoMinimo,
+            itemsSinStock,
+            totalDepositos = depositoIds.Count
+        });
+    }
+
+    /// <summary>
+    /// Realiza un ajuste de stock (inventario) para un ítem/depósito.
+    /// Ajusta la cantidad a un valor específico y registra el movimiento.
+    /// </summary>
+    [HttpPost("ajuste")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Ajuste(
+        [FromBody] AjusteStockCommand command,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(command, ct);
+        return result.IsSuccess
+            ? Ok(new
+            {
+                movimientoId = result.Value,
+                mensaje = "Ajuste de stock registrado correctamente."
+            })
+            : BadRequest(new { error = result.Error });
+    }
+
+    /// <summary>
+    /// Transfiere stock de un depósito a otro.
+    /// Genera dos movimientos: salida del origen y entrada al destino.
+    /// </summary>
+    [HttpPost("transferencia")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Transferencia(
+        [FromBody] TransferenciaStockCommand command,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(command, ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Carga el stock inicial masivo.
+    /// Útil para la puesta en marcha del sistema.
+    /// </summary>
+    [HttpPost("stock-inicial")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> StockInicial(
+        [FromBody] StockInicialCommand command,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(command, ct);
+        return result.IsSuccess
+            ? Ok(new
+            {
+                itemsProcesados = result.Value,
+                mensaje = $"Stock inicial cargado para {result.Value} ítem(s)."
+            })
+            : BadRequest(new { error = result.Error });
+    }
+
+    /// <summary>
+    /// Retorna los movimientos de stock filtrados y paginados.
+    /// </summary>
     [HttpGet("movimientos")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMovimientos(

@@ -10,12 +10,29 @@ public class StockItemConfiguration : IEntityTypeConfiguration<StockItem>
     {
         builder.ToTable("stock");
         builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).HasColumnName("id").UseIdentityColumn();
-        builder.Property(x => x.ItemId).HasColumnName("item_id").IsRequired();
-        builder.Property(x => x.DepositoId).HasColumnName("deposito_id").IsRequired();
-        builder.Property(x => x.Cantidad).HasColumnName("cantidad").HasPrecision(18, 4);
-        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        builder.Property(x => x.Id)
+               .HasColumnName("id")
+               .UseIdentityColumn();
 
+        builder.Property(x => x.ItemId)
+               .HasColumnName("item_id")
+               .IsRequired();
+
+        builder.Property(x => x.DepositoId)
+               .HasColumnName("deposito_id")
+               .IsRequired();
+
+        builder.Property(x => x.Cantidad)
+               .HasColumnName("cantidad")
+               .HasPrecision(18, 4)
+               .HasDefaultValue(0m);
+
+        builder.Property(x => x.UpdatedAt)
+               .HasColumnName("updated_at");
+
+        // Índices para búsquedas y unicidad
         builder.HasIndex(x => new { x.ItemId, x.DepositoId }).IsUnique();
+        builder.HasIndex(x => x.ItemId);
+        builder.HasIndex(x => x.DepositoId);
     }
 }
