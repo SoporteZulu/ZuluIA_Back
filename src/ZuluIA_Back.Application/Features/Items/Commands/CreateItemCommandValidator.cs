@@ -8,11 +8,11 @@ public class CreateItemCommandValidator : AbstractValidator<CreateItemCommand>
     {
         RuleFor(x => x.Codigo)
             .NotEmpty().WithMessage("El código es obligatorio.")
-            .MaximumLength(30).WithMessage("El código no puede superar los 30 caracteres.");
+            .MaximumLength(50).WithMessage("El código no puede superar los 50 caracteres.");
 
         RuleFor(x => x.Descripcion)
             .NotEmpty().WithMessage("La descripción es obligatoria.")
-            .MaximumLength(200).WithMessage("La descripción no puede superar los 200 caracteres.");
+            .MaximumLength(300).WithMessage("La descripción no puede superar los 300 caracteres.");
 
         RuleFor(x => x.UnidadMedidaId)
             .GreaterThan(0).WithMessage("Debe seleccionar una unidad de medida.");
@@ -24,8 +24,8 @@ public class CreateItemCommandValidator : AbstractValidator<CreateItemCommand>
             .GreaterThan(0).WithMessage("Debe seleccionar una moneda.");
 
         RuleFor(x => x)
-            .Must(x => x.EsProducto || x.EsServicio)
-            .WithMessage("El ítem debe ser producto o servicio.");
+            .Must(x => x.EsProducto || x.EsServicio || x.EsFinanciero)
+            .WithMessage("El ítem debe ser producto, servicio o financiero.");
 
         RuleFor(x => x)
             .Must(x => !(x.EsProducto && x.EsServicio))

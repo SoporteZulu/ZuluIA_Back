@@ -48,8 +48,7 @@ public static class DependencyInjection
 
         // Módulo 1 — Terceros
         services.AddScoped<ITerceroRepository, TerceroRepository>();
-        // Módulo Items/Stock/Comprobantes/Contabilidad
-        services.AddScoped<IItemRepository, ItemRepository>();
+        // Módulo Stock/Comprobantes/Contabilidad
         services.AddScoped<IComprobanteRepository, ComprobanteRepository>();
         services.AddScoped<IStockRepository, StockRepository>();
         services.AddScoped<IAsientoRepository, AsientoRepository>();
@@ -79,6 +78,10 @@ public static class DependencyInjection
         // ── Servicios de Dominio ──────────────────────────────────
         services.AddScoped<NumeracionComprobanteService>();
         services.AddScoped<PermisoService>();
+        // ── M7 — Items, Categorías y Depósitos ────────────────────
+        services.AddScoped<ICategoriaItemRepository, CategoriaItemRepository>();
+        services.AddScoped<IItemRepository, ItemRepository>();
+        services.AddScoped<IDepositoRepository, DepositoRepository>();
 
         services.AddScoped(typeof(IRepository<Cobro>), typeof(BaseRepository<Cobro>));
         services.AddScoped(typeof(IRepository<CobroMedio>), typeof(BaseRepository<CobroMedio>));

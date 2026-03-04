@@ -8,6 +8,9 @@ public record GetItemsPagedQuery(
     int Page = 1,
     int PageSize = 20,
     string? Search = null,
+    long? CategoriaId = null,
+    bool? SoloActivos = null,
+    bool? SoloConStock = null,
     bool? SoloProductos = null,
     bool? SoloServicios = null
 ) : IRequest<PagedResult<ItemListDto>>;

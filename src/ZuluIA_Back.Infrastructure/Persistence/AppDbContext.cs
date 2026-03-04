@@ -44,8 +44,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<UnidadMedida> UnidadesMedida => Set<UnidadMedida>();
     public DbSet<FormaPago> FormasPago => Set<FormaPago>();
 
-    // ─── Items ────────────────────────────────────────────────────────────────
-    public DbSet<Item> Items => Set<Item>();
 
     // ─── Stock ────────────────────────────────────────────────────────────────
     public DbSet<StockItem> Stock => Set<StockItem>();
@@ -91,6 +89,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Seguridad> Seguridad => Set<Seguridad>();
     public DbSet<SeguridadUsuario> SeguridadUsuario => Set<SeguridadUsuario>();
     public DbSet<ParametroUsuario> ParametrosUsuario => Set<ParametroUsuario>();
+
+    // ── Módulo 7 — Items, Categorías y Depósitos ──────────────────
+    public DbSet<CategoriaItem> CategoriasItems => Set<CategoriaItem>();
+    public DbSet<Item> Items => Set<Item>();
+    public DbSet<Deposito> Depositos => Set<Deposito>();
 
     // ─── EF Core / Dominio ────────────────────────────────────────────────────
     protected override void OnModelCreating(ModelBuilder modelBuilder)

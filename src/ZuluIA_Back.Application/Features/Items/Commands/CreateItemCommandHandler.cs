@@ -12,11 +12,20 @@ public class CreateItemCommandHandler(
     ICurrentUserService currentUser)
     : IRequestHandler<CreateItemCommand, Result<long>>
 {
-    public async Task<Result<long>> Handle(CreateItemCommand request, CancellationToken ct)
+    public async Task<Result<long>> Handle(
+        CreateItemCommand request,
+        CancellationToken ct)
     {
-        if (await repo.ExisteCodigoAsync(request.Codigo, request.SucursalId, null, ct))
-            return Result.Failure<long>($"Ya existe un ítem con el código '{request.Codigo}'.");
+        // Validar existencia de código (con o sin sucursal)
+        var existe = request.SucursalId.HasValue
+            ? await repo.ExisteCodigoAsync(request.Codigo, request.SucursalId, null, ct)
+            : await repo.ExisteCodigoAsync(request.Codigo, null, ct);
 
+        if (existe)
+            return Result.Failure<long>(
+                $"Ya existe un ítem con el código '{request.Codigo}'.");
+
+        // Crear el ítem con todos los parámetros fusionados
         var item = Item.Crear(
             request.Codigo,
             request.Descripcion,
@@ -25,20 +34,47 @@ public class CreateItemCommandHandler(
             request.MonedaId,
             request.EsProducto,
             request.EsServicio,
+            request.EsFinanciero,
             request.ManejaStock,
             request.PrecioCosto,
             request.PrecioVenta,
+            request.CategoriaId,
+            request.StockMinimo,
+            request.StockMaximo,
+            request.CodigoBarras,
+            request.DescripcionAdicional,
+            request.CodigoAfip,
             request.SucursalId,
             currentUser.UserId);
 
+        // Actualizar todos los campos relevantes
         item.Actualizar(
             request.Descripcion,
             request.DescripcionAdicional,
             request.CodigoBarras,
+            request.UnidadMedidaId,
+            request.AlicuotaIvaId,
+            request.MonedaId,
+            request.EsProducto,
+            request.EsServicio,
+            request.EsFinanciero,
+            request.ManejaStock,
             request.CategoriaId,
+            request.CodigoAfip,
             request.StockMinimo,
             request.StockMaximo,
-            request.CodigoAfip,
+            request.SucursalId,
+            currentUser.UserId);
+
+        // Actualizar precios y stock explícitamente (si la lógica lo requiere)
+        item.ActualizarPrecios(
+            request.PrecioCosto,
+            request.PrecioVenta,
+            currentUser.UserId);
+
+        item.ActualizarStock(
+            request.StockMinimo,
+            request.StockMaximo,
             currentUser.UserId);
 
         await repo.AddAsync(item, ct);

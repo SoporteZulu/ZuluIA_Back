@@ -47,9 +47,6 @@ public interface IApplicationDbContext
     DbSet<UnidadMedida> UnidadesMedida { get; }
     DbSet<FormaPago> FormasPago { get; }
 
-    // ─── Items ────────────────────────────────────────────────────────────────
-    DbSet<Item> Items { get; }
-
     // ─── Stock ────────────────────────────────────────────────────────────────
     DbSet<StockItem> Stock { get; }
     DbSet<MovimientoStock> MovimientosStock { get; }
@@ -96,6 +93,10 @@ public interface IApplicationDbContext
     DbSet<Seguridad> Seguridad { get; }
     DbSet<SeguridadUsuario> SeguridadUsuario { get; }
     DbSet<ParametroUsuario> ParametrosUsuario { get; }
+    // ── Módulo 7 — Items, Categorías y Depósitos ──────────────────
+    DbSet<CategoriaItem> CategoriasItems { get; }
+    DbSet<Item> Items { get; }
+    DbSet<Deposito> Depositos { get; }
 
     // ─── Persistencia ─────────────────────────────────────────────────────────
     Task<int> SaveChangesAsync(CancellationToken ct = default);
