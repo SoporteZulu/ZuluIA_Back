@@ -1,7 +1,3 @@
 ﻿namespace ZuluIA_Back.Domain.Enums;
 
-public enum EstadoPago
-{
-    Activo,
-    Anulado
-}
+public enum EstadoPago { Activo, Anulado }

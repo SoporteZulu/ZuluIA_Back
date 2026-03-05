@@ -18,10 +18,10 @@ public class PagoMedio : BaseEntity
         long pagoId,
         long cajaId,
         long formaPagoId,
+        long? chequeId,
         decimal importe,
         long monedaId,
-        decimal cotizacion,
-        long? chequeId = null)
+        decimal cotizacion)
     {
         if (importe <= 0)
             throw new InvalidOperationException("El importe del medio de pago debe ser mayor a 0.");
@@ -31,10 +31,10 @@ public class PagoMedio : BaseEntity
             PagoId      = pagoId,
             CajaId      = cajaId,
             FormaPagoId = formaPagoId,
+            ChequeId    = chequeId,
             Importe     = importe,
             MonedaId    = monedaId,
-            Cotizacion  = cotizacion,
-            ChequeId    = chequeId
+            Cotizacion  = cotizacion <= 0 ? 1 : cotizacion
         };
     }
 }

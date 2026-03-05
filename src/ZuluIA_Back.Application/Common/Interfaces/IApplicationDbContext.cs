@@ -47,12 +47,6 @@ public interface IApplicationDbContext
     DbSet<UnidadMedida> UnidadesMedida { get; }
     DbSet<FormaPago> FormasPago { get; }
 
-    // ─── Finanzas ─────────────────────────────────────────────────────────────
-    DbSet<Cobro> Cobros { get; }
-    DbSet<CobroMedio> CobrosMedios { get; }
-    DbSet<Pago> Pagos { get; }
-    DbSet<PagoMedio> PagosMedios { get; }
-
     // ─── Contabilidad ─────────────────────────────────────────────────────────
     DbSet<Asiento> Asientos { get; }
     DbSet<AsientoLinea> AsientosLineas { get; }
@@ -97,6 +91,15 @@ public interface IApplicationDbContext
     DbSet<ComprobanteItem> ComprobantesItems { get; }
     DbSet<Imputacion> Imputaciones { get; }
     DbSet<OrdenCompraMeta> OrdenesCompraMeta { get; }
+    // ── M10 — Cobros, Pagos y Cuenta Corriente ─────────────────────
+    DbSet<Cobro> Cobros { get; }
+    DbSet<CobroMedio> CobrosMedios { get; }
+    DbSet<Pago> Pagos { get; }
+    DbSet<PagoMedio> PagosMedios { get; }
+    DbSet<Retencion> Retenciones { get; }
+    DbSet<CuentaCorriente> CuentaCorriente { get; }
+    DbSet<MovimientoCtaCte> MovimientosCtaCte { get; }
+    DbSet<Cedulon> Cedulones { get; }
 
     // ─── Persistencia ─────────────────────────────────────────────────────────
     Task<int> SaveChangesAsync(CancellationToken ct = default);

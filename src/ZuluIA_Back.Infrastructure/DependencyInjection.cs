@@ -90,6 +90,14 @@ public static class DependencyInjection
         services.AddScoped<IImputacionRepository, ImputacionRepository>();
         services.AddScoped(typeof(IRepository<OrdenCompraMeta>),
                            typeof(BaseRepository<OrdenCompraMeta>));
+        // ── M10 ───────────────────────────────────────────────────
+        services.AddScoped<ICobroRepository, CobroRepository>();
+        services.AddScoped<IPagoRepository, PagoRepository>();
+        services.AddScoped<ICuentaCorrienteRepository, CuentaCorrienteRepository>();
+        services.AddScoped<IMovimientoCtaCteRepository, MovimientoCtaCteRepository>();
+        services.AddScoped<ICedulonRepository, CedulonRepository>();
+        services.AddScoped(typeof(IRepository<Retencion>),
+                           typeof(BaseRepository<Retencion>));
 
         services.AddScoped(typeof(IRepository<Cobro>), typeof(BaseRepository<Cobro>));
         services.AddScoped(typeof(IRepository<CobroMedio>), typeof(BaseRepository<CobroMedio>));

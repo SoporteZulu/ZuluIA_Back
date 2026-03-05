@@ -45,12 +45,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<FormaPago> FormasPago => Set<FormaPago>();
 
 
-    // ─── Finanzas ─────────────────────────────────────────────────────────────
-    public DbSet<Cobro> Cobros => Set<Cobro>();
-    public DbSet<CobroMedio> CobrosMedios => Set<CobroMedio>();
-    public DbSet<Pago> Pagos => Set<Pago>();
-    public DbSet<PagoMedio> PagosMedios => Set<PagoMedio>();
-
     // ─── Contabilidad ─────────────────────────────────────────────────────────
     public DbSet<Asiento> Asientos => Set<Asiento>();
     public DbSet<AsientoLinea> AsientosLineas => Set<AsientoLinea>();
@@ -94,6 +88,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<ComprobanteItem> ComprobantesItems => Set<ComprobanteItem>();
     public DbSet<Imputacion> Imputaciones => Set<Imputacion>();
     public DbSet<OrdenCompraMeta> OrdenesCompraMeta => Set<OrdenCompraMeta>();
+    // ── M10 — Cobros, Pagos y Cuenta Corriente ─────────────────────
+    public DbSet<Cobro> Cobros => Set<Cobro>();
+    public DbSet<CobroMedio> CobrosMedios => Set<CobroMedio>();
+    public DbSet<Pago> Pagos => Set<Pago>();
+    public DbSet<PagoMedio> PagosMedios => Set<PagoMedio>();
+    public DbSet<Retencion> Retenciones => Set<Retencion>();
+    public DbSet<CuentaCorriente> CuentaCorriente => Set<CuentaCorriente>();
+    public DbSet<MovimientoCtaCte> MovimientosCtaCte => Set<MovimientoCtaCte>();
+    public DbSet<Cedulon> Cedulones => Set<Cedulon>();
 
     // ─── EF Core / Dominio ────────────────────────────────────────────────────
     protected override void OnModelCreating(ModelBuilder modelBuilder)
