@@ -4,7 +4,7 @@ public enum EstadoComprobante
 {
     Borrador,
     Emitido,
-    Anulado,
+    PagadoParcial,
     Pagado,
-    PagadoParcial
+    Anulado
 }

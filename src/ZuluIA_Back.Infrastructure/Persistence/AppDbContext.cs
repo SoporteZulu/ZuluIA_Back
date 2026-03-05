@@ -45,10 +45,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<FormaPago> FormasPago => Set<FormaPago>();
 
 
-    // ─── Comprobantes ─────────────────────────────────────────────────────────
-    public DbSet<Comprobante> Comprobantes => Set<Comprobante>();
-    public DbSet<ComprobanteItem> ComprobantesItems => Set<ComprobanteItem>();
-
     // ─── Finanzas ─────────────────────────────────────────────────────────────
     public DbSet<Cobro> Cobros => Set<Cobro>();
     public DbSet<CobroMedio> CobrosMedios => Set<CobroMedio>();
@@ -93,6 +89,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     // ── M8 — Stock ────────────────────────────────────────────────
     public DbSet<StockItem> Stock => Set<StockItem>();
     public DbSet<MovimientoStock> MovimientosStock => Set<MovimientoStock>();
+    // ── M9 — Comprobantes ─────────────────────────────────────────
+    public DbSet<Comprobante> Comprobantes => Set<Comprobante>();
+    public DbSet<ComprobanteItem> ComprobantesItems => Set<ComprobanteItem>();
+    public DbSet<Imputacion> Imputaciones => Set<Imputacion>();
+    public DbSet<OrdenCompraMeta> OrdenesCompraMeta => Set<OrdenCompraMeta>();
 
     // ─── EF Core / Dominio ────────────────────────────────────────────────────
     protected override void OnModelCreating(ModelBuilder modelBuilder)

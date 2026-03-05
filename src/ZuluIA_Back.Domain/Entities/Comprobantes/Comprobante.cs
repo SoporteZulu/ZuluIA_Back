@@ -1,6 +1,5 @@
 ﻿using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Enums;
-using ZuluIA_Back.Domain.Events.Comprobantes;
 using ZuluIA_Back.Domain.ValueObjects;
 
 namespace ZuluIA_Back.Domain.Entities.Comprobantes;
@@ -10,7 +9,10 @@ public class Comprobante : AuditableEntity
     public long SucursalId { get; private set; }
     public long? PuntoFacturacionId { get; private set; }
     public long TipoComprobanteId { get; private set; }
+    // Usa el value object que corresponda en tu dominio:
     public NroComprobante Numero { get; private set; } = null!;
+    // Alternativa si usas el nuevo VO:
+    // public NumeroComprobante Numero { get; private set; } = null!;
     public DateOnly Fecha { get; private set; }
     public DateOnly? FechaVencimiento { get; private set; }
     public long TerceroId { get; private set; }
@@ -44,50 +46,108 @@ public class Comprobante : AuditableEntity
         short prefijo,
         long numero,
         DateOnly fecha,
+        DateOnly? fechaVencimiento,
         long terceroId,
         long monedaId,
         decimal cotizacion,
+        string? observacion,
         long? userId)
     {
-        var comprobante = new Comprobante
+        var comp = new Comprobante
         {
-            SucursalId         = sucursalId,
-            PuntoFacturacionId = puntoFacturacionId,
-            TipoComprobanteId  = tipoComprobanteId,
-            Numero             = new NroComprobante(prefijo, numero),
-            Fecha              = fecha,
-            TerceroId          = terceroId,
-            MonedaId           = monedaId,
-            Cotizacion         = cotizacion,
-            Estado             = EstadoComprobante.Borrador
+            SucursalId          = sucursalId,
+            PuntoFacturacionId  = puntoFacturacionId,
+            TipoComprobanteId   = tipoComprobanteId,
+            Numero              = new NroComprobante(prefijo, numero),
+            // Si usas el nuevo VO, reemplaza por:
+            // Numero = NumeroComprobante.Crear(prefijo, numero),
+            Fecha               = fecha,
+            FechaVencimiento    = fechaVencimiento,
+            TerceroId           = terceroId,
+            MonedaId            = monedaId,
+            Cotizacion          = cotizacion <= 0 ? 1 : cotizacion,
+            Estado              = EstadoComprobante.Borrador,
+            Observacion         = observacion?.Trim()
         };
 
-        comprobante.SetCreated(userId);
-        return comprobante;
+        comp.SetCreated(userId);
+        return comp;
     }
 
     public void AgregarItem(ComprobanteItem item)
     {
         if (Estado != EstadoComprobante.Borrador)
-            throw new InvalidOperationException("No se pueden agregar ítems a un comprobante que no está en borrador.");
+            throw new InvalidOperationException("Solo se pueden agregar ítems a comprobantes en borrador.");
 
         _items.Add(item);
         RecalcularTotales();
     }
 
-    public void Emitir(string? cae, DateOnly? fechaVtoCae, long? userId)
+    public void RemoverItem(long itemId)
     {
         if (Estado != EstadoComprobante.Borrador)
-            throw new InvalidOperationException("Solo se pueden emitir comprobantes en estado Borrador.");
+            throw new InvalidOperationException("Solo se pueden remover ítems de comprobantes en borrador.");
+
+        var item = _items.FirstOrDefault(x => x.Id == itemId);
+        if (item is not null)
+        {
+            _items.Remove(item);
+            RecalcularTotales();
+        }
+    }
+
+    public void RecalcularTotales()
+    {
+        Subtotal        = _items.Sum(x => x.TotalLinea + x.IvaImporte);
+        NetoGravado     = _items.Where(x => x.EsGravado).Sum(x => x.SubtotalNeto);
+        NetoNoGravado   = _items.Where(x => !x.EsGravado).Sum(x => x.SubtotalNeto);
+        IvaRi           = _items.Sum(x => x.IvaImporte);
+        IvaRni          = 0;
+        DescuentoImporte = _items.Sum(x =>
+            x.PrecioUnitario * x.Cantidad * (x.DescuentoPct / 100));
+
+        Total  = NetoGravado + NetoNoGravado + IvaRi + IvaRni +
+                 Percepciones - Retenciones;
+        Saldo  = Total;
+    }
+
+    public void SetPercepciones(decimal percepciones, long? userId)
+    {
+        if (Estado != EstadoComprobante.Borrador)
+            throw new InvalidOperationException("Solo se pueden modificar percepciones en comprobantes borrador.");
+
+        Percepciones = percepciones;
+        RecalcularTotales();
+        SetUpdated(userId);
+    }
+
+    public void SetRetenciones(decimal retenciones, long? userId)
+    {
+        Retenciones = retenciones;
+        RecalcularTotales();
+        SetUpdated(userId);
+    }
+
+    public void Emitir(long? userId)
+    {
+        if (Estado != EstadoComprobante.Borrador)
+            throw new InvalidOperationException($"No se puede emitir un comprobante en estado {Estado}.");
 
         if (!_items.Any())
             throw new InvalidOperationException("No se puede emitir un comprobante sin ítems.");
 
-        Estado      = EstadoComprobante.Emitido;
-        Cae         = cae;
-        FechaVtoCae = fechaVtoCae;
+        Estado = EstadoComprobante.Emitido;
+        Saldo  = Total;
         SetUpdated(userId);
-        AddDomainEvent(new ComprobanteEmitidoEvent(Id, SucursalId, TerceroId, Total, MonedaId));
+    }
+
+    public void AsignarCae(string cae, DateOnly fechaVto, string? qrData, long? userId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(cae);
+        Cae         = cae.Trim();
+        FechaVtoCae = fechaVto;
+        QrData      = qrData;
+        SetUpdated(userId);
     }
 
     public void Anular(long? userId)
@@ -96,44 +156,27 @@ public class Comprobante : AuditableEntity
             throw new InvalidOperationException("El comprobante ya está anulado.");
 
         Estado = EstadoComprobante.Anulado;
+        Saldo  = 0;
         SetDeleted();
         SetUpdated(userId);
-        AddDomainEvent(new ComprobanteAnuladoEvent(Id, SucursalId, TerceroId, Total, MonedaId));
     }
 
-    public void AplicarPago(decimal importe)
+    public void ActualizarSaldo(decimal importeImputado, long? userId)
     {
-        if (importe <= 0)
-            throw new InvalidOperationException("El importe a aplicar debe ser mayor a 0.");
+        Saldo -= importeImputado;
+        if (Saldo < 0) Saldo = 0;
 
-        Saldo -= importe;
-
-        if (Saldo <= 0)
-        {
-            Saldo  = 0;
+        if (Saldo == 0)
             Estado = EstadoComprobante.Pagado;
-        }
-        else
-        {
+        else if (Saldo < Total)
             Estado = EstadoComprobante.PagadoParcial;
-        }
+
+        SetUpdated(userId);
     }
 
-    public void SetFechaVencimiento(DateOnly fecha) =>
-        FechaVencimiento = fecha;
-
-    public void SetObservacion(string? obs) =>
-        Observacion = obs?.Trim();
-
-    public void SetQrData(string? qr) =>
-        QrData = qr;
-
-    private void RecalcularTotales()
+    public void SetFechaVencimiento(DateOnly fecha, long? userId)
     {
-        Subtotal         = _items.Sum(i => i.TotalLinea);
-        NetoGravado      = _items.Sum(i => i.SubtotalNeto);
-        IvaRi            = _items.Sum(i => i.IvaImporte);
-        Total            = NetoGravado + NetoNoGravado + IvaRi + IvaRni + Percepciones - Retenciones - DescuentoImporte;
-        Saldo            = Total;
+        FechaVencimiento = fecha;
+        SetUpdated(userId);
     }
 }
