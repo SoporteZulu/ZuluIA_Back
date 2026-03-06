@@ -4,12 +4,15 @@ using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Configuracion;
 using ZuluIA_Back.Domain.Entities.Contabilidad;
+using ZuluIA_Back.Domain.Entities.Extras;
 using ZuluIA_Back.Domain.Entities.Facturacion;
 using ZuluIA_Back.Domain.Entities.Finanzas;
 using ZuluIA_Back.Domain.Entities.Geografia;
 using ZuluIA_Back.Domain.Entities.Items;
 using ZuluIA_Back.Domain.Entities.Precios;
+using ZuluIA_Back.Domain.Entities.Produccion;
 using ZuluIA_Back.Domain.Entities.Referencia;
+using ZuluIA_Back.Domain.Entities.RRHH;
 using ZuluIA_Back.Domain.Entities.Stock;
 using ZuluIA_Back.Domain.Entities.Sucursales;
 using ZuluIA_Back.Domain.Entities.Terceros;
@@ -43,11 +46,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<AlicuotaIva> AlicuotasIva => Set<AlicuotaIva>();
     public DbSet<UnidadMedida> UnidadesMedida => Set<UnidadMedida>();
     public DbSet<FormaPago> FormasPago => Set<FormaPago>();
-
-
-    // ─── Contabilidad ─────────────────────────────────────────────────────────
-    public DbSet<Asiento> Asientos => Set<Asiento>();
-    public DbSet<AsientoLinea> AsientosLineas => Set<AsientoLinea>();
 
     // ── Módulo 3 — Precios y Ventas ──────────────────────────────
     public DbSet<ListaPrecios> ListasPrecios => Set<ListaPrecios>();
@@ -97,6 +95,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<CuentaCorriente> CuentaCorriente => Set<CuentaCorriente>();
     public DbSet<MovimientoCtaCte> MovimientosCtaCte => Set<MovimientoCtaCte>();
     public DbSet<Cedulon> Cedulones => Set<Cedulon>();
+    // ── M11 — Contabilidad ─────────────────────────────────────────
+    public DbSet<Ejercicio> Ejercicios => Set<Ejercicio>();
+    public DbSet<EjercicioSucursal> EjercicioSucursales => Set<EjercicioSucursal>();
+    public DbSet<PlanCuenta> PlanCuentas => Set<PlanCuenta>();
+    public DbSet<PlanCuentaParametro> PlanCuentasParametros => Set<PlanCuentaParametro>();
+    public DbSet<CentroCosto> CentrosCosto => Set<CentroCosto>();
+    public DbSet<Asiento> Asientos => Set<Asiento>();
+    public DbSet<AsientoLinea> AsientosLineas => Set<AsientoLinea>();
+    // ── M12 — Producción ──────────────────────────────────────────
+    public DbSet<FormulaProduccion> FormulasProduccion => Set<FormulaProduccion>();
+    public DbSet<FormulaIngrediente> FormulaIngredientes => Set<FormulaIngrediente>();
+    public DbSet<OrdenTrabajo> OrdenesTrabajo => Set<OrdenTrabajo>();
+
+    // ── M12 — RRHH ────────────────────────────────────────────────
+    public DbSet<Empleado> Empleados => Set<Empleado>();
+    public DbSet<LiquidacionSueldo> LiquidacionesSueldo => Set<LiquidacionSueldo>();
+
+    // ── M12 — Extras ──────────────────────────────────────────────
+    public DbSet<Transportista> Transportistas => Set<Transportista>();
+    public DbSet<Busqueda> Busquedas => Set<Busqueda>();
 
     // ─── EF Core / Dominio ────────────────────────────────────────────────────
     protected override void OnModelCreating(ModelBuilder modelBuilder)

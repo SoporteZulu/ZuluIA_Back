@@ -3,11 +3,16 @@ using System.Collections.Generic;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Configuracion;
 using ZuluIA_Back.Domain.Entities.Contabilidad;
+using ZuluIA_Back.Domain.Entities.Extras;
 using ZuluIA_Back.Domain.Entities.Facturacion;
 using ZuluIA_Back.Domain.Entities.Finanzas;
 using ZuluIA_Back.Domain.Entities.Geografia;
 using ZuluIA_Back.Domain.Entities.Items;
 using ZuluIA_Back.Domain.Entities.Precios;
+using ZuluIA_Back.Domain.Entities.Produccion;
+
+using ZuluIA_Back.Domain.Entities.RRHH;
+
 
 //using ZuluIA_Back.Domain.Entities.Referencia;   // <- descomentar cuando tengas esos modelos
 using ZuluIA_Back.Domain.Entities.Stock;
@@ -46,10 +51,6 @@ public interface IApplicationDbContext
     DbSet<AlicuotaIva> AlicuotasIva { get; }
     DbSet<UnidadMedida> UnidadesMedida { get; }
     DbSet<FormaPago> FormasPago { get; }
-
-    // ─── Contabilidad ─────────────────────────────────────────────────────────
-    DbSet<Asiento> Asientos { get; }
-    DbSet<AsientoLinea> AsientosLineas { get; }
 
     // Sucursales y Configuración
     DbSet<Sucursal> Sucursales { get; }
@@ -100,6 +101,26 @@ public interface IApplicationDbContext
     DbSet<CuentaCorriente> CuentaCorriente { get; }
     DbSet<MovimientoCtaCte> MovimientosCtaCte { get; }
     DbSet<Cedulon> Cedulones { get; }
+    // ── M11 — Contabilidad ─────────────────────────────────────────
+    DbSet<Ejercicio> Ejercicios { get; }
+    DbSet<EjercicioSucursal> EjercicioSucursales { get; }
+    DbSet<PlanCuenta> PlanCuentas { get; }
+    DbSet<PlanCuentaParametro> PlanCuentasParametros { get; }
+    DbSet<CentroCosto> CentrosCosto { get; }
+    DbSet<Asiento> Asientos { get; }
+    DbSet<AsientoLinea> AsientosLineas { get; }
+    // ── M12 — Producción ──────────────────────────────────────────
+    DbSet<FormulaProduccion> FormulasProduccion { get; }
+    DbSet<FormulaIngrediente> FormulaIngredientes { get; }
+    DbSet<OrdenTrabajo> OrdenesTrabajo { get; }
+
+    // ── M12 — RRHH ────────────────────────────────────────────────
+    DbSet<Empleado> Empleados { get; }
+    DbSet<LiquidacionSueldo> LiquidacionesSueldo { get; }
+
+    // ── M12 — Extras ──────────────────────────────────────────────
+    DbSet<Transportista> Transportistas { get; }
+    DbSet<Busqueda> Busquedas { get; }
 
     // ─── Persistencia ─────────────────────────────────────────────────────────
     Task<int> SaveChangesAsync(CancellationToken ct = default);

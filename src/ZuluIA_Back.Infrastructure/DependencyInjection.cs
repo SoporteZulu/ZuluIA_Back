@@ -4,8 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Contabilidad;
+using ZuluIA_Back.Domain.Entities.Extras;
 using ZuluIA_Back.Domain.Entities.Finanzas;
 using ZuluIA_Back.Domain.Entities.Items;
+using ZuluIA_Back.Domain.Entities.Produccion;
+using ZuluIA_Back.Domain.Entities.RRHH;
 using ZuluIA_Back.Domain.Entities.Stock;
 using ZuluIA_Back.Domain.Entities.Terceros;
 using ZuluIA_Back.Domain.Interfaces;
@@ -98,6 +101,32 @@ public static class DependencyInjection
         services.AddScoped<ICedulonRepository, CedulonRepository>();
         services.AddScoped(typeof(IRepository<Retencion>),
                            typeof(BaseRepository<Retencion>));
+        // ── M11 ───────────────────────────────────────────────────
+        services.AddScoped<IEjercicioRepository, EjercicioRepository>();
+        services.AddScoped<IPlanCuentasRepository, PlanCuentasRepository>();
+        services.AddScoped<IAsientoRepository, AsientoRepository>();
+        services.AddScoped(typeof(IRepository<EjercicioSucursal>),
+                           typeof(BaseRepository<EjercicioSucursal>));
+        services.AddScoped(typeof(IRepository<PlanCuentaParametro>),
+                           typeof(BaseRepository<PlanCuentaParametro>));
+        services.AddScoped(typeof(IRepository<CentroCosto>),
+                           typeof(BaseRepository<CentroCosto>));
+        services.AddScoped(typeof(IRepository<AsientoLinea>),
+                           typeof(BaseRepository<AsientoLinea>));
+        // ── M12 ── Producción ─────────────────────────────────────
+        services.AddScoped<IFormulaProduccionRepository, FormulaProduccionRepository>();
+        services.AddScoped<IOrdenTrabajoRepository, OrdenTrabajoRepository>();
+        services.AddScoped(typeof(IRepository<FormulaIngrediente>),
+                           typeof(BaseRepository<FormulaIngrediente>));
+        // ── M12 ── RRHH ───────────────────────────────────────────
+        services.AddScoped<IEmpleadoRepository, EmpleadoRepository>();
+        services.AddScoped(typeof(IRepository<LiquidacionSueldo>),
+                           typeof(BaseRepository<LiquidacionSueldo>));
+        // ── M12 ── Extras ─────────────────────────────────────────
+        services.AddScoped(typeof(IRepository<Transportista>),
+                           typeof(BaseRepository<Transportista>));
+        services.AddScoped(typeof(IRepository<Busqueda>),
+                           typeof(BaseRepository<Busqueda>));
 
         services.AddScoped(typeof(IRepository<Cobro>), typeof(BaseRepository<Cobro>));
         services.AddScoped(typeof(IRepository<CobroMedio>), typeof(BaseRepository<CobroMedio>));

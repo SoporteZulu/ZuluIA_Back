@@ -23,14 +23,17 @@ public class AsientoLinea : BaseEntity
         short orden,
         long? centroCostoId = null)
     {
-        if (debe < 0 || haber < 0)
-            throw new InvalidOperationException("Los importes de debe y haber no pueden ser negativos.");
+        if (debe < 0)
+            throw new InvalidOperationException("El debe no puede ser negativo.");
+
+        if (haber < 0)
+            throw new InvalidOperationException("El haber no puede ser negativo.");
 
         if (debe == 0 && haber == 0)
-            throw new InvalidOperationException("Una línea de asiento debe tener debe o haber mayor a 0.");
+            throw new InvalidOperationException("La línea debe tener un importe en debe o haber.");
 
         if (debe > 0 && haber > 0)
-            throw new InvalidOperationException("Una línea no puede tener debe y haber al mismo tiempo.");
+            throw new InvalidOperationException("Una línea no puede tener debe y haber simultáneamente.");
 
         return new AsientoLinea
         {
@@ -43,4 +46,7 @@ public class AsientoLinea : BaseEntity
             CentroCostoId = centroCostoId
         };
     }
+
+    public bool EsDeudora => Debe  > 0;
+    public bool EsAcreedora => Haber > 0;
 }

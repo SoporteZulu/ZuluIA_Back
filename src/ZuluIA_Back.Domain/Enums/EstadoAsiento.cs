@@ -3,6 +3,6 @@
 public enum EstadoAsiento
 {
     Borrador,
-    Contabilizado,
+    Confirmado,
     Anulado
 }

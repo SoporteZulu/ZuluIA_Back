@@ -38,7 +38,7 @@ public class Asiento : AuditableEntity
             Fecha       = fecha,
             Numero      = numero,
             Descripcion = descripcion.Trim(),
-            OrigenTabla = origenTabla,
+            OrigenTabla = origenTabla?.Trim().ToLowerInvariant(),
             OrigenId    = origenId,
             Estado      = EstadoAsiento.Borrador
         };
@@ -53,6 +53,7 @@ public class Asiento : AuditableEntity
             throw new InvalidOperationException("No se pueden agregar líneas a un asiento contabilizado.");
 
         _lineas.Add(linea);
+        SetUpdated(null);
     }
 
     public void Contabilizar(long? userId)
@@ -60,10 +61,13 @@ public class Asiento : AuditableEntity
         if (Estado != EstadoAsiento.Borrador)
             throw new InvalidOperationException("Solo se pueden contabilizar asientos en estado Borrador.");
 
+        if (!_lineas.Any())
+            throw new InvalidOperationException("El asiento debe tener al menos una línea.");
+
         var totalDebe = _lineas.Sum(l => l.Debe);
         var totalHaber = _lineas.Sum(l => l.Haber);
 
-        if (Math.Round(totalDebe, 2) != Math.Round(totalHaber, 2))
+        if (Math.Abs(totalDebe - totalHaber) > 0.01m)
             throw new InvalidOperationException(
                 $"El asiento no balancea. Debe: {totalDebe:N2} | Haber: {totalHaber:N2}");
 
@@ -80,7 +84,7 @@ public class Asiento : AuditableEntity
         SetUpdated(userId);
     }
 
-    public decimal TotalDebe => _lineas.Sum(l => l.Debe);
-    public decimal TotalHaber => _lineas.Sum(l => l.Haber);
-    public bool Balancea => Math.Round(TotalDebe, 2) == Math.Round(TotalHaber, 2);
+    public decimal TotalDebe => _lineas.Sum(x => x.Debe);
+    public decimal TotalHaber => _lineas.Sum(x => x.Haber);
+    public bool Balancea => Math.Abs(TotalDebe - TotalHaber) <= 0.01m;
 }

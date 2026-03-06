@@ -17,4 +17,9 @@
 	<ItemGroup>
 		<ProjectReference Include="..\ZuluIA_Back.Domain\ZuluIA_Back.Domain.csproj" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="Features\Extras\Commands\" />
+	  <Folder Include="Features\Extras\Queries\" />
+	  <Folder Include="Features\RRHH\Queries\" />
+	</ItemGroup>
 </Project>

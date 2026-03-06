@@ -4,7 +4,6 @@ using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Finanzas;
 using ZuluIA_Back.Domain.Interfaces;
 using ZuluIA_Back.Domain.Services;
-using ZuluIA_Back.Infrastructure.Common.Interfaces;
 
 namespace ZuluIA_Back.Application.Features.Finanzas.Commands;
 
