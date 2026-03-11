@@ -128,6 +128,16 @@ public static class DependencyInjection
         services.AddScoped(typeof(IRepository<Busqueda>),
                            typeof(BaseRepository<Busqueda>));
 
+        services.AddScoped<NumeracionComprobanteService>();
+        services.AddScoped<PermisoService>();
+        services.AddScoped<CuentaCorrienteService>();
+        services.AddScoped<ContabilidadService>();
+        services.AddScoped<StockService>();
+        services.AddScoped<ComprobanteService>();
+        services.AddScoped<CuentaCorrienteService>();
+        services.AddScoped<ContabilidadService>();
+        services.AddScoped<ProduccionService>();
+
         services.AddScoped(typeof(IRepository<Cobro>), typeof(BaseRepository<Cobro>));
         services.AddScoped(typeof(IRepository<CobroMedio>), typeof(BaseRepository<CobroMedio>));
         services.AddScoped(typeof(IRepository<Pago>), typeof(BaseRepository<Pago>));

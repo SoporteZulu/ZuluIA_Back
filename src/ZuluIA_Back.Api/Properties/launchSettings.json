@@ -20,7 +20,8 @@
       "commandName": "IISExpress",
       "launchBrowser": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "SUPABASE_JWT_SECRET": "Tj51uW4opSpMT7b4TFhrqLxJ+kFcFDPn1bzb5n0V66ZqS+i5ezcEkpEtnoWRwitJdSihTsJIpU2mm43BiP3BCg=="
       }
     }
   },

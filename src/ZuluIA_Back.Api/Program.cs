@@ -68,6 +68,20 @@ try
 
     var isDevelopment = builder.Environment.IsDevelopment();
 
+    if (string.IsNullOrWhiteSpace(jwtSecret))
+    {
+        if (isDevelopment)
+        {
+            // Usar un secret dummy en desarrollo para que la app arranque
+            jwtSecret = "dev-only-dummy-secret-32-chars-min!!";
+            Log.Warning("SUPABASE_JWT_SECRET no configurado. Usando valor dummy para desarrollo.");
+        }
+        else
+        {
+            throw new InvalidOperationException("SUPABASE_JWT_SECRET no está configurado.");
+        }
+    }
+
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
