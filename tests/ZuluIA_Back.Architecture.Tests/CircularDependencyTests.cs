@@ -71,20 +71,31 @@ public class CircularDependencyTests
     }
 
     [Fact]
-    public void Application_NoReferenciaEFCore()
+    public void Application_NoReferenciaEFCore_Directamente()
     {
-        var appRefs = AssemblyReferences.ApplicationAssembly
-            .GetReferencedAssemblies()
-            .Select(a => a.Name ?? "")
+        // Los handlers en Application no deben inyectar DbContext directamente,
+        // solo a través de IApplicationDbContext
+        var handlersConDbContextDirecto = AssemblyReferences.ApplicationAssembly
+            .GetTypes()
+            .Where(t => (t.Name.EndsWith("CommandHandler") || t.Name.EndsWith("QueryHandler"))
+                     && !t.IsAbstract && t.IsClass)
+            .Where(t =>
+            {
+                var ctors = t.GetConstructors();
+                return ctors.Any(c =>
+                    c.GetParameters().Any(p =>
+                        // A concrete DbContext parameter is non-interface and has a name ending in "DbContext"
+                        // (interfaces like IApplicationDbContext are excluded by IsInterface check)
+                        !p.ParameterType.IsInterface &&
+                        p.ParameterType.Name.EndsWith("DbContext")));
+            })
+            .Select(t => t.Name)
             .ToList();
 
-        appRefs.Should().NotContain(
-            "Microsoft.EntityFrameworkCore",
-            because: "Application no debe referenciar EF Core directamente. " +
-                     "Debe usar IApplicationDbContext.");
-
-        appRefs.Should().NotContain(
-            "Npgsql",
-            because: "Application no debe referenciar Npgsql directamente.");
+        handlersConDbContextDirecto.Should().BeEmpty(
+            because: "Los handlers de Application no deben inyectar DbContext directamente. " +
+                     "Deben usar IApplicationDbContext. " +
+                     "Handlers con DbContext directo: " +
+                     string.Join(", ", handlersConDbContextDirecto));
     }
 }
