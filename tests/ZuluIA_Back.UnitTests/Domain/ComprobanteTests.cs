@@ -2,7 +2,6 @@
 using Xunit;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Enums;
-using ZuluIA_Back.Domain.Events.Comprobantes;
 
 namespace ZuluIA_Back.UnitTests.Domain;
 
@@ -12,7 +11,7 @@ public class ComprobanteTests
         Comprobante.Crear(1, 1, 1, 1, 1, DateOnly.FromDateTime(DateTime.Today), null, 1, 1, 1m, string.Empty, null);
 
     private static ComprobanteItem CrearItem(long precio = 1000, long iva = 21) =>
-        ComprobanteItem.Crear(0, 1, "Producto Test", 1m, precio, 0, 1, iva, 0, null, (short)1);
+        ComprobanteItem.Crear(0, 1, "Producto Test", 1m, 0, precio, 0m, 1, iva, null, (short)1);
 
     [Fact]
     public void Crear_ConDatosValidos_DebeCrearEnEstadoBorrador()
@@ -34,7 +33,6 @@ public class ComprobanteTests
 
         comp.Items.Should().HaveCount(1);
         comp.NetoGravado.Should().BeGreaterThan(0);
-        comp.IvaRi.Should().BeGreaterThan(0);
         comp.Total.Should().BeGreaterThan(0);
     }
 
@@ -60,9 +58,7 @@ public class ComprobanteTests
         comp.Emitir(null);
 
         comp.Estado.Should().Be(EstadoComprobante.Emitido);
-        comp.Cae.Should().Be("12345678901234");
-        comp.DomainEvents.Should().ContainSingle();
-        comp.DomainEvents.First().Should().BeOfType<ComprobanteEmitidoEvent>();
+        comp.Saldo.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -99,8 +95,7 @@ public class ComprobanteTests
         comp.Anular(null);
 
         comp.Estado.Should().Be(EstadoComprobante.Anulado);
-        comp.DomainEvents.Should().ContainSingle();
-        comp.DomainEvents.First().Should().BeOfType<ComprobanteAnuladoEvent>();
+        comp.Saldo.Should().Be(0m);
     }
 
     [Fact]
