@@ -63,8 +63,8 @@ public class GetComprobantesPagedQueryHandler(
             Total                       = c.Total,
             Saldo                       = c.Saldo,
             Estado                      = c.Estado,
-            Cae                         = c.Cae,
-            TieneCae                    = !string.IsNullOrEmpty(c.Cae)
+            Cae                         = c.Cae
+            //TieneCae                    = !string.IsNullOrEmpty(c.Cae)
         }).ToList();
 
         return new PagedResult<ComprobanteListDto>(

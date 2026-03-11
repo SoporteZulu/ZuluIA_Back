@@ -25,7 +25,7 @@ public class EjercicioRepository(AppDbContext context)
             .Include(x => x.Sucursales)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
 
-    public async Task<IReadOnlyList<Ejercicio>> GetAllAsync(
+    new public async Task<IReadOnlyList<Ejercicio>> GetAllAsync(
         CancellationToken ct = default) =>
         await DbSet
             .AsNoTracking()

@@ -41,17 +41,17 @@ public class GetItemsPagedQueryHandler(
             ? await db.CategoriasItems
                 .AsNoTracking()
                 .Where(x => categoriaIds.Contains(x.Id))
-                .Select(x => new { x.Id, x.Descripcion })
-                .ToDictionaryAsync(x => x.Id, ct)
-            : new Dictionary<long, dynamic>();
+                .Select(x => new KeyValuePair<long, string>(x.Id, x.Descripcion))
+                .ToDictionaryAsync(x => x.Key, x => x.Value, ct)
+            : new Dictionary<long, string>();
 
         var unidades = unidadIds.Count > 0
             ? await db.UnidadesMedida
                 .AsNoTracking()
                 .Where(x => unidadIds.Contains(x.Id))
-                .Select(x => new { x.Id, x.Descripcion })
-                .ToDictionaryAsync(x => x.Id, ct)
-            : new Dictionary<long, dynamic>();
+                .Select(x => new KeyValuePair<long, string>(x.Id, x.Descripcion))
+                .ToDictionaryAsync(x => x.Key, x => x.Value, ct)
+            : new Dictionary<long, string>();
 
         var dtos = result.Items.Select(i => new ItemListDto
         {
@@ -61,10 +61,10 @@ public class GetItemsPagedQueryHandler(
             Descripcion             = i.Descripcion,
             CategoriaId             = i.CategoriaId,
             CategoriaDescripcion    = i.CategoriaId.HasValue
-                ? categorias.GetValueOrDefault(i.CategoriaId.Value)?.Descripcion
+                ? categorias.GetValueOrDefault(i.CategoriaId.Value)
                 : null,
             UnidadMedidaId          = i.UnidadMedidaId,
-            UnidadMedidaDescripcion = unidades.GetValueOrDefault(i.UnidadMedidaId)?.Descripcion,
+            UnidadMedidaDescripcion = unidades.GetValueOrDefault(i.UnidadMedidaId),
             EsProducto              = i.EsProducto,
             EsServicio              = i.EsServicio,
             ManejaStock             = i.ManejaStock,

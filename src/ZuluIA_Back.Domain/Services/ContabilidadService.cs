@@ -61,8 +61,8 @@ public class ContabilidadService(
             asiento.AgregarLinea(linea);
         }
 
-        // 5. Confirmar (valida que cuadre)
-        asiento.Confirmar();
+        if (!asiento.Balancea)
+            throw new InvalidOperationException("El asiento no balancea. Verifique los montos de 'Debe' y 'Haber'.");
 
         await asientoRepo.AddAsync(asiento, ct);
         return asiento;

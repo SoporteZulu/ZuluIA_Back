@@ -4,11 +4,11 @@ public record CreateComprobanteItemDto(
 long ItemId,
 string Descripcion,
 decimal Cantidad,
-decimal PrecioUnitario,
-decimal DescuentoPct,
+long PrecioUnitario,
+long DescuentoPct,
 long AlicuotaIvaId,
-decimal PorcentajeIva,
+long PorcentajeIva,
 long? DepositoId,
 short Orden,
-decimal CantidadBonif = 0
+long CantidadBonif = 0
 );

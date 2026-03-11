@@ -28,7 +28,7 @@ public class CreateSucursalCommandValidator : AbstractValidator<CreateSucursalCo
             .WithMessage("El email no tiene un formato válido.");
 
         RuleFor(x => x.PuertoAfip)
-            .InclusiveBetween((short)1, (short)65535)
+            .InclusiveBetween((short)1, short.MaxValue)
             .WithMessage("El puerto AFIP debe estar entre 1 y 65535.");
     }
 }

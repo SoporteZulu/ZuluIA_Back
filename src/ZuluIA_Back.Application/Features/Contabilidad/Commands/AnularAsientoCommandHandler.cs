@@ -16,7 +16,7 @@ public class AnularAsientoCommandHandler(
         if (asiento is null)
             return Result.Failure($"No se encontró el asiento con ID {request.Id}.");
 
-        asiento.Anular();
+        asiento.Anular(request.Id);
         repo.Update(asiento);
         await uow.SaveChangesAsync(ct);
 

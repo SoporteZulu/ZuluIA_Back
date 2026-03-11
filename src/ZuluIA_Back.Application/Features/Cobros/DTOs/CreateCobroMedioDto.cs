@@ -3,8 +3,8 @@
 public record CreateCobroMedioDto(
     long CajaId,
     long FormaPagoId,
-    decimal Importe,
+    long Importe,
     long MonedaId,
-    decimal Cotizacion,
+    long Cotizacion,
     long? ChequeId = null
 );

@@ -6,7 +6,7 @@ public class AlicuotaIva : BaseEntity
 {
     public short Codigo { get; private set; }
     public string Descripcion { get; private set; } = string.Empty;
-    public decimal Porcentaje { get; private set; }
+    public long Porcentaje { get; private set; }
 
     private AlicuotaIva() { }
 }

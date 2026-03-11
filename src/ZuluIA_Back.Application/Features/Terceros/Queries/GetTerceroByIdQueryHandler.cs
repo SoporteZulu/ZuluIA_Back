@@ -28,33 +28,55 @@ public class GetTerceroByIdQueryHandler(
         var dto = mapper.Map<TerceroDto>(tercero);
 
         // ── 3. Resolver descripciones de catálogos ────────────────────────────
-        // Usa los métodos RAW para obtener los datos como string.
-        // Cuando tengas los DbSet reales, reemplaza estos bloques por búsquedas a los DbSet.
 
         // TipoDocumento
-        var tipoDocList = await db.GetTipoDocumentosRawAsync(ct); // Devuelve lista de string (solo los nombres, ejemplo)
-        dto.TipoDocumentoDescripcion = tipoDocList.FirstOrDefault() ?? string.Empty;
+        var tipoDoc = await db.TiposDocumento
+            .FindAsync(new object[] { tercero.TipoDocumentoId }, ct);
+        dto.TipoDocumentoDescripcion = tipoDoc?.Descripcion ?? string.Empty;
 
         // CondiciónIVA
-        var condIvaList = await db.GetCondicionesIvaRawAsync(ct);
-        dto.CondicionIvaDescripcion = condIvaList.FirstOrDefault() ?? string.Empty;
+        var condIva = await db.CondicionesIva
+            .FindAsync(new object[] { tercero.CondicionIvaId }, ct);
+        dto.CondicionIvaDescripcion = condIva?.Descripcion ?? string.Empty;
 
         // Categoría (opcional)
-        var catList = await db.GetCategoriasTerceroRawAsync(ct);
-        dto.CategoriaDescripcion = catList.FirstOrDefault() ?? string.Empty;
+        if (tercero.CategoriaId.HasValue)
+        {
+            var categoria = await db.CategoriasTerceros
+                .FindAsync(new object[] { tercero.CategoriaId.Value }, ct);
+            dto.CategoriaDescripcion = categoria?.Descripcion ?? string.Empty;
+        }
 
         // Moneda (opcional)
-        var monedaList = await db.GetMonedasRawAsync(ct);
-        dto.MonedaDescripcion = monedaList.FirstOrDefault() ?? string.Empty;
+        if (tercero.MonedaId.HasValue)
+        {
+            var moneda = await db.Monedas
+                .FindAsync(new object[] { tercero.MonedaId.Value }, ct);
+            dto.MonedaDescripcion = moneda?.Descripcion ?? string.Empty;
+        }
 
         // Cobrador/Vendedor (opcional)
-        var usuariosList = await db.GetUsuariosRawAsync(ct);
-        dto.CobradorNombre = usuariosList.FirstOrDefault() ?? string.Empty;
-        dto.VendedorNombre = usuariosList.FirstOrDefault() ?? string.Empty;
+        if (tercero.CobradorId.HasValue)
+        {
+            var cobrador = await db.Usuarios
+                .FindAsync(new object[] { tercero.CobradorId.Value }, ct);
+            dto.CobradorNombre = cobrador?.NombreCompleto ?? string.Empty;
+        }
+        if (tercero.VendedorId.HasValue)
+        {
+            var vendedor = await db.Usuarios
+                .FindAsync(new object[] { tercero.VendedorId.Value }, ct);
+            dto.VendedorNombre = vendedor?.NombreCompleto ?? string.Empty;
+        }
 
         // Sucursal (opcional)
-        var sucursalList = await db.GetSucursalesRawAsync(ct);
-        dto.SucursalDescripcion = sucursalList.FirstOrDefault() ?? string.Empty;
+        if (tercero.SucursalId.HasValue)
+        {
+            var sucursal = await db.Sucursales
+                .FindAsync(new object[] { tercero.SucursalId.Value }, ct);
+            dto.SucursalDescripcion = sucursal?.RazonSocial ?? string.Empty;
+        }
+
 
         // ── 4. Resolver descripciones del Domicilio ───────────────────────────
         if (tercero.Domicilio.LocalidadId.HasValue)

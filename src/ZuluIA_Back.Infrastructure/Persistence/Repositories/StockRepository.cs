@@ -1,20 +1,25 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using ZuluIA_Back.Domain.Entities.Items;
 using ZuluIA_Back.Domain.Entities.Stock;
 using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Infrastructure.Persistence.Repositories;
 
-public class StockRepository(AppDbContext context)
-    : BaseRepository<StockItem>(context), IStockRepository
+public class StockRepository : BaseRepository<StockItem>, IStockRepository
 {
+    private readonly AppDbContext _context;
+
+    public StockRepository(AppDbContext context) : base(context)
+    {
+        _context = context;
+    }
+
     public async Task<StockItem?> GetByItemDepositoAsync(
         long itemId,
         long depositoId,
         CancellationToken ct = default) =>
         await DbSet
             .FirstOrDefaultAsync(x =>
-                x.ItemId     == itemId &&
+                x.ItemId == itemId &&
                 x.DepositoId == depositoId,
                 ct);
 
@@ -50,15 +55,14 @@ public class StockRepository(AppDbContext context)
         long? depositoId,
         CancellationToken ct = default)
     {
-        // Join con items para comparar cantidad vs stock_minimo
         var query =
-            from s in context.Stock.AsNoTracking()
-            join i in context.Items.AsNoTracking()
+            from s in _context.Stock.AsNoTracking()
+            join i in _context.Items.AsNoTracking()
                 on s.ItemId equals i.Id
-            join d in context.Depositos.AsNoTracking()
+            join d in _context.Depositos.AsNoTracking()
                 on s.DepositoId equals d.Id
             where i.ManejaStock &&
-                  i.Activo      &&
+                  i.Activo &&
                   s.Cantidad < i.StockMinimo
             select s;
 
@@ -67,7 +71,7 @@ public class StockRepository(AppDbContext context)
 
         if (sucursalId.HasValue)
         {
-            var depositoIds = context.Depositos
+            var depositoIds = _context.Depositos
                 .AsNoTracking()
                 .Where(d => d.SucursalId == sucursalId.Value && d.Activo)
                 .Select(d => d.Id);
@@ -87,7 +91,7 @@ public class StockRepository(AppDbContext context)
     {
         var stock = await DbSet
             .FirstOrDefaultAsync(x =>
-                x.ItemId     == itemId &&
+                x.ItemId == itemId &&
                 x.DepositoId == depositoId,
                 ct);
 

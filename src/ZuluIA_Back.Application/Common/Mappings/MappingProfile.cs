@@ -32,7 +32,7 @@ public class MappingProfile : Profile
             .ForMember(d => d.NroFormateado, o => o.MapFrom(s => s.Numero.Formateado));
 
         CreateMap<Comprobante, ComprobanteListDto>()
-            .ForMember(d => d.NroFormateado, o => o.MapFrom(s => s.Numero.Formateado));
+            .ForMember(d => d.NumeroFormateado, o => o.MapFrom(s => s.Numero.Formateado));
 
         CreateMap<ComprobanteItem, ComprobanteItemDto>();
 

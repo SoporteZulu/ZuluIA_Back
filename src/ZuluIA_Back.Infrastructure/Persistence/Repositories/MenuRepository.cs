@@ -4,9 +4,12 @@ using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Infrastructure.Persistence.Repositories;
 
-public class MenuRepository(AppDbContext context)
-    : BaseRepository<MenuItem>(context), IMenuRepository
+public class MenuRepository : BaseRepository<MenuItem>, IMenuRepository
 {
+    public MenuRepository(AppDbContext context) : base(context)
+    {
+    }
+
     public async Task<IReadOnlyList<MenuItem>> GetArbolCompletoAsync(
         CancellationToken ct = default) =>
         await DbSet
@@ -20,7 +23,7 @@ public class MenuRepository(AppDbContext context)
         long usuarioId,
         CancellationToken ct = default)
     {
-        var menuIds = await context.MenuUsuario
+        var menuIds = await Context.MenuUsuario
             .AsNoTracking()
             .Where(x => x.UsuarioId == usuarioId)
             .Select(x => x.MenuId)
@@ -37,7 +40,7 @@ public class MenuRepository(AppDbContext context)
     public async Task<IReadOnlyList<long>> GetMenuIdsUsuarioAsync(
         long usuarioId,
         CancellationToken ct = default) =>
-        await context.MenuUsuario
+        await Context.MenuUsuario
             .AsNoTracking()
             .Where(x => x.UsuarioId == usuarioId)
             .Select(x => x.MenuId)

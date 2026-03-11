@@ -31,15 +31,17 @@ public class CreateComprobanteCommandHandler(
             request.Prefijo,
             request.Numero,
             request.Fecha,
+            request.FechaVencimiento,
             request.TerceroId,
             request.MonedaId,
             request.Cotizacion,
+            request.Observacion,
             currentUser.UserId);
 
         if (request.FechaVencimiento.HasValue)
-            comprobante.SetFechaVencimiento(request.FechaVencimiento.Value);
+            comprobante.SetFechaVencimiento(request.FechaVencimiento.Value, currentUser.UserId);
 
-        comprobante.SetObservacion(request.Observacion);
+        //comprobante.SetObservacion(request.Observacion);
 
         foreach (var itemDto in request.Items.OrderBy(i => i.Orden))
         {
@@ -48,13 +50,13 @@ public class CreateComprobanteCommandHandler(
                 itemDto.ItemId,
                 itemDto.Descripcion,
                 itemDto.Cantidad,
+                itemDto.CantidadBonif,
                 itemDto.PrecioUnitario,
                 itemDto.DescuentoPct,
                 itemDto.AlicuotaIvaId,
                 itemDto.PorcentajeIva,
                 itemDto.DepositoId,
-                itemDto.Orden,
-                itemDto.CantidadBonif);
+                itemDto.Orden);
 
             comprobante.AgregarItem(linea);
         }

@@ -4,9 +4,15 @@ using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Infrastructure.Persistence.Repositories;
 
-public class ParametroUsuarioRepository(AppDbContext context)
-    : BaseRepository<ParametroUsuario>(context), IParametroUsuarioRepository
+public class ParametroUsuarioRepository : BaseRepository<ParametroUsuario>, IParametroUsuarioRepository
 {
+    private readonly AppDbContext _context;
+
+    public ParametroUsuarioRepository(AppDbContext context) : base(context)
+    {
+        _context = context;
+    }
+
     public async Task<ParametroUsuario?> GetByClaveAsync(
         long usuarioId,
         string clave,
@@ -49,6 +55,6 @@ public class ParametroUsuarioRepository(AppDbContext context)
             DbSet.Update(existing);
         }
 
-        await context.SaveChangesAsync(ct);
+        await _context.SaveChangesAsync(ct);
     }
 }

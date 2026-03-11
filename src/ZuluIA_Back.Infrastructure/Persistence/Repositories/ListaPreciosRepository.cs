@@ -4,9 +4,12 @@ using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Infrastructure.Persistence.Repositories;
 
-public class ListaPreciosRepository(AppDbContext context)
-    : BaseRepository<ListaPrecios>(context), IListaPreciosRepository
+public class ListaPreciosRepository : BaseRepository<ListaPrecios>, IListaPreciosRepository
 {
+    public ListaPreciosRepository(AppDbContext context) : base(context)
+    {
+    }
+
     public async Task<IReadOnlyList<ListaPrecios>> GetActivasAsync(
         DateOnly? fecha = null,
         CancellationToken ct = default)
@@ -39,7 +42,7 @@ public class ListaPreciosRepository(AppDbContext context)
         long listaId,
         long itemId,
         CancellationToken ct = default) =>
-        await context.ListaPreciosItems
+        await Context.ListaPreciosItems
             .AsNoTracking()
             .FirstOrDefaultAsync(
                 x => x.ListaId == listaId && x.ItemId == itemId,
@@ -50,7 +53,7 @@ public class ListaPreciosRepository(AppDbContext context)
         long monedaId,
         DateOnly fecha,
         CancellationToken ct = default) =>
-        await context.ListaPreciosItems
+        await Context.ListaPreciosItems
             .AsNoTracking()
             .Include(x => x.Lista)
             .Where(x =>

@@ -12,6 +12,6 @@ public interface IEjercicioRepository : IRepository<Ejercicio>
         long id,
         CancellationToken ct = default);
 
-    Task<IReadOnlyList<Ejercicio>> GetAllAsync(
+    new Task<IReadOnlyList<Ejercicio>> GetAllAsync(
         CancellationToken ct = default);
 }

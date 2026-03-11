@@ -14,11 +14,13 @@ public class ContabilidadController(IMediator mediator) : BaseController(mediato
         [FromQuery] int pageSize = 20,
         [FromQuery] long ejercicioId = 0,
         [FromQuery] long? sucursalId = null,
-        [FromQuery] string? estado = null,
+        [FromQuery] Domain.Enums.EstadoAsiento? estado = null,
+        [FromQuery] DateOnly? desde = null,
+        [FromQuery] DateOnly? hasta = null,
         CancellationToken ct = default)
     {
         var result = await Mediator.Send(
-            new GetAsientosPagedQuery(page, pageSize, ejercicioId, sucursalId, estado), ct);
+            new GetAsientosPagedQuery(page, pageSize, ejercicioId, sucursalId, estado, desde, hasta), ct);
         return Ok(result);
     }
 

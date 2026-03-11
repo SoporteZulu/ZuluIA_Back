@@ -32,10 +32,10 @@ public class CreateCobroCommandHandler(
                 0,
                 medioDto.CajaId,
                 medioDto.FormaPagoId,
+                medioDto.ChequeId,
                 medioDto.Importe,
                 medioDto.MonedaId,
-                medioDto.Cotizacion,
-                medioDto.ChequeId);
+                medioDto.Cotizacion);
 
             cobro.AgregarMedio(medio);
         }

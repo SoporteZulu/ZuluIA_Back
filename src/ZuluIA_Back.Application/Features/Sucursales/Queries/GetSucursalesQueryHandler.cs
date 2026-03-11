@@ -1,23 +1,31 @@
 ﻿using AutoMapper;
 using MediatR;
 using ZuluIA_Back.Application.Features.Sucursales.DTOs;
+using ZuluIA_Back.Domain.Entities.Sucursales;
 using ZuluIA_Back.Domain.Interfaces;
 
-namespace ZuluIA_Back.Application.Features.Sucursales.Queries;
-
-public class GetSucursalesQueryHandler(
-    ISucursalRepository repo,
-    IMapper mapper)
-    : IRequestHandler<GetSucursalesQuery, IReadOnlyList<SucursalListDto>>
+namespace ZuluIA_Back.Application.Features.Sucursales.Queries
 {
-    public async Task<IReadOnlyList<SucursalListDto>> Handle(
-        GetSucursalesQuery request,
-        CancellationToken ct)
+    public class GetSucursalesQueryHandler : IRequestHandler<GetSucursalesQuery, IReadOnlyList<SucursalListDto>>
     {
-        var sucursales = request.SoloActivas
-            ? await repo.GetAllActivasAsync(ct)
-            : await repo.GetAllAsync(ct);
+        private readonly IMapper mapper;
+        private readonly ISucursalRepository repo;
 
-        return mapper.Map<IReadOnlyList<SucursalListDto>>(sucursales);
+        public GetSucursalesQueryHandler(IMapper mapper, ISucursalRepository repo)
+        {
+            this.mapper = mapper;
+            this.repo = repo;
+        }
+
+        public async Task<IReadOnlyList<SucursalListDto>> Handle(
+            GetSucursalesQuery request,
+            CancellationToken ct)
+        {
+            var sucursales = request.SoloActivas
+                ? (IReadOnlyList<Sucursal>)await repo.GetAllActivasAsync(ct)
+                : (IReadOnlyList<Sucursal>)await repo.GetAllAsync(ct);
+
+            return mapper.Map<IReadOnlyList<SucursalListDto>>(sucursales);
+        }
     }
 }

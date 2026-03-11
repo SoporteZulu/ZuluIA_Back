@@ -4,17 +4,23 @@ using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Infrastructure.Persistence.Repositories;
 
-public class SeguridadRepository(AppDbContext context)
-    : BaseRepository<Seguridad>(context), ISeguridadRepository
+public class SeguridadRepository : BaseRepository<Seguridad>, ISeguridadRepository
 {
+    private readonly AppDbContext _context;
+
+    public SeguridadRepository(AppDbContext context) : base(context)
+    {
+        _context = context;
+    }
+
     public async Task<Dictionary<string, bool>> GetPermisosUsuarioAsync(
         long usuarioId,
         CancellationToken ct = default)
     {
         // Une la tabla seguridad con seguridad_usuario para este usuario
         var permisos = await (
-            from s in context.Seguridad.AsNoTracking()
-            join su in context.SeguridadUsuario.AsNoTracking()
+            from s in _context.Seguridad.AsNoTracking()
+            join su in _context.SeguridadUsuario.AsNoTracking()
                 on new { SeguridadId = s.Id, UsuarioId = usuarioId }
                 equals new { su.SeguridadId, su.UsuarioId }
                 into suJoin
@@ -46,7 +52,7 @@ public class SeguridadRepository(AppDbContext context)
         if (seguridad is null) return false;
         if (!seguridad.AplicaSeguridadPorUsuario) return true;
 
-        return await context.SeguridadUsuario
+        return await _context.SeguridadUsuario
             .AsNoTracking()
             .AnyAsync(x =>
                 x.SeguridadId == seguridad.Id &&

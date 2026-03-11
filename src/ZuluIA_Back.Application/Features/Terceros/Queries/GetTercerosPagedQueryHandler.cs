@@ -43,22 +43,17 @@ public class GetTercerosPagedQueryHandler(
         var items = mapper.Map<IReadOnlyList<TerceroListDto>>(paged.Items);
 
         // ── 4. Resolver descripciones de FK en batch ──────────────────────────
-        // Se obtienen los IDs únicos para hacer una sola consulta por catálogo
-        // en lugar de N queries (equivalente al JOIN que el VB6 hacía en el SELECT).
-
-        // ── 4. Resolver descripciones de FK en batch ──────────────────────────
         // CondiciónIVA
         var condicionIvaIds = paged.Items
             .Select(x => x.CondicionIvaId)
             .Distinct()
             .ToList();
 
-        // Temporal: usar método raw hasta tener el DbSet real
-        var condicionesIvaRaw = await db.GetCondicionesIvaRawAsync(ct);
-        var condicionesIva = condicionIvaIds.ToDictionary(
-            id => id,
-            id => condicionesIvaRaw.FirstOrDefault() ?? string.Empty
-        );
+        Dictionary<long, string> condicionesIva = condicionIvaIds.Count > 0
+            ? await db.CondicionesIva
+                .Where(x => condicionIvaIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.Descripcion, ct)
+            : [];
 
         // Localidades (del domicilio, para columna de ubicación)
         var localidadIds = paged.Items

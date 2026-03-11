@@ -12,6 +12,7 @@ public class Asiento : AuditableEntity
     public string Descripcion { get; private set; } = string.Empty;
     public string? OrigenTabla { get; private set; }
     public long? OrigenId { get; private set; }
+    public bool Cuadra { get; private set; }
     public EstadoAsiento Estado { get; private set; }
 
     private readonly List<AsientoLinea> _lineas = [];

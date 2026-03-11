@@ -10,6 +10,7 @@ using ZuluIA_Back.Domain.Entities.Geografia;
 using ZuluIA_Back.Domain.Entities.Items;
 using ZuluIA_Back.Domain.Entities.Precios;
 using ZuluIA_Back.Domain.Entities.Produccion;
+using ZuluIA_Back.Domain.Entities.Referencia;
 
 using ZuluIA_Back.Domain.Entities.RRHH;
 
@@ -43,8 +44,8 @@ public interface IApplicationDbContext
     DbSet<Tercero> Terceros { get; }
 
     // ─── Catálogos de referencia ──────────────────────────────────────────────
-    DbSet<TipoDocumento> TiposDocumento { get; }
-    DbSet<CondicionIva> CondicionesIva { get; }
+    DbSet<Domain.Entities.Referencia.TipoDocumento> TiposDocumento { get; }
+    DbSet<Domain.Entities.Referencia.CondicionIva> CondicionesIva { get; }
     DbSet<CategoriaTercero> CategoriasTerceros { get; }
     DbSet<Moneda> Monedas { get; }
     DbSet<TipoComprobante> TiposComprobante { get; }

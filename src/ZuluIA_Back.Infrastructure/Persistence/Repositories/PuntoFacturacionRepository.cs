@@ -4,9 +4,12 @@ using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Infrastructure.Persistence.Repositories;
 
-public class PuntoFacturacionRepository(AppDbContext context)
-    : BaseRepository<PuntoFacturacion>(context), IPuntoFacturacionRepository
+public class PuntoFacturacionRepository : BaseRepository<PuntoFacturacion>, IPuntoFacturacionRepository
 {
+    public PuntoFacturacionRepository(AppDbContext context) : base(context)
+    {
+    }
+
     public async Task<IReadOnlyList<PuntoFacturacion>> GetActivosBySucursalAsync(
         long sucursalId,
         CancellationToken ct = default) =>
@@ -45,7 +48,7 @@ public class PuntoFacturacionRepository(AppDbContext context)
                 $"No se encontró el punto de facturación {puntoFacturacionId}.");
 
         // Buscar el último número emitido para ese punto y tipo
-        var ultimoNumero = await context.Comprobantes
+        var ultimoNumero = await Context.Comprobantes
             .AsNoTracking()
             .Where(x =>
                 x.PuntoFacturacionId == puntoFacturacionId &&

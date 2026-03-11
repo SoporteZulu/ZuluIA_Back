@@ -19,6 +19,7 @@ public class CreateItemCommandValidatorTests
         MonedaId: 1,
         EsProducto: true,
         EsServicio: false,
+        EsFinanciero: false,
         ManejaStock: true,
         PrecioCosto: 100m,
         PrecioVenta: 200m,

@@ -8,12 +8,12 @@ public class ComprobanteItem : BaseEntity
     public long ItemId { get; private set; }
     public string Descripcion { get; private set; } = string.Empty;
     public decimal Cantidad { get; private set; }
-    public decimal CantidadBonif { get; private set; } // Alias para compatibilidad
-    public decimal CantidadBonificada { get; private set; }
-    public decimal PrecioUnitario { get; private set; }
+    public long CantidadBonif { get; private set; } // Alias para compatibilidad
+    public long CantidadBonificada { get; private set; }
+    public long PrecioUnitario { get; private set; }
     public decimal DescuentoPct { get; private set; }
     public long AlicuotaIvaId { get; private set; }
-    public decimal PorcentajeIva { get; private set; }
+    public long PorcentajeIva { get; private set; }
     public decimal SubtotalNeto { get; private set; }
     public decimal IvaImporte { get; private set; }
     public decimal TotalLinea { get; private set; }
@@ -28,11 +28,11 @@ public class ComprobanteItem : BaseEntity
         long itemId,
         string descripcion,
         decimal cantidad,
-        decimal cantidadBonificada,
-        decimal precioUnitario,
+        long cantidadBonificada,
+        long precioUnitario,
         decimal descuentoPct,
         long alicuotaIvaId,
-        decimal porcentajeIva,
+        long porcentajeIva,
         long? depositoId,
         short orden,
         bool esGravado = true)

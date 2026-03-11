@@ -101,7 +101,7 @@ public class ComprobantesController(IMediator mediator, IApplicationDbContext db
                 x.EsCompra,
                 x.EsInterno,
                 x.AfectaStock,
-                x.AfectaCtaCte,
+                x.AfectaCuentaCorriente,
                 x.GeneraAsiento,
                 x.TipoAfip,
                 x.LetraAfip

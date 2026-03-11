@@ -128,6 +128,31 @@ public class Comprobante : AuditableEntity
         SetUpdated(userId);
     }
 
+    public void AplicarPago(decimal importe)
+    {
+        if (Estado != EstadoComprobante.Emitido)
+        {
+            throw new InvalidOperationException("Solo se puede aplicar un pago a un comprobante emitido.");
+        }
+
+        if (importe <= 0)
+        {
+            throw new ArgumentException("El importe debe ser mayor a cero.", nameof(importe));
+        }
+
+        Saldo -= importe;
+
+        if (Saldo <= 0)
+        {
+            Saldo = 0;
+            Estado = EstadoComprobante.Pagado;
+        }
+        else
+        {
+            Estado = EstadoComprobante.PagadoParcial;
+        }
+    }
+
     public void Emitir(long? userId)
     {
         if (Estado != EstadoComprobante.Borrador)

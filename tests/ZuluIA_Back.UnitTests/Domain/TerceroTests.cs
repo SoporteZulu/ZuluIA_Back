@@ -14,7 +14,7 @@ public class TerceroTests
         var tercero = Tercero.Crear(
             "CLI001", "Distribuidora El Sur SRL",
             1, "30-22222222-2", 1,
-            true, false, 1, null);
+            true, false, false, 1, null);
 
         tercero.Legajo.Should().Be("CLI001");
         tercero.RazonSocial.Should().Be("Distribuidora El Sur SRL");
@@ -29,7 +29,7 @@ public class TerceroTests
         var tercero = Tercero.Crear(
             "  cli001  ", "Empresa SA",
             1, "30-11111111-1", 1,
-            true, false, null, null);
+            true, false, false, null, null);
 
         tercero.Legajo.Should().Be("CLI001");
     }
@@ -40,7 +40,7 @@ public class TerceroTests
         var act = () => Tercero.Crear(
             "", "Empresa SA",
             1, "30-11111111-1", 1,
-            true, false, null, null);
+            true, false, false, null, null);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -51,7 +51,7 @@ public class TerceroTests
         var act = () => Tercero.Crear(
             "CLI001", "",
             1, "30-11111111-1", 1,
-            true, false, null, null);
+            true, false, false, null, null);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -62,7 +62,7 @@ public class TerceroTests
         var tercero = Tercero.Crear(
             "CLI001", "Empresa SA",
             1, "30-11111111-1", 1,
-            true, false, null, null);
+            true, false, false, null, null);
 
         tercero.DomainEvents.Should().ContainSingle();
         tercero.DomainEvents.First().Should().BeOfType<TerceroCreadoEvent>();
@@ -74,7 +74,7 @@ public class TerceroTests
         var tercero = Tercero.Crear(
             "CLI001", "Empresa SA",
             1, "30-11111111-1", 1,
-            true, false, null, null);
+            true, false, false, null, null);
 
         tercero.Actualizar(
             "Empresa SA Actualizada",
@@ -84,7 +84,11 @@ public class TerceroTests
             "nuevo@email.com",
             "www.empresa.com",
             new Domicilio("San Martín", "123", null, null, "X5000", 1, null),
+            null,
+            null,
             500000m,
+            true,
+            null,
             null);
 
         tercero.RazonSocial.Should().Be("Empresa SA Actualizada");
@@ -100,7 +104,7 @@ public class TerceroTests
         var tercero = Tercero.Crear(
             "CLI001", "Empresa SA",
             1, "30-11111111-1", 1,
-            true, false, null, null);
+            true, false, false, null, null);
 
         tercero.Desactivar(null);
 
@@ -114,7 +118,7 @@ public class TerceroTests
         var tercero = Tercero.Crear(
             "CLI001", "Empresa SA",
             1, "30-11111111-1", 1,
-            true, false, null, null);
+            true, false, false, null, null);
 
         tercero.ClearDomainEvents();
         tercero.Desactivar(null);
@@ -129,7 +133,7 @@ public class TerceroTests
         var tercero = Tercero.Crear(
             "CLI001", "Empresa SA",
             1, "30-11111111-1", 1,
-            true, false, null, null);
+            true, false, false, null, null);
 
         tercero.Desactivar(null);
         tercero.Activar(null);
