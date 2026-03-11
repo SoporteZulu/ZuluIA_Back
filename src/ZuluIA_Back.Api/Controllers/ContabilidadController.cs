@@ -24,7 +24,7 @@ public class ContabilidadController(IMediator mediator) : BaseController(mediato
         return Ok(result);
     }
 
-    [HttpGet("asientos/{id:long}", Name = "GetAsientoById")]
+    [HttpGet("asientos/{id:long}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetAsientoById(long id, CancellationToken ct)
