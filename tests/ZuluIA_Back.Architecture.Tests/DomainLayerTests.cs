@@ -90,18 +90,28 @@ public class DomainLayerTests
     [Fact]
     public void ValueObjects_DebenHeredarDeValueObject()
     {
-        var result = Types
-            .InAssembly(AssemblyReferences.DomainAssembly)
-            .That()
-            .ResideInNamespace($"{AssemblyReferences.DomainNamespace}.ValueObjects")
-            .And()
-            .AreClasses()
-            .Should()
-            .Inherit(typeof(ZuluIA_Back.Domain.Common.ValueObject))
-            .GetResult();
+        // Los records son inherentemente value objects de C# (IEquatable built-in)
+        // Solo verificamos las clases no-record y no generadas por el compilador
+        var voNoHereda = AssemblyReferences.DomainAssembly
+            .GetTypes()
+            .Where(t => t.Namespace == $"{AssemblyReferences.DomainNamespace}.ValueObjects"
+                     && t.IsClass
+                     && !t.IsAbstract
+                     // Exclude compiler-generated types (names starting with '<' are C# generated, e.g. iterator state machines)
+                     && !t.Name.StartsWith('<'))
+            .Where(t =>
+            {
+                // Excluir records (tienen la propiedad EqualityContract generada por el compilador)
+                var isRecord = t.GetProperty("EqualityContract",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance) != null;
+                return !isRecord;
+            })
+            .Where(t => !t.IsSubclassOf(typeof(ZuluIA_Back.Domain.Common.ValueObject)))
+            .Select(t => t.Name)
+            .ToList();
 
-        result.IsSuccessful.Should().BeTrue(
-            because: "Todos los value objects deben heredar de ValueObject. " +
-                     "Tipos fallidos: " + string.Join(", ", result.FailingTypeNames ?? []));
+        voNoHereda.Should().BeEmpty(
+            because: "Todas las clases (no records) en ValueObjects deben heredar de ValueObject. " +
+                     "Tipos fallidos: " + string.Join(", ", voNoHereda));
     }
 }

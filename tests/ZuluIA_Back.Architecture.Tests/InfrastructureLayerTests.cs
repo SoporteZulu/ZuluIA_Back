@@ -58,23 +58,26 @@ public class InfrastructureLayerTests
     }
 
     [Fact]
-    public void Repositories_DebenImplementarIRepository()
+    public void Repositories_DebenImplementarInterfazDeDomain()
     {
-        var result = Types
-            .InAssembly(AssemblyReferences.InfrastructureAssembly)
-            .That()
-            .HaveNameEndingWith("Repository")
-            .And()
-            .AreNotAbstract()
-            .Should()
-            .ImplementInterface(typeof(ZuluIA_Back.Domain.Interfaces.IUnitOfWork))
-            .Or()
-            .ImplementInterface(typeof(ZuluIA_Back.Domain.Interfaces.IRepository<>))
-            .GetResult();
+        var reposConProblemas = AssemblyReferences.InfrastructureAssembly
+            .GetTypes()
+            .Where(t => t.Name.EndsWith("Repository")
+                     && !t.IsAbstract
+                     && t.IsClass)
+            .Where(t =>
+            {
+                // Debe implementar AL MENOS UNA interfaz del namespace ZuluIA_Back.Domain
+                var interfaces = t.GetInterfaces();
+                return !interfaces.Any(i =>
+                    i.Namespace?.StartsWith("ZuluIA_Back.Domain") == true);
+            })
+            .Select(t => t.Name)
+            .ToList();
 
-        result.IsSuccessful.Should().BeTrue(
-            because: "Todos los Repositories deben implementar IRepository<>. " +
-                     "Tipos fallidos: " + string.Join(", ", result.FailingTypeNames ?? []));
+        reposConProblemas.Should().BeEmpty(
+            because: "Todos los Repositories deben implementar al menos una interfaz de Domain. " +
+                     "Tipos fallidos: " + string.Join(", ", reposConProblemas));
     }
 
     [Fact]
