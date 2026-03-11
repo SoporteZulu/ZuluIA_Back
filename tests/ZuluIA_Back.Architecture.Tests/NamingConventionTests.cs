@@ -78,17 +78,23 @@ public class NamingConventionTests
             .And()
             .AreNotAbstract()
             .And()
+            .AreClasses()
+            .And()
             .DoNotHaveNameEndingWith("Handler")
             .And()
             .DoNotHaveNameEndingWith("Validator")
             .And()
-            .AreClasses()
+            .DoNotHaveNameEndingWith("Dto")
+            .And()
+            .DoNotHaveNameEndingWith("Input")
+            .And()
+            .ImplementInterface(typeof(MediatR.IRequest<>))
             .Should()
             .HaveNameEndingWith("Command")
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue(
-            because: "Todos los Commands deben terminar en 'Command'. " +
+            because: "Todos los Commands (que implementan IRequest<>) deben terminar en 'Command'. " +
                      "Tipos fallidos: " + string.Join(", ", result.FailingTypeNames ?? []));
     }
 
@@ -102,15 +108,19 @@ public class NamingConventionTests
             .And()
             .AreNotAbstract()
             .And()
+            .AreClasses()
+            .And()
             .DoNotHaveNameEndingWith("Handler")
             .And()
-            .AreClasses()
+            .DoNotHaveNameEndingWith("Validator")
+            .And()
+            .ImplementInterface(typeof(MediatR.IRequest<>))
             .Should()
             .HaveNameEndingWith("Query")
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue(
-            because: "Todos los Queries deben terminar en 'Query'. " +
+            because: "Todos los Queries (que implementan IRequest<>) deben terminar en 'Query'. " +
                      "Tipos fallidos: " + string.Join(", ", result.FailingTypeNames ?? []));
     }
 

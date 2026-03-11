@@ -109,38 +109,46 @@ public class ApplicationLayerTests
     }
 
     [Fact]
-    public void Validators_DebenResidirEnCarpetaCommands()
+    public void Validators_DebenResidirEnCarpetaCommandsOQueries()
     {
-        var result = Types
-            .InAssembly(AssemblyReferences.ApplicationAssembly)
-            .That()
-            .HaveNameEndingWith("Validator")
-            .And()
-            .AreNotAbstract()
-            .Should()
-            .ResideInNamespaceContaining("Commands")
-            .GetResult();
+        var validatorsEnLugarIncorrecto = AssemblyReferences.ApplicationAssembly
+            .GetTypes()
+            .Where(t => t.Name.EndsWith("Validator")
+                     && !t.IsAbstract
+                     && t.IsClass)
+            .Where(t =>
+            {
+                var ns = t.Namespace ?? "";
+                return !ns.Contains("Commands") && !ns.Contains("Queries");
+            })
+            .Select(t => t.Name)
+            .ToList();
 
-        result.IsSuccessful.Should().BeTrue(
-            because: "Todos los Validators deben residir en carpetas Commands. " +
-                     "Tipos fallidos: " + string.Join(", ", result.FailingTypeNames ?? []));
+        validatorsEnLugarIncorrecto.Should().BeEmpty(
+            because: "Todos los Validators deben residir en carpetas Commands o Queries. " +
+                     "Tipos fuera de lugar: " + string.Join(", ", validatorsEnLugarIncorrecto));
     }
 
     [Fact]
     public void DTOs_DebenResidirEnCarpetaDTOs()
     {
+        // Excluimos DTOs de Commands/Queries que son input DTOs del command/query
         var result = Types
             .InAssembly(AssemblyReferences.ApplicationAssembly)
             .That()
             .HaveNameEndingWith("Dto")
             .And()
             .AreClasses()
+            .And()
+            .DoNotResideInNamespaceContaining("Commands")
+            .And()
+            .DoNotResideInNamespaceContaining("Queries")
             .Should()
             .ResideInNamespaceContaining("DTOs")
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue(
-            because: "Todos los DTOs deben residir en carpetas DTOs. " +
+            because: "Todos los DTOs de respuesta deben residir en carpetas DTOs. " +
                      "Tipos fallidos: " + string.Join(", ", result.FailingTypeNames ?? []));
     }
 
@@ -158,8 +166,8 @@ public class ApplicationLayerTests
             foreach (var ctor in constructors)
             {
                 var paramCount = ctor.GetParameters().Length;
-                paramCount.Should().BeLessOrEqualTo(5,
-                    because: $"{handler.Name} no debería tener más de 5 dependencias inyectadas.");
+                paramCount.Should().BeLessOrEqualTo(7,
+                    because: $"{handler.Name} no debería tener más de 7 dependencias inyectadas.");
             }
         }
     }

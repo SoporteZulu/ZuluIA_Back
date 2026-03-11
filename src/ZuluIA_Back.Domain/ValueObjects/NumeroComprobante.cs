@@ -4,7 +4,7 @@
 /// Value Object que representa el número de un comprobante AFIP.
 /// Formato: XXXX-XXXXXXXX (prefijo 4 dígitos - número 8 dígitos)
 /// </summary>
-public record NumeroComprobante(short Prefijo, long Numero)
+public sealed record NumeroComprobante(short Prefijo, long Numero)
 {
     public string Formateado => $"{Prefijo:D4}-{Numero:D8}";
 
