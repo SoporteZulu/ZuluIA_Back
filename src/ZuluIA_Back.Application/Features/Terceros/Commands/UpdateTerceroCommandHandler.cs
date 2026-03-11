@@ -12,37 +12,97 @@ public class UpdateTerceroCommandHandler(
     ICurrentUserService currentUser)
     : IRequestHandler<UpdateTerceroCommand, Result>
 {
-    public async Task<Result> Handle(UpdateTerceroCommand request, CancellationToken ct)
+    public async Task<Result> Handle(UpdateTerceroCommand command, CancellationToken ct)
     {
-        var tercero = await repo.GetByIdAsync(request.Id, ct);
-
+        // ── 1. Obtener entidad ────────────────────────────────────────────────
+        var tercero = await repo.GetByIdAsync(command.Id, ct);
         if (tercero is null)
-            return Result.Failure($"No se encontró el tercero con ID {request.Id}.");
+            return Result.Failure($"No se encontró el tercero con Id {command.Id}.");
 
-        tercero.Actualizar(
-            request.RazonSocial,
-            request.NombreFantasia,
-            request.Telefono,
-            request.Celular,
-            request.Email,
-            request.Web,
-            new Domicilio(
-                request.Calle,
-                request.Nro,
-                null,
-                null,
-                request.CodigoPostal,
-                request.LocalidadId,
-                request.BarrioId),
-            request.LimiteCredito,
-            currentUser.UserId);
+        if (tercero.IsDeleted)
+            return Result.Failure($"El tercero '{tercero.Legajo}' está dado de baja y no puede modificarse.");
 
-        if (request.CategoriaId.HasValue)
-            tercero.SetCategoria(request.CategoriaId);
+        // ── 2. Validar cambio de NroDocumento (si viene) ───────────────────────
+        if (!string.IsNullOrWhiteSpace(command.NroDocumento) &&
+            command.NroDocumento != tercero.NroDocumento)
+        {
+            if (await repo.ExisteNroDocumentoAsync(command.NroDocumento, excludeId: command.Id, ct))
+                return Result.Failure($"Ya existe un tercero con el documento '{command.NroDocumento}'.");
 
-        if (request.MonedaId.HasValue)
-            tercero.SetMoneda(request.MonedaId.Value);
+            tercero.ActualizarNroDocumento(command.NroDocumento, currentUser.UserId);
+        }
 
+        // ── 3. Validar cambio de roles ─────────────────────────────────────────
+        var rolesChanged = command.EsCliente   != tercero.EsCliente   ||
+                           command.EsProveedor != tercero.EsProveedor ||
+                           command.EsEmpleado  != tercero.EsEmpleado;
+
+        if (rolesChanged)
+        {
+            if (tercero.EsEmpleado && !command.EsEmpleado)
+            {
+                if (await repo.TieneEmpleadoActivoAsync(command.Id, ct))
+                    return Result.Failure(
+                        "No se puede quitar el rol Empleado porque el tercero tiene un legajo laboral activo. Dé de baja el empleado primero.");
+            }
+
+            try
+            {
+                tercero.ActualizarRoles(
+                    command.EsCliente,
+                    command.EsProveedor,
+                    command.EsEmpleado,
+                    currentUser.UserId);
+            }
+            catch (ArgumentException ex)
+            {
+                return Result.Failure(ex.Message);
+            }
+        }
+
+        // ── 4. Construir el VO Domicilio ───────────────────────────────────────
+        var domicilio = Domicilio.Crear(
+            command.Calle,
+            command.Nro,
+            command.Piso,
+            command.Dpto,
+            command.CodigoPostal,
+            command.LocalidadId,
+            command.BarrioId);
+
+        // ── 5. Actualizar datos principales ────────────────────────────────────
+        try
+        {
+            tercero.Actualizar(
+                command.RazonSocial,
+                command.NombreFantasia,
+                command.CondicionIvaId,
+                command.Telefono,
+                command.Celular,
+                command.Email,
+                command.Web,
+                domicilio,
+                command.NroIngresosBrutos,
+                command.NroMunicipal,
+                command.LimiteCredito,
+                command.Facturable,
+                command.CobradorId,
+                command.PctComisionCobrador,
+                command.VendedorId,
+                command.PctComisionVendedor,
+                command.Observacion,
+                currentUser.UserId);
+        }
+        catch (ArgumentException ex)
+        {
+            return Result.Failure(ex.Message);
+        }
+
+        // ── 6. Opcionales con setter propio ────────────────────────────────────
+        tercero.SetMoneda(command.MonedaId);
+        tercero.SetCategoria(command.CategoriaId);
+
+        // ── 7. Persistir ───────────────────────────────────────────────────────
         repo.Update(tercero);
         await uow.SaveChangesAsync(ct);
 

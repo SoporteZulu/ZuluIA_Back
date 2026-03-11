@@ -14,8 +14,9 @@ public class ItemTests
             "PROD001", "Notebook 15 pulgadas",
             1, 1, 1,
             true, false, true,
-            800000m, 1200000m,
-            null, null);
+            true, 800000m, 1200000m,
+            null, 0m, null,
+            null, null, null, null, null);
 
         item.Codigo.Should().Be("PROD001");
         item.Descripcion.Should().Be("Notebook 15 pulgadas");
@@ -34,8 +35,9 @@ public class ItemTests
             "SERV001", "Servicio de Instalación",
             1, 1, 1,
             false, true, true,
-            0m, 25000m,
-            null, null);
+            false, 0m, 25000m,
+            null, 0m, null,
+            null, null, null, null, null);
 
         item.EsServicio.Should().BeTrue();
         item.ManejaStock.Should().BeFalse();
@@ -48,8 +50,9 @@ public class ItemTests
             "PROD001", "Producto",
             1, 1, 1,
             true, true, false,
-            0m, 0m,
-            null, null);
+            false, 0m, 0m,
+            null, 0m, null,
+            null, null, null, null, null);
 
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*producto y servicio*");
@@ -62,8 +65,9 @@ public class ItemTests
             "  prod001  ", "Producto",
             1, 1, 1,
             true, false, false,
-            0m, 0m,
-            null, null);
+            false, 0m, 0m,
+            null, 0m, null,
+            null, null, null, null, null);
 
         item.Codigo.Should().Be("PROD001");
     }
@@ -75,12 +79,14 @@ public class ItemTests
             "PROD001", "Producto",
             1, 1, 1,
             true, false, false,
-            0m, 0m,
-            null, null);
+            false, 0m, 0m,
+            null, 0m, null,
+            null, null, null, null, null);
 
         item.DomainEvents.Should().ContainSingle();
         item.DomainEvents.First().Should().BeOfType<ItemCreadoEvent>();
     }
+
 
     [Fact]
     public void ActualizarPrecios_ConPreciosValidos_DebeActualizar()
@@ -89,8 +95,9 @@ public class ItemTests
             "PROD001", "Producto",
             1, 1, 1,
             true, false, false,
-            100m, 200m,
-            null, null);
+            true, 100m, 200m,
+            null, 0m, null,
+            null, null, null, null, null);
 
         item.ClearDomainEvents();
         item.ActualizarPrecios(150m, 250m, null);
@@ -106,8 +113,9 @@ public class ItemTests
             "PROD001", "Producto",
             1, 1, 1,
             true, false, false,
-            100m, 200m,
-            null, null);
+            true, 100m, 200m,
+            null, 0m, null,
+            null, null, null, null, null);
 
         item.ClearDomainEvents();
         item.ActualizarPrecios(150m, 300m, null);
@@ -125,11 +133,13 @@ public class ItemTests
             "PROD001", "Producto",
             1, 1, 1,
             true, false, false,
-            0m, 0m,
-            null, null);
+            true, 0m, 0m,
+            null, 0m, null,
+            null, null, null, null, null);
 
         item.Desactivar(null);
 
         item.Activo.Should().BeFalse();
     }
+
 }

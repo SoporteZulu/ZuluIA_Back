@@ -36,9 +36,9 @@ public class Cobro : AuditableEntity
             TerceroId   = terceroId,
             Fecha       = fecha,
             MonedaId    = monedaId,
-            Cotizacion  = cotizacion,
-            Observacion = observacion?.Trim(),
+            Cotizacion  = cotizacion <= 0 ? 1 : cotizacion,
             Estado      = EstadoCobro.Activo,
+            Observacion = observacion?.Trim(),
             Total       = 0
         };
 
@@ -49,12 +49,15 @@ public class Cobro : AuditableEntity
     public void AgregarMedio(CobroMedio medio)
     {
         if (Estado != EstadoCobro.Activo)
-            throw new InvalidOperationException("No se pueden agregar medios a un cobro anulado.");
+            throw new InvalidOperationException("No se pueden agregar medios a un cobro inactivo.");
 
         _medios.Add(medio);
-        Total = _medios.Sum(m => m.Importe);
+        RecalcularTotal();
         AddDomainEvent(new CobroRegistradoEvent(Id, SucursalId, TerceroId, Total, MonedaId));
     }
+
+    private void RecalcularTotal() =>
+        Total = _medios.Sum(x => x.Importe * x.Cotizacion);
 
     public void Anular(long? userId)
     {
@@ -67,5 +70,9 @@ public class Cobro : AuditableEntity
         AddDomainEvent(new CobroAnuladoEvent(Id, SucursalId, TerceroId, Total, MonedaId));
     }
 
-    public void SetNroCierre(int nro) => NroCierre = nro;
+    public void AsignarCierre(int nroCierre, long? userId)
+    {
+        NroCierre = nroCierre;
+        SetUpdated(userId);
+    }
 }

@@ -13,49 +13,80 @@ public class CreateTerceroCommandHandler(
     ICurrentUserService currentUser)
     : IRequestHandler<CreateTerceroCommand, Result<long>>
 {
-    public async Task<Result<long>> Handle(CreateTerceroCommand request, CancellationToken ct)
+    public async Task<Result<long>> Handle(CreateTerceroCommand command, CancellationToken ct)
     {
-        if (await repo.ExisteLegajoAsync(request.Legajo, null, ct))
-            return Result.Failure<long>($"Ya existe un tercero con el legajo '{request.Legajo}'.");
+        // ── 1. Validar unicidad de Legajo ──────────────────────────────────────
+        if (await repo.ExisteLegajoAsync(command.Legajo, null, ct))
+            return Result.Failure<long>($"Ya existe un tercero con el legajo '{command.Legajo.ToUpperInvariant()}'.");
 
-        if (await repo.ExisteNroDocumentoAsync(request.NroDocumento, null, ct))
-            return Result.Failure<long>($"Ya existe un tercero con el documento '{request.NroDocumento}'.");
+        // ── 2. Validar unicidad de NroDocumento ────────────────────────────────
+        if (await repo.ExisteNroDocumentoAsync(command.NroDocumento, null, ct))
+            return Result.Failure<long>($"Ya existe un tercero con el documento '{command.NroDocumento}'.");
 
-        var tercero = Tercero.Crear(
-            request.Legajo,
-            request.RazonSocial,
-            request.TipoDocumentoId,
-            request.NroDocumento,
-            request.CondicionIvaId,
-            request.EsCliente,
-            request.EsProveedor,
-            request.SucursalId,
-            currentUser.UserId);
+        // ── 3. Construir el Value Object Domicilio ─────────────────────────────
+        var domicilio = Domicilio.Crear(
+            command.Calle,
+            command.Nro,
+            command.Piso,
+            command.Dpto,
+            command.CodigoPostal,
+            command.LocalidadId,
+            command.BarrioId);
 
+        // ── 4. Crear la entidad usando el factory method ───────────────────────
+        Tercero tercero;
+        try
+        {
+            tercero = Tercero.Crear(
+                command.Legajo,
+                command.RazonSocial,
+                command.TipoDocumentoId,
+                command.NroDocumento,
+                command.CondicionIvaId,
+                command.EsCliente,
+                command.EsProveedor,
+                command.EsEmpleado,
+                command.SucursalId,
+                currentUser.UserId);
+        }
+        catch (ArgumentException ex)
+        {
+            return Result.Failure<long>(ex.Message);
+        }
+
+        // ── 5. Aplicar datos opcionales y comerciales ──────────────────────────
         tercero.Actualizar(
-            request.RazonSocial,
-            request.NombreFantasia,
-            request.Telefono,
-            request.Celular,
-            request.Email,
-            request.Web,
-            new Domicilio(
-                request.Calle,
-                request.Nro,
-                null,
-                null,
-                request.CodigoPostal,
-                request.LocalidadId,
-                request.BarrioId),
-            request.LimiteCredito,
+            command.RazonSocial,
+            command.NombreFantasia,
+            command.CondicionIvaId,
+            command.Telefono,
+            command.Celular,
+            command.Email,
+            command.Web,
+            domicilio,
+            command.NroIngresosBrutos,
+            command.NroMunicipal,
+            command.LimiteCredito,
+            command.Facturable,
+            command.CobradorId,
+            command.PctComisionCobrador,
+            command.VendedorId,
+            command.PctComisionVendedor,
+            command.Observacion,
             currentUser.UserId);
 
-        if (request.MonedaId.HasValue)
-            tercero.SetMoneda(request.MonedaId.Value);
+        tercero.SetMoneda(command.MonedaId);
+        tercero.SetCategoria(command.CategoriaId);
 
-        if (request.CategoriaId.HasValue)
-            tercero.SetCategoria(request.CategoriaId);
+        // ── 6. Roles (si es empleado, asegura el estado correcto) ──────────────
+        if (command.EsEmpleado)
+            tercero.ActualizarRoles(
+                command.EsCliente,
+                command.EsProveedor,
+                true,
+                currentUser.UserId);
 
+        // ── 7. Persistir ───────────────────────────────────────────────────────
         await repo.AddAsync(tercero, ct);
         await uow.SaveChangesAsync(ct);
 

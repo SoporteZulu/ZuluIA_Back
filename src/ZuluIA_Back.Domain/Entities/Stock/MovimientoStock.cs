@@ -19,10 +19,10 @@ public class MovimientoStock : BaseEntity
 
     private MovimientoStock() { }
 
-    public static MovimientoStock Registrar(
+    public static MovimientoStock Crear(
         long itemId,
         long depositoId,
-        TipoMovimientoStock tipo,
+        TipoMovimientoStock tipoMovimiento,
         decimal cantidad,
         decimal saldoResultante,
         string? origenTabla = null,
@@ -35,17 +35,17 @@ public class MovimientoStock : BaseEntity
 
         return new MovimientoStock
         {
-            ItemId          = itemId,
-            DepositoId      = depositoId,
-            Fecha           = DateTimeOffset.UtcNow,
-            TipoMovimiento  = tipo,
-            Cantidad        = cantidad,
-            SaldoResultante = saldoResultante,
-            OrigenTabla     = origenTabla,
-            OrigenId        = origenId,
-            Observacion     = observacion,
-            CreatedAt       = DateTimeOffset.UtcNow,
-            CreatedBy       = userId
+            ItemId           = itemId,
+            DepositoId       = depositoId,
+            Fecha            = DateTimeOffset.UtcNow,
+            TipoMovimiento   = tipoMovimiento,
+            Cantidad         = cantidad,
+            SaldoResultante  = saldoResultante,
+            OrigenTabla      = origenTabla?.Trim(),
+            OrigenId         = origenId,
+            Observacion      = observacion?.Trim(),
+            CreatedAt        = DateTimeOffset.UtcNow,
+            CreatedBy        = userId
         };
     }
 }

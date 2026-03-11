@@ -9,10 +9,10 @@ namespace ZuluIA_Back.UnitTests.Domain;
 public class ComprobanteTests
 {
     private static Comprobante CrearComprobante() =>
-        Comprobante.Crear(1, 1, 1, 1, 1, DateOnly.FromDateTime(DateTime.Today), 1, 1, 1m, null);
+        Comprobante.Crear(1, 1, 1, 1, 1, DateOnly.FromDateTime(DateTime.Today), null, 1, 1, 1m, string.Empty, null);
 
-    private static ComprobanteItem CrearItem(decimal precio = 1000m, decimal iva = 21m) =>
-        ComprobanteItem.Crear(0, 1, "Producto Test", 1m, precio, 0m, 1, iva, null, 1);
+    private static ComprobanteItem CrearItem(long precio = 1000, long iva = 21) =>
+        ComprobanteItem.Crear(0, 1, "Producto Test", 1m, precio, 0, 1, iva, 0, null, (short)1);
 
     [Fact]
     public void Crear_ConDatosValidos_DebeCrearEnEstadoBorrador()
@@ -43,7 +43,7 @@ public class ComprobanteTests
     {
         var comp = CrearComprobante();
         comp.AgregarItem(CrearItem());
-        comp.Emitir(null, null, null);
+        comp.Emitir(null);
 
         var act = () => comp.AgregarItem(CrearItem());
 
@@ -57,7 +57,7 @@ public class ComprobanteTests
         comp.AgregarItem(CrearItem());
         comp.ClearDomainEvents();
 
-        comp.Emitir("12345678901234", DateOnly.FromDateTime(DateTime.Today.AddDays(30)), null);
+        comp.Emitir(null);
 
         comp.Estado.Should().Be(EstadoComprobante.Emitido);
         comp.Cae.Should().Be("12345678901234");
@@ -70,7 +70,7 @@ public class ComprobanteTests
     {
         var comp = CrearComprobante();
 
-        var act = () => comp.Emitir(null, null, null);
+        var act = () => comp.Emitir(null);
 
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*sin ítems*");
@@ -81,9 +81,9 @@ public class ComprobanteTests
     {
         var comp = CrearComprobante();
         comp.AgregarItem(CrearItem());
-        comp.Emitir(null, null, null);
+        comp.Emitir(null);
 
-        var act = () => comp.Emitir(null, null, null);
+        var act = () => comp.Emitir(null);
 
         act.Should().Throw<InvalidOperationException>();
     }
@@ -93,7 +93,7 @@ public class ComprobanteTests
     {
         var comp = CrearComprobante();
         comp.AgregarItem(CrearItem());
-        comp.Emitir(null, null, null);
+        comp.Emitir(null);
         comp.ClearDomainEvents();
 
         comp.Anular(null);
@@ -108,7 +108,7 @@ public class ComprobanteTests
     {
         var comp = CrearComprobante();
         comp.AgregarItem(CrearItem());
-        comp.Emitir(null, null, null);
+        comp.Emitir(null);
         comp.Anular(null);
 
         var act = () => comp.Anular(null);
@@ -120,8 +120,8 @@ public class ComprobanteTests
     public void AplicarPago_PagoTotal_DebeDejarSaldoCeroYEstadoPagado()
     {
         var comp = CrearComprobante();
-        comp.AgregarItem(CrearItem(1000m, 21m));
-        comp.Emitir(null, null, null);
+        comp.AgregarItem(CrearItem(1000, 21));
+        comp.Emitir(null);
 
         comp.AplicarPago(comp.Total);
 
@@ -133,8 +133,8 @@ public class ComprobanteTests
     public void AplicarPago_PagoParcial_DebeDejarSaldoPositivoYEstadoParcial()
     {
         var comp = CrearComprobante();
-        comp.AgregarItem(CrearItem(1000m, 21m));
-        comp.Emitir(null, null, null);
+        comp.AgregarItem(CrearItem(1000, 21));
+        comp.Emitir(null);
 
         comp.AplicarPago(comp.Total / 2);
 

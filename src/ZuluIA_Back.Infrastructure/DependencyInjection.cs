@@ -2,14 +2,17 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Application.Common.Interfaces;
-using ZuluIA_Back.Infrastructure.Common.Interfaces;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Contabilidad;
+using ZuluIA_Back.Domain.Entities.Extras;
 using ZuluIA_Back.Domain.Entities.Finanzas;
 using ZuluIA_Back.Domain.Entities.Items;
+using ZuluIA_Back.Domain.Entities.Produccion;
+using ZuluIA_Back.Domain.Entities.RRHH;
 using ZuluIA_Back.Domain.Entities.Stock;
 using ZuluIA_Back.Domain.Entities.Terceros;
 using ZuluIA_Back.Domain.Interfaces;
+using ZuluIA_Back.Domain.Services;
 using ZuluIA_Back.Infrastructure.Persistence;
 using ZuluIA_Back.Infrastructure.Persistence.Repositories;
 using ZuluIA_Back.Infrastructure.Services;
@@ -46,11 +49,84 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+        // Módulo 1 — Terceros
         services.AddScoped<ITerceroRepository, TerceroRepository>();
-        services.AddScoped<IItemRepository, ItemRepository>();
+        // Módulo Stock/Comprobantes/Contabilidad
         services.AddScoped<IComprobanteRepository, ComprobanteRepository>();
         services.AddScoped<IStockRepository, StockRepository>();
         services.AddScoped<IAsientoRepository, AsientoRepository>();
+        // Módulo 2 — Sucursales y Configuración
+        services.AddScoped<ISucursalRepository, SucursalRepository>();
+        services.AddScoped<IConfiguracionRepository, ConfiguracionRepository>();
+        // Módulo 3 — Precios y Planes de Pago
+        services.AddScoped<IListaPreciosRepository, ListaPreciosRepository>();
+        services.AddScoped<IPlanPagoRepository, PlanPagoRepository>();
+        // Módulo 4 — Financiero
+        services.AddScoped<ICajaRepository, CajaRepository>();
+        services.AddScoped<IChequeRepository, ChequeRepository>();
+        services.AddScoped<ICotizacionMonedaRepository, CotizacionMonedaRepository>();
+        services.AddScoped(typeof(IRepository<FormaPagoCaja>),
+                           typeof(BaseRepository<FormaPagoCaja>));
+        services.AddScoped(typeof(IRepository<TipoCajaCuenta>),
+                           typeof(BaseRepository<TipoCajaCuenta>));
+        // Módulo 5 — Facturación
+        services.AddScoped<IPuntoFacturacionRepository, PuntoFacturacionRepository>();
+        services.AddScoped<ICartaPorteRepository, CartaPorteRepository>();
+        services.AddScoped<IPeriodoIvaRepository, PeriodoIvaRepository>();
+        // ── M6 — Usuarios, Menú y Seguridad ───────────────────────
+        services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+        services.AddScoped<IMenuRepository, MenuRepository>();
+        services.AddScoped<ISeguridadRepository, SeguridadRepository>();
+        services.AddScoped<IParametroUsuarioRepository, ParametroUsuarioRepository>();
+        // ── Servicios de Dominio ──────────────────────────────────
+        services.AddScoped<NumeracionComprobanteService>();
+        services.AddScoped<PermisoService>();
+        // ── M7 — Items, Categorías y Depósitos ────────────────────
+        services.AddScoped<ICategoriaItemRepository, CategoriaItemRepository>();
+        services.AddScoped<IItemRepository, ItemRepository>();
+        services.AddScoped<IDepositoRepository, DepositoRepository>();
+        // ── M8 — Stock ────────────────────────────────────────────
+        services.AddScoped<IStockRepository, StockRepository>();
+        services.AddScoped<IMovimientoStockRepository, MovimientoStockRepository>();
+        // ── M9 — Comprobantes ─────────────────────────────────────
+        services.AddScoped<IComprobanteRepository, ComprobanteRepository>();
+        services.AddScoped<IImputacionRepository, ImputacionRepository>();
+        services.AddScoped(typeof(IRepository<OrdenCompraMeta>),
+                           typeof(BaseRepository<OrdenCompraMeta>));
+        // ── M10 ───────────────────────────────────────────────────
+        services.AddScoped<ICobroRepository, CobroRepository>();
+        services.AddScoped<IPagoRepository, PagoRepository>();
+        services.AddScoped<ICuentaCorrienteRepository, CuentaCorrienteRepository>();
+        services.AddScoped<IMovimientoCtaCteRepository, MovimientoCtaCteRepository>();
+        services.AddScoped<ICedulonRepository, CedulonRepository>();
+        services.AddScoped(typeof(IRepository<Retencion>),
+                           typeof(BaseRepository<Retencion>));
+        // ── M11 ───────────────────────────────────────────────────
+        services.AddScoped<IEjercicioRepository, EjercicioRepository>();
+        services.AddScoped<IPlanCuentasRepository, PlanCuentasRepository>();
+        services.AddScoped<IAsientoRepository, AsientoRepository>();
+        services.AddScoped(typeof(IRepository<EjercicioSucursal>),
+                           typeof(BaseRepository<EjercicioSucursal>));
+        services.AddScoped(typeof(IRepository<PlanCuentaParametro>),
+                           typeof(BaseRepository<PlanCuentaParametro>));
+        services.AddScoped(typeof(IRepository<CentroCosto>),
+                           typeof(BaseRepository<CentroCosto>));
+        services.AddScoped(typeof(IRepository<AsientoLinea>),
+                           typeof(BaseRepository<AsientoLinea>));
+        // ── M12 ── Producción ─────────────────────────────────────
+        services.AddScoped<IFormulaProduccionRepository, FormulaProduccionRepository>();
+        services.AddScoped<IOrdenTrabajoRepository, OrdenTrabajoRepository>();
+        services.AddScoped(typeof(IRepository<FormulaIngrediente>),
+                           typeof(BaseRepository<FormulaIngrediente>));
+        // ── M12 ── RRHH ───────────────────────────────────────────
+        services.AddScoped<IEmpleadoRepository, EmpleadoRepository>();
+        services.AddScoped(typeof(IRepository<LiquidacionSueldo>),
+                           typeof(BaseRepository<LiquidacionSueldo>));
+        // ── M12 ── Extras ─────────────────────────────────────────
+        services.AddScoped(typeof(IRepository<Transportista>),
+                           typeof(BaseRepository<Transportista>));
+        services.AddScoped(typeof(IRepository<Busqueda>),
+                           typeof(BaseRepository<Busqueda>));
 
         services.AddScoped(typeof(IRepository<Cobro>), typeof(BaseRepository<Cobro>));
         services.AddScoped(typeof(IRepository<CobroMedio>), typeof(BaseRepository<CobroMedio>));

@@ -35,9 +35,9 @@ public class Pago : AuditableEntity
             TerceroId   = terceroId,
             Fecha       = fecha,
             MonedaId    = monedaId,
-            Cotizacion  = cotizacion,
-            Observacion = observacion?.Trim(),
+            Cotizacion  = cotizacion <= 0 ? 1 : cotizacion,
             Estado      = EstadoPago.Activo,
+            Observacion = observacion?.Trim(),
             Total       = 0
         };
 
@@ -48,12 +48,15 @@ public class Pago : AuditableEntity
     public void AgregarMedio(PagoMedio medio)
     {
         if (Estado != EstadoPago.Activo)
-            throw new InvalidOperationException("No se pueden agregar medios a un pago anulado.");
+            throw new InvalidOperationException("No se pueden agregar medios a un pago inactivo.");
 
         _medios.Add(medio);
-        Total = _medios.Sum(m => m.Importe);
+        RecalcularTotal();
         AddDomainEvent(new PagoRegistradoEvent(Id, SucursalId, TerceroId, Total, MonedaId));
     }
+
+    private void RecalcularTotal() =>
+        Total = _medios.Sum(x => x.Importe * x.Cotizacion);
 
     public void Anular(long? userId)
     {

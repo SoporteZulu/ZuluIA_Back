@@ -2,8 +2,13 @@
 
 namespace ZuluIA_Back.Domain.Events.Terceros;
 
+/// <summary>
+/// Se dispara cuando se crea un nuevo tercero (cliente, proveedor o ambos).
+/// Equivalente al momento en que el VB6 ejecutaba Guardar() por primera vez.
+/// </summary>
 public sealed record TerceroCreadoEvent(
     long TerceroId,
+    string Legajo,
     string RazonSocial
 ) : IDomainEvent
 {

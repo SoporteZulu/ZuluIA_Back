@@ -4,7 +4,7 @@ public enum EstadoCheque
 {
     Cartera,
     Depositado,
-    Endosado,
+    Acreditado,
     Rechazado,
-    Anulado
+    Entregado
 }

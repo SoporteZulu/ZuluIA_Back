@@ -5,5 +5,5 @@ public enum EstadoOrdenTrabajo
     Pendiente,
     EnProceso,
     Finalizada,
-    Anulada
+    Cancelada
 }

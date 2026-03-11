@@ -35,9 +35,16 @@ public class Item : AuditableEntity
         long monedaId,
         bool esProducto,
         bool esServicio,
+        bool esFinanciero,
         bool manejaStock,
         decimal precioCosto,
         decimal precioVenta,
+        long? categoriaId,
+        decimal stockMinimo,
+        decimal? stockMaximo,
+        string? codigoBarras,
+        string? descripcionAdicional,
+        string? codigoAfip,
         long? sucursalId,
         long? userId)
     {
@@ -47,20 +54,36 @@ public class Item : AuditableEntity
         if (esProducto && esServicio)
             throw new InvalidOperationException("Un ítem no puede ser producto y servicio a la vez.");
 
+        if (precioCosto < 0)
+            throw new InvalidOperationException("El precio de costo no puede ser negativo.");
+        if (precioVenta < 0)
+            throw new InvalidOperationException("El precio de venta no puede ser negativo.");
+        if (stockMinimo < 0)
+            throw new InvalidOperationException("El stock mínimo no puede ser negativo.");
+        if (stockMaximo.HasValue && stockMaximo < stockMinimo)
+            throw new InvalidOperationException("El stock máximo no puede ser menor al stock mínimo.");
+
         var item = new Item
         {
-            Codigo         = codigo.Trim().ToUpperInvariant(),
-            Descripcion    = descripcion.Trim(),
-            UnidadMedidaId = unidadMedidaId,
-            AlicuotaIvaId  = alicuotaIvaId,
-            MonedaId       = monedaId,
-            EsProducto     = esProducto,
-            EsServicio     = esServicio,
-            ManejaStock    = manejaStock && esProducto,
-            PrecioCosto    = precioCosto,
-            PrecioVenta    = precioVenta,
-            SucursalId     = sucursalId,
-            Activo         = true
+            Codigo              = codigo.Trim().ToUpperInvariant(),
+            Descripcion         = descripcion.Trim(),
+            UnidadMedidaId      = unidadMedidaId,
+            AlicuotaIvaId       = alicuotaIvaId,
+            MonedaId            = monedaId,
+            EsProducto          = esProducto,
+            EsServicio          = esServicio,
+            EsFinanciero        = esFinanciero,
+            ManejaStock         = manejaStock && esProducto,
+            PrecioCosto         = precioCosto,
+            PrecioVenta         = precioVenta,
+            CategoriaId         = categoriaId,
+            StockMinimo         = stockMinimo,
+            StockMaximo         = stockMaximo,
+            CodigoBarras        = codigoBarras?.Trim(),
+            DescripcionAdicional= descripcionAdicional?.Trim(),
+            CodigoAfip          = codigoAfip?.Trim(),
+            SucursalId          = sucursalId,
+            Activo              = true
         };
 
         item.SetCreated(userId);
@@ -69,8 +92,58 @@ public class Item : AuditableEntity
         return item;
     }
 
+    public void Actualizar(
+        string descripcion,
+        string? descripcionAdicional,
+        string? codigoBarras,
+        long unidadMedidaId,
+        long alicuotaIvaId,
+        long monedaId,
+        bool esProducto,
+        bool esServicio,
+        bool esFinanciero,
+        bool manejaStock,
+        long? categoriaId,
+        string? codigoAfip,
+        decimal stockMinimo,
+        decimal? stockMaximo,
+        long? sucursalId,
+        long? userId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(descripcion);
+
+        if (esProducto && esServicio)
+            throw new InvalidOperationException("Un ítem no puede ser producto y servicio a la vez.");
+        if (stockMinimo < 0)
+            throw new InvalidOperationException("El stock mínimo no puede ser negativo.");
+        if (stockMaximo.HasValue && stockMaximo < stockMinimo)
+            throw new InvalidOperationException("El stock máximo no puede ser menor al stock mínimo.");
+
+        Descripcion          = descripcion.Trim();
+        DescripcionAdicional = descripcionAdicional?.Trim();
+        CodigoBarras         = codigoBarras?.Trim();
+        UnidadMedidaId       = unidadMedidaId;
+        AlicuotaIvaId        = alicuotaIvaId;
+        MonedaId             = monedaId;
+        EsProducto           = esProducto;
+        EsServicio           = esServicio;
+        EsFinanciero         = esFinanciero;
+        ManejaStock          = manejaStock && esProducto;
+        CategoriaId          = categoriaId;
+        CodigoAfip           = codigoAfip?.Trim();
+        StockMinimo          = stockMinimo;
+        StockMaximo          = stockMaximo;
+        SucursalId           = sucursalId;
+        SetUpdated(userId);
+    }
+
     public void ActualizarPrecios(decimal precioCosto, decimal precioVenta, long? userId)
     {
+        if (precioCosto < 0)
+            throw new InvalidOperationException("El precio de costo no puede ser negativo.");
+        if (precioVenta < 0)
+            throw new InvalidOperationException("El precio de venta no puede ser negativo.");
+
         var precioAnterior = PrecioVenta;
         PrecioCosto = precioCosto;
         PrecioVenta = precioVenta;
@@ -78,23 +151,15 @@ public class Item : AuditableEntity
         AddDomainEvent(new PrecioItemActualizadoEvent(Id, Codigo, precioAnterior, precioVenta));
     }
 
-    public void Actualizar(
-        string descripcion,
-        string? descripcionAdicional,
-        string? codigoBarras,
-        long? categoriaId,
-        decimal stockMinimo,
-        decimal? stockMaximo,
-        string? codigoAfip,
-        long? userId)
+    public void ActualizarStock(decimal stockMinimo, decimal? stockMaximo, long? userId)
     {
-        Descripcion          = descripcion.Trim();
-        DescripcionAdicional = descripcionAdicional?.Trim();
-        CodigoBarras         = codigoBarras?.Trim();
-        CategoriaId          = categoriaId;
-        StockMinimo          = stockMinimo;
-        StockMaximo          = stockMaximo;
-        CodigoAfip           = codigoAfip?.Trim();
+        if (stockMinimo < 0)
+            throw new InvalidOperationException("El stock mínimo no puede ser negativo.");
+        if (stockMaximo.HasValue && stockMaximo < stockMinimo)
+            throw new InvalidOperationException("El stock máximo no puede ser menor al stock mínimo.");
+
+        StockMinimo = stockMinimo;
+        StockMaximo = stockMaximo;
         SetUpdated(userId);
     }
 
