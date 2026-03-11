@@ -99,7 +99,7 @@ public class AsientoTests
         var act = () => AsientoLinea.Crear(0, 1, 0m, 0m, "Error", 1);
 
         act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*mayor a 0*");
+            .WithMessage("*importe en debe o haber*");
     }
 
     [Fact]
