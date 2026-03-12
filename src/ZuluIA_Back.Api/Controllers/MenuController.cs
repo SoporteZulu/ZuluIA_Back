@@ -42,7 +42,7 @@ public class MenuController(
         foreach (var dto in dtos)
         {
             if (dto.ParentId.HasValue && lookup.TryGetValue(dto.ParentId.Value, out var parent))
-                ((List<MenuItemDto>)parent.Hijos).Add(dto);
+                parent.Hijos.Add(dto);
             else
                 roots.Add(dto);
         }

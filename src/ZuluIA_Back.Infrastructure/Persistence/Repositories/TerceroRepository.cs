@@ -217,7 +217,7 @@ public class TerceroRepository(AppDbContext context)
     {
         var query = DbSet
             .AsNoTracking()
-            .Where(x => x.EsCliente && x.Activo && !x.IsDeleted);
+            .Where(x => x.EsCliente && x.Activo && x.DeletedAt == null);
 
         if (sucursalId.HasValue)
             query = query.Where(x => x.SucursalId == sucursalId.Value
@@ -238,7 +238,7 @@ public class TerceroRepository(AppDbContext context)
     {
         var query = DbSet
             .AsNoTracking()
-            .Where(x => x.EsProveedor && x.Activo && !x.IsDeleted);
+            .Where(x => x.EsProveedor && x.Activo && x.DeletedAt == null);
 
         if (sucursalId.HasValue)
             query = query.Where(x => x.SucursalId == sucursalId.Value

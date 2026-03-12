@@ -30,7 +30,7 @@ public class GetMenuUsuarioQueryHandler(
         foreach (var item in flatList)
         {
             if (item.ParentId.HasValue && lookup.TryGetValue(item.ParentId.Value, out var parent))
-                ((List<MenuItemDto>)parent.Hijos).Add(item);
+                parent.Hijos.Add(item);
             else
                 roots.Add(item);
         }

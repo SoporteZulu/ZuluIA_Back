@@ -23,7 +23,7 @@ public class GetLibroIvaQueryHandler(IApplicationDbContext db)
             .ToListAsync(ct);
 
         // Obtener comprobantes del período en estado Emitido o PagadoParcial o Pagado
-        var estadosValidos = new[] { "EMITIDO", "PAGADOPARCIAL", "PAGADO" };
+        var estadosValidos = new HashSet<string> { "EMITIDO", "PAGADOPARCIAL", "PAGADO" };
 
         var comprobantes = await db.Comprobantes
             .AsNoTracking()
@@ -31,8 +31,7 @@ public class GetLibroIvaQueryHandler(IApplicationDbContext db)
                 c.SucursalId == request.SucursalId         &&
                 c.Fecha      >= request.Desde              &&
                 c.Fecha      <= request.Hasta              &&
-                tipoIds.Contains(c.TipoComprobanteId)      &&
-                estadosValidos.Contains(c.Estado.ToString().ToUpperInvariant()))
+                tipoIds.Contains(c.TipoComprobanteId))
             .Select(c => new
             {
                 c.Fecha,
@@ -45,16 +44,21 @@ public class GetLibroIvaQueryHandler(IApplicationDbContext db)
                 c.IvaRi,
                 c.IvaRni,
                 c.Percepciones,
-                c.Total
+                c.Total,
+                Estado = c.Estado.ToString()
             })
             .OrderBy(c => c.Fecha)
             .ThenBy(c => c.Prefijo)
             .ThenBy(c => c.Numero)
             .ToListAsync(ct);
 
+        // Filtrar por estado en memoria (client-side) — EF Core no puede traducir .ToString() en este contexto
+        var comprobantesFiltered = comprobantes
+            .Where(c => estadosValidos.Contains(c.Estado.ToUpperInvariant()));
+
         // Obtener datos de terceros y tipos
-        var terceroIds = comprobantes.Select(c => c.TerceroId).Distinct().ToList();
-        var tipoIdsUsados = comprobantes.Select(c => c.TipoComprobanteId).Distinct().ToList();
+        var terceroIds = comprobantesFiltered.Select(c => c.TerceroId).Distinct().ToList();
+        var tipoIdsUsados = comprobantesFiltered.Select(c => c.TipoComprobanteId).Distinct().ToList();
 
         var terceros = await db.Terceros
             .AsNoTracking()
@@ -72,7 +76,7 @@ public class GetLibroIvaQueryHandler(IApplicationDbContext db)
             .AsNoTracking()
             .ToDictionaryAsync(c => c.Id, c => c.Descripcion, ct);
 
-        var lineas = comprobantes.Select(c =>
+        var lineas = comprobantesFiltered.Select(c =>
         {
             var tercero = terceros.GetValueOrDefault(c.TerceroId);
             var tipo = tipos.GetValueOrDefault(c.TipoComprobanteId);
