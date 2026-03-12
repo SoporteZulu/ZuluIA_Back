@@ -50,7 +50,7 @@ public class PagoConfiguration : IEntityTypeConfiguration<Pago>
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.Property(x => x.DeletedAt).HasColumnName("deleted_at");
         builder.Property(x => x.CreatedBy).HasColumnName("created_by");
-        builder.Property(x => x.UpdatedBy).HasColumnName("updated_by");
+        builder.Ignore(x => x.UpdatedBy);
 
         builder.HasMany(x => x.Medios)
                .WithOne()

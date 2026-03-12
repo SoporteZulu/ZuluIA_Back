@@ -49,6 +49,8 @@ public class AsientoConfiguration : IEntityTypeConfiguration<Asiento>
                .HasMaxLength(20)
                .IsRequired();
 
+        builder.Ignore(x => x.Cuadra);
+
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.Property(x => x.CreatedBy).HasColumnName("created_by");

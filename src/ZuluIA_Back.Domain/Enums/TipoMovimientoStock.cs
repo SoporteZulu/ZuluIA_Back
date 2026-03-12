@@ -15,6 +15,7 @@ public enum TipoMovimientoStock
 
     // ── Egresos ───────────────────────────────────
     Egreso,                 // Genérico
+    Venta,                  // Alias legacy de VentaDespacho
     VentaDespacho,          // Despacho por venta
     DevolucionCompra,       // Devolución a proveedor
     AjusteNegativo,         // Ajuste por egreso

@@ -38,7 +38,7 @@ public class ListaPreciosConfiguration : IEntityTypeConfiguration<ListaPrecios>
         builder.Property(x => x.UpdatedBy).HasColumnName("updated_by");
 
         builder.HasMany(x => x.Items)
-               .WithOne()
+               .WithOne(x => x.Lista)
                .HasForeignKey(x => x.ListaId)
                .OnDelete(DeleteBehavior.Cascade);
 

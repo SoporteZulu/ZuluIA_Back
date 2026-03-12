@@ -35,8 +35,8 @@ public class PuntoFacturacionConfiguration : IEntityTypeConfiguration<PuntoFactu
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.Property(x => x.DeletedAt).HasColumnName("deleted_at");
-        builder.Property(x => x.CreatedBy).HasColumnName("created_by");
-        builder.Property(x => x.UpdatedBy).HasColumnName("updated_by");
+        builder.Ignore(x => x.CreatedBy);
+        builder.Ignore(x => x.UpdatedBy);
 
         builder.HasIndex(x => new { x.SucursalId, x.Numero }).IsUnique();
         builder.HasIndex(x => x.Activo);

@@ -48,8 +48,8 @@ public class CajaCuentaBancariaConfiguration : IEntityTypeConfiguration<CajaCuen
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.Property(x => x.DeletedAt).HasColumnName("deleted_at");
-        builder.Property(x => x.CreatedBy).HasColumnName("created_by");
-        builder.Property(x => x.UpdatedBy).HasColumnName("updated_by");
+        builder.Ignore(x => x.CreatedBy);
+        builder.Ignore(x => x.UpdatedBy);
 
         builder.HasIndex(x => x.SucursalId);
         builder.HasIndex(x => x.UsuarioId);

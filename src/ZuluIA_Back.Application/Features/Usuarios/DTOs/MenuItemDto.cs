@@ -10,5 +10,5 @@ public class MenuItemDto
     public short Nivel { get; set; }
     public short Orden { get; set; }
     public bool Activo { get; set; }
-    public IReadOnlyList<MenuItemDto> Hijos { get; set; } = [];
+    public List<MenuItemDto> Hijos { get; set; } = [];
 }

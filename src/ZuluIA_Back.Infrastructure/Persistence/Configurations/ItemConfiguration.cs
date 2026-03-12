@@ -103,7 +103,7 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.Property(x => x.DeletedAt).HasColumnName("deleted_at");
         builder.Property(x => x.CreatedBy).HasColumnName("created_by");
-        builder.Property(x => x.UpdatedBy).HasColumnName("updated_by");
+        builder.Ignore(x => x.UpdatedBy);
 
         // Índices
         builder.HasIndex(x => x.Codigo).IsUnique();

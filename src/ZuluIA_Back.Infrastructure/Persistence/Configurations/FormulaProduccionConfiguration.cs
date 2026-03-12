@@ -35,7 +35,7 @@ public class FormulaProduccionConfiguration : IEntityTypeConfiguration<FormulaPr
                .HasColumnName("unidad_medida_id");
 
         builder.Property(x => x.Activo)
-               .HasColumnName("activo")
+               .HasColumnName("activa")
                .HasDefaultValue(true);
 
         builder.Property(x => x.Observacion)

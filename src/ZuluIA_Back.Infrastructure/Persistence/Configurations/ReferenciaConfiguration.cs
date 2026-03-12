@@ -18,6 +18,9 @@ public class MonedaConfiguration : IEntityTypeConfiguration<Moneda>
         builder.Property(x => x.Activa).HasColumnName("activa").HasDefaultValue(true);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        builder.Ignore(x => x.DeletedAt);
+        builder.Ignore(x => x.CreatedBy);
+        builder.Ignore(x => x.UpdatedBy);
         builder.HasIndex(x => x.Codigo).IsUnique();
     }
 }

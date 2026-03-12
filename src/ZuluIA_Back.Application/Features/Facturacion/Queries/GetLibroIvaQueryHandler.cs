@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Facturacion.DTOs;
+using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Application.Features.Facturacion.Queries;
 
@@ -23,7 +24,7 @@ public class GetLibroIvaQueryHandler(IApplicationDbContext db)
             .ToListAsync(ct);
 
         // Obtener comprobantes del período en estado Emitido o PagadoParcial o Pagado
-        var estadosValidos = new[] { "EMITIDO", "PAGADOPARCIAL", "PAGADO" };
+        var estadosValidos = new[] { EstadoComprobante.Emitido, EstadoComprobante.PagadoParcial, EstadoComprobante.Pagado };
 
         var comprobantes = await db.Comprobantes
             .AsNoTracking()
@@ -32,7 +33,7 @@ public class GetLibroIvaQueryHandler(IApplicationDbContext db)
                 c.Fecha      >= request.Desde              &&
                 c.Fecha      <= request.Hasta              &&
                 tipoIds.Contains(c.TipoComprobanteId)      &&
-                estadosValidos.Contains(c.Estado.ToString().ToUpperInvariant()))
+                estadosValidos.Contains(c.Estado))
             .Select(c => new
             {
                 c.Fecha,

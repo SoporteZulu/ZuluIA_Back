@@ -20,9 +20,7 @@ public class TransportistaConfiguration : IEntityTypeConfiguration<Transportista
                .HasColumnName("nro_cuit_transportista")
                .HasMaxLength(20);
 
-        builder.Property(x => x.DomicilioPartida)
-               .HasColumnName("domicilio_partida")
-               .HasMaxLength(300);
+        builder.Ignore(x => x.DomicilioPartida);
 
         builder.Property(x => x.Patente)
                .HasColumnName("patente")
