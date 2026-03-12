@@ -47,10 +47,10 @@ public class TerceroRepository(AppDbContext context)
 
         // Filtro de baja lógica
         if (soloActivos is null || soloActivos == true)
-            query = query.Where(x => !x.IsDeleted);
+            query = query.Where(x => x.DeletedAt == null);
 
         if (soloActivos == false)
-            query = query.Where(x => x.IsDeleted);
+            query = query.Where(x => x.DeletedAt != null);
 
         // Filtro por estado activo/inactivo dentro de los no eliminados
         if (soloActivos == true)

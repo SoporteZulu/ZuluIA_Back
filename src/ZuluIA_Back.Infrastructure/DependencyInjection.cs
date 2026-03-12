@@ -36,8 +36,8 @@ public static class DependencyInjection
             {
                 npgsql.CommandTimeout(60);
                 npgsql.EnableRetryOnFailure(
-                    maxRetryCount: 3,
-                    maxRetryDelay: TimeSpan.FromSeconds(5),
+                    maxRetryCount: 1,
+                    maxRetryDelay: TimeSpan.FromSeconds(3),
                     errorCodesToAdd: null);
             });
 

@@ -85,20 +85,17 @@ try
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
-            // ✅ Sin Authority — usamos validación por clave simétrica directamente
-            // Authority causa que intente descargar metadatos OIDC y falla con HTTP
-            options.RequireHttpsMetadata = !isDevelopment; // false en Development, true en Production
+            options.Authority = jwtIssuer; // https://jygtddlvzaojekyvdyan.supabase.co/auth/v1
+            options.RequireHttpsMetadata = !isDevelopment;
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey         = new SymmetricSecurityKey(
-                                               Encoding.UTF8.GetBytes(jwtSecret)),
-                ValidateIssuer           = true,
-                ValidIssuer              = jwtIssuer,
-                ValidateAudience         = true,
-                ValidAudience            = jwtAudience,
-                ValidateLifetime         = true,
-                ClockSkew                = TimeSpan.Zero
+                ValidateIssuer   = true,
+                ValidIssuer      = jwtIssuer,
+                ValidateAudience = true,
+                ValidAudience    = jwtAudience,
+                ValidateLifetime = true,
+                ClockSkew        = TimeSpan.Zero
             };
         });
 
