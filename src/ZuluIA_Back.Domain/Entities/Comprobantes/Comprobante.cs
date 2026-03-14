@@ -34,6 +34,12 @@ public class Comprobante : AuditableEntity
     public EstadoComprobante Estado { get; private set; }
     public string? Observacion { get; private set; }
 
+    /// <summary>
+    /// Cuando este comprobante fue generado desde un presupuesto,
+    /// almacena el ID del presupuesto de origen.
+    /// </summary>
+    public long? ComprobanteOrigenId { get; private set; }
+
     private readonly List<ComprobanteItem> _items = [];
     public IReadOnlyCollection<ComprobanteItem> Items => _items.AsReadOnly();
 
@@ -185,6 +191,22 @@ public class Comprobante : AuditableEntity
         SetDeleted();
         SetUpdated(userId);
     }
+
+    /// <summary>
+    /// Marca un presupuesto/comprobante borrador como convertido a un comprobante definitivo.
+    /// Equivale a la acción "Convertir Presupuesto a Factura" del VB6.
+    /// </summary>
+    public void MarcarComoConvertido(long? userId)
+    {
+        if (Estado is not (EstadoComprobante.Borrador or EstadoComprobante.Emitido))
+            throw new InvalidOperationException("Solo se puede marcar como Convertido un presupuesto en estado Borrador o Emitido.");
+
+        Estado = EstadoComprobante.Convertido;
+        SetUpdated(userId);
+    }
+
+    /// <summary>Establece el comprobante de origen cuando se convierte un presupuesto.</summary>
+    public void SetComprobanteOrigen(long origenId) => ComprobanteOrigenId = origenId;
 
     public void ActualizarSaldo(decimal importeImputado, long? userId)
     {
