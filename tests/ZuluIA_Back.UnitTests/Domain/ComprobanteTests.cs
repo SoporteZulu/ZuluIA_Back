@@ -136,4 +136,50 @@ public class ComprobanteTests
         comp.Saldo.Should().BeGreaterThan(0);
         comp.Estado.Should().Be(EstadoComprobante.PagadoParcial);
     }
+
+    // ── MarcarComoConvertido / SetComprobanteOrigen ───────────────────────────
+
+    [Fact]
+    public void MarcarComoConvertido_DesdeBorrador_DebePonerEstadoConvertido()
+    {
+        var comp = CrearComprobante();
+
+        comp.MarcarComoConvertido(null);
+
+        comp.Estado.Should().Be(EstadoComprobante.Convertido);
+    }
+
+    [Fact]
+    public void MarcarComoConvertido_DesdeEmitido_DebePonerEstadoConvertido()
+    {
+        var comp = CrearComprobante();
+        comp.AgregarItem(CrearItem());
+        comp.Emitir(null);
+
+        comp.MarcarComoConvertido(null);
+
+        comp.Estado.Should().Be(EstadoComprobante.Convertido);
+    }
+
+    [Fact]
+    public void MarcarComoConvertido_DesdeAnulado_DebeLanzarExcepcion()
+    {
+        var comp = CrearComprobante();
+        comp.Anular(null);
+
+        var act = () => comp.MarcarComoConvertido(null);
+
+        act.Should().Throw<InvalidOperationException>()
+           .WithMessage("*Borrador o Emitido*");
+    }
+
+    [Fact]
+    public void SetComprobanteOrigen_DebeAsignarComprobanteOrigenId()
+    {
+        var comp = CrearComprobante();
+
+        comp.SetComprobanteOrigen(42L);
+
+        comp.ComprobanteOrigenId.Should().Be(42L);
+    }
 }
