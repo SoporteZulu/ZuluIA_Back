@@ -16,6 +16,15 @@ public class CajaCuentaBancaria : AuditableEntity
     public bool EsCaja { get; private set; } = true;
     public bool Activa { get; private set; } = true;
 
+    /// <summary>Indica si la caja está abierta (habilitada para operar).</summary>
+    public bool EstaAbierta { get; private set; }
+
+    /// <summary>Fecha de la última apertura registrada.</summary>
+    public DateOnly? FechaUltimaApertura { get; private set; }
+
+    /// <summary>Saldo inicial de la última apertura.</summary>
+    public decimal SaldoApertura { get; private set; }
+
     private CajaCuentaBancaria() { }
 
     public static CajaCuentaBancaria Crear(
@@ -74,9 +83,28 @@ public class CajaCuentaBancaria : AuditableEntity
     /// </summary>
     public int CerrarArqueo(long? userId)
     {
+        if (!EstaAbierta)
+            throw new InvalidOperationException("No se puede cerrar una caja que no está abierta.");
+
         NroCierreActual++;
+        EstaAbierta = false;
         SetUpdated(userId);
         return NroCierreActual;
+    }
+
+    /// <summary>
+    /// Abre la caja para operar, registrando el saldo inicial.
+    /// Equivale a frmAperturaCajasCuentasBancarias del VB6.
+    /// </summary>
+    public void AbrirCaja(DateOnly fechaApertura, decimal saldoInicial, long? userId)
+    {
+        if (EstaAbierta)
+            throw new InvalidOperationException("La caja ya está abierta.");
+
+        EstaAbierta           = true;
+        FechaUltimaApertura   = fechaApertura;
+        SaldoApertura         = saldoInicial;
+        SetUpdated(userId);
     }
 
     public void Desactivar(long? userId)

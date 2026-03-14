@@ -9,6 +9,7 @@ using ZuluIA_Back.Domain.Entities.Facturacion;
 using ZuluIA_Back.Domain.Entities.Finanzas;
 using ZuluIA_Back.Domain.Entities.Geografia;
 using ZuluIA_Back.Domain.Entities.Items;
+using ZuluIA_Back.Domain.Entities.Logistica;
 using ZuluIA_Back.Domain.Entities.Precios;
 using ZuluIA_Back.Domain.Entities.Produccion;
 using ZuluIA_Back.Domain.Entities.Referencia;
@@ -92,6 +93,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Pago> Pagos => Set<Pago>();
     public DbSet<PagoMedio> PagosMedios => Set<PagoMedio>();
     public DbSet<Retencion> Retenciones => Set<Retencion>();
+    public DbSet<TipoRetencion> TiposRetencion => Set<TipoRetencion>();
+    public DbSet<EscalaRetencion> EscalasRetencion => Set<EscalaRetencion>();
+    public DbSet<TransferenciaCaja> TransferenciasCaja => Set<TransferenciaCaja>();
     public DbSet<CuentaCorriente> CuentaCorriente => Set<CuentaCorriente>();
     public DbSet<MovimientoCtaCte> MovimientosCtaCte => Set<MovimientoCtaCte>();
     public DbSet<Cedulon> Cedulones => Set<Cedulon>();
@@ -115,6 +119,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     // ── M12 — Extras ──────────────────────────────────────────────
     public DbSet<Transportista> Transportistas => Set<Transportista>();
     public DbSet<Busqueda> Busquedas => Set<Busqueda>();
+
+    // ── M13 — Logística / Picking ─────────────────────────────────
+    public DbSet<OrdenPreparacion> OrdenesPreparacion => Set<OrdenPreparacion>();
+    public DbSet<OrdenPreparacionDetalle> OrdenesPreparacionDetalles => Set<OrdenPreparacionDetalle>();
+
+    // ── M14 — Descuentos Comerciales ──────────────────────────────
+    public DbSet<DescuentoComercial> DescuentosComerciales => Set<DescuentoComercial>();
+
+    // ── M15 — Retenciones por Persona ──────────────────────────
+    public DbSet<RetencionXPersona> RetencionesPorPersona => Set<RetencionXPersona>();
 
     // ─── EF Core / Dominio ────────────────────────────────────────────────────
     protected override void OnModelCreating(ModelBuilder modelBuilder)

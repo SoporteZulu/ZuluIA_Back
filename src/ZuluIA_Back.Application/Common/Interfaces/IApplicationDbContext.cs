@@ -8,6 +8,7 @@ using ZuluIA_Back.Domain.Entities.Facturacion;
 using ZuluIA_Back.Domain.Entities.Finanzas;
 using ZuluIA_Back.Domain.Entities.Geografia;
 using ZuluIA_Back.Domain.Entities.Items;
+using ZuluIA_Back.Domain.Entities.Logistica;
 using ZuluIA_Back.Domain.Entities.Precios;
 using ZuluIA_Back.Domain.Entities.Produccion;
 using ZuluIA_Back.Domain.Entities.Referencia;
@@ -99,6 +100,9 @@ public interface IApplicationDbContext
     DbSet<Pago> Pagos { get; }
     DbSet<PagoMedio> PagosMedios { get; }
     DbSet<Retencion> Retenciones { get; }
+    DbSet<TipoRetencion> TiposRetencion { get; }
+    DbSet<EscalaRetencion> EscalasRetencion { get; }
+    DbSet<TransferenciaCaja> TransferenciasCaja { get; }
     DbSet<CuentaCorriente> CuentaCorriente { get; }
     DbSet<MovimientoCtaCte> MovimientosCtaCte { get; }
     DbSet<Cedulon> Cedulones { get; }
@@ -122,6 +126,16 @@ public interface IApplicationDbContext
     // ── M12 — Extras ──────────────────────────────────────────────
     DbSet<Transportista> Transportistas { get; }
     DbSet<Busqueda> Busquedas { get; }
+
+    // ── M13 — Logística / Picking ─────────────────────────────────
+    DbSet<OrdenPreparacion> OrdenesPreparacion { get; }
+    DbSet<OrdenPreparacionDetalle> OrdenesPreparacionDetalles { get; }
+
+    // ── M14 — Descuentos Comerciales ──────────────────────────────
+    DbSet<DescuentoComercial> DescuentosComerciales { get; }
+
+    // ── M15 — Retenciones por Persona ──────────────────────────
+    DbSet<RetencionXPersona> RetencionesPorPersona { get; }
 
     // ─── Persistencia ─────────────────────────────────────────────────────────
     Task<int> SaveChangesAsync(CancellationToken ct = default);

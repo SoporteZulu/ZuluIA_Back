@@ -6,5 +6,7 @@ public enum EstadoComprobante
     Emitido,
     PagadoParcial,
     Pagado,
-    Anulado
+    Anulado,
+    /// <summary>Presupuesto que fue convertido a comprobante definitivo.</summary>
+    Convertido
 }

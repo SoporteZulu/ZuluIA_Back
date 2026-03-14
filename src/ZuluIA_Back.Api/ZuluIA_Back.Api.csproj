@@ -15,6 +15,11 @@
 		<PackageReference Include="MediatR" Version="12.2.0" />
 	</ItemGroup>
 	<ItemGroup>
+		<!-- GHSA-rvv3-g6hj-g44x: AutoMapper DynamicMap code-injection advisory.
+		     All versions are flagged; this project does not use DynamicMap. -->
+		<NuGetAuditSuppress Include="https://github.com/advisories/GHSA-rvv3-g6hj-g44x" />
+	</ItemGroup>
+	<ItemGroup>
 		<ProjectReference Include="..\ZuluIA_Back.Application\ZuluIA_Back.Application.csproj" />
 		<ProjectReference Include="..\ZuluIA_Back.Infrastructure\ZuluIA_Back.Infrastructure.csproj" />
 	</ItemGroup>

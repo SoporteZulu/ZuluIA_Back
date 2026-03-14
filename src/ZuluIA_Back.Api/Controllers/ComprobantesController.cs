@@ -194,6 +194,64 @@ public class ComprobantesController(IMediator mediator, IApplicationDbContext db
     }
 
     /// <summary>
+    /// Convierte un presupuesto en un comprobante definitivo (ej. Factura A).
+    /// Equivale al flujo "Convertir Presupuesto" de frmPreFacturaVenta del VB6.
+    /// </summary>
+    [HttpPost("{id:long}/convertir-presupuesto")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ConvertirPresupuesto(
+        long id,
+        [FromBody] ConvertirPresupuestoRequest request,
+        CancellationToken ct)
+    {
+        var command = new ConvertirPresupuestoCommand(
+            id,
+            request.TipoComprobanteDestinoId,
+            request.PuntoFacturacionId,
+            request.Fecha,
+            request.FechaVencimiento,
+            request.Observacion);
+
+        var result = await Mediator.Send(command, ct);
+        return result.IsSuccess
+            ? CreatedAtRoute("GetComprobanteById", new { id = result.Value }, new { id = result.Value })
+            : BadRequest(new { error = result.Error });
+    }
+
+    /// <summary>
+    /// Imputa un comprobante origen en uno destino (rebaje de saldo).
+    /// </summary>
+    [HttpPost("imputar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Imputar(
+        [FromBody] ImputarComprobanteCommand command,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(command, ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Imputa múltiples pares de comprobantes en una sola operación.
+    /// Equivale a frmImputacionesVentasMasivas / frmImputacionesComprasMasivas del VB6.
+    /// </summary>
+    [HttpPost("imputar-masivo")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ImputarMasivo(
+        [FromBody] ImputarComprobantesMasivosCommand command,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(command, ct);
+        return result.IsSuccess
+            ? Ok(new { imputacionesCreadas = result.Value!.Count, ids = result.Value })
+            : BadRequest(new { error = result.Error });
+    }
+
+    /// <summary>
     /// Retorna estadísticas de comprobantes por período y sucursal.
     /// </summary>
     [HttpGet("estadisticas")]
@@ -265,3 +323,10 @@ public record AsignarCaeRequest(
     string? QrData);
 
 public record AnularComprobanteRequest(bool RevertirStock = true);
+
+public record ConvertirPresupuestoRequest(
+    long TipoComprobanteDestinoId,
+    long? PuntoFacturacionId,
+    DateOnly Fecha,
+    DateOnly? FechaVencimiento,
+    string? Observacion);

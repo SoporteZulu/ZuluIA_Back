@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Cajas.Commands;
 using ZuluIA_Back.Application.Features.Cajas.Queries;
+using ZuluIA_Back.Application.Features.Cajas.DTOs;
 
 namespace ZuluIA_Back.Api.Controllers;
 
@@ -144,4 +145,94 @@ public class CajasController(IMediator mediator, IApplicationDbContext db)
             mensaje = $"Arqueo cerrado. Número de cierre: {nroCierre}."
         });
     }
+
+    /// <summary>
+    /// Registra una apertura de caja (habilita la caja para operar en la fecha).
+    /// Equivale a frmAperturaCajasCuentasBancarias del VB6.
+    /// </summary>
+    [HttpPost("{id:long}/abrir")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> AbrirCaja(
+        long id,
+        [FromBody] AbrirCajaRequest request,
+        CancellationToken ct)
+    {
+        var caja = await db.CajasCuentasBancarias
+            .FirstOrDefaultAsync(x => x.Id == id, ct);
+
+        if (caja is null)
+            return NotFound(new { error = $"No se encontró la caja con ID {id}." });
+
+        caja.AbrirCaja(request.FechaApertura, request.SaldoInicial, null);
+        await db.SaveChangesAsync(ct);
+
+        return Ok(new
+        {
+            cajaId = id,
+            fechaApertura = request.FechaApertura,
+            saldoInicial = request.SaldoInicial,
+            mensaje = "Caja abierta correctamente."
+        });
+    }
+
+    /// <summary>
+    /// Registra una transferencia entre dos cajas/cuentas bancarias.
+    /// Equivale a frmTransferenciasCajasCuentasBancarias del VB6.
+    /// </summary>
+    [HttpPost("transferencias")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Transferencia(
+        [FromBody] RegistrarTransferenciaCommand command,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(command, ct);
+        return result.IsSuccess
+            ? Ok(new { id = result.Value })
+            : BadRequest(new { error = result.Error });
+    }
+
+    /// <summary>
+    /// Retorna el historial de transferencias de una caja.
+    /// </summary>
+    [HttpGet("{id:long}/transferencias")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTransferencias(
+        long id,
+        [FromQuery] DateOnly? desde,
+        [FromQuery] DateOnly? hasta,
+        CancellationToken ct)
+    {
+        var query = db.TransferenciasCaja
+            .AsNoTracking()
+            .Where(x => (x.CajaOrigenId == id || x.CajaDestinoId == id) && !x.Anulada);
+
+        if (desde.HasValue)
+            query = query.Where(x => x.Fecha >= desde.Value);
+        if (hasta.HasValue)
+            query = query.Where(x => x.Fecha <= hasta.Value);
+
+        var lista = await query
+            .OrderByDescending(x => x.Fecha)
+            .Select(x => new
+            {
+                x.Id,
+                x.Fecha,
+                x.CajaOrigenId,
+                x.CajaDestinoId,
+                x.Importe,
+                x.MonedaId,
+                x.Cotizacion,
+                x.Concepto,
+                Tipo = x.CajaOrigenId == id ? "EGRESO" : "INGRESO"
+            })
+            .ToListAsync(ct);
+
+        return Ok(lista);
+    }
 }
+
+// ── Request bodies ───────────────────────────────────────────────────────────
+public record AbrirCajaRequest(DateOnly FechaApertura, decimal SaldoInicial);
