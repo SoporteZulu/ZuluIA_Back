@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Compras.Commands;
 using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Api.Controllers;
@@ -90,14 +91,11 @@ public class OrdenesCompraController(IMediator mediator, IApplicationDbContext d
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Recibir(long id, CancellationToken ct)
     {
-        var orden = await db.OrdenesCompraMeta
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
-
-        if (orden is null)
-            return NotFound(new { error = $"No se encontró la OC con ID {id}." });
-
-        orden.Recibir();
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new RecibirOrdenCompraCommand(id), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("no se encontro", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Orden de compra marcada como recibida." });
     }
@@ -111,14 +109,11 @@ public class OrdenesCompraController(IMediator mediator, IApplicationDbContext d
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Cancelar(long id, CancellationToken ct)
     {
-        var orden = await db.OrdenesCompraMeta
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
-
-        if (orden is null)
-            return NotFound(new { error = $"No se encontró la OC con ID {id}." });
-
-        orden.Cancelar();
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new CancelarOrdenCompraCommand(id), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("no se encontro", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Orden de compra cancelada." });
     }

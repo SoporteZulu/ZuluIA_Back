@@ -102,4 +102,77 @@ public class StockItemTests
         evt.Nuevo.Should().Be(200m);
         evt.Motivo.Should().Be("Test");
     }
+
+    // ── AjustarA ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void AjustarA_ConCantidadValida_ActualizaCantidadYRetornaDiferencia()
+    {
+        var stock = StockItem.Crear(1, 1, 100m);
+
+        var diferencia = stock.AjustarA(150m);
+
+        stock.Cantidad.Should().Be(150m);
+        diferencia.Should().Be(50m);
+    }
+
+    [Fact]
+    public void AjustarA_CantidadMenorQueActual_RetornaDiferenciaNegativa()
+    {
+        var stock = StockItem.Crear(1, 1, 100m);
+
+        var diferencia = stock.AjustarA(60m);
+
+        stock.Cantidad.Should().Be(60m);
+        diferencia.Should().Be(-40m);
+    }
+
+    [Fact]
+    public void AjustarA_CantidadNegativa_LanzaExcepcion()
+    {
+        var stock = StockItem.Crear(1, 1, 100m);
+
+        var act = () => stock.AjustarA(-1m);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*negativa*");
+    }
+
+    [Fact]
+    public void AjustarA_DebeGenerarDomainEvent()
+    {
+        var stock = StockItem.Crear(1, 1, 100m);
+
+        stock.AjustarA(200m, "Inventario anual");
+
+        stock.DomainEvents.Should().ContainSingle();
+        var evt = stock.DomainEvents.First() as StockAjustadoEvent;
+        evt!.Anterior.Should().Be(100m);
+        evt.Nuevo.Should().Be(200m);
+        evt.Motivo.Should().Be("Inventario anual");
+    }
+
+    [Fact]
+    public void Ingresar_CantidadPositiva_IncrementaStock()
+    {
+        var stock = StockItem.Crear(1, 1, 10m);
+        stock.Ingresar(5m);
+        stock.Cantidad.Should().Be(15m);
+    }
+
+    [Fact]
+    public void Ingresar_CantidadCero_LanzaExcepcion()
+    {
+        var stock = StockItem.Crear(1, 1, 10m);
+        var act = () => stock.Ingresar(0m);
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Ingresar_CantidadNegativa_LanzaExcepcion()
+    {
+        var stock = StockItem.Crear(1, 1, 10m);
+        var act = () => stock.Ingresar(-3m);
+        act.Should().Throw<InvalidOperationException>();
+    }
 }

@@ -1,11 +1,11 @@
-ï»¿using ZuluIA_Back.Domain.Entities.Contabilidad;
+using ZuluIA_Back.Domain.Entities.Contabilidad;
 using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Domain.Services;
 
 /// <summary>
-/// Servicio de dominio que centraliza la lÃ³gica de generaciÃ³n
-/// y validaciÃ³n de asientos contables.
+/// Servicio de dominio que centraliza la lógica de generación
+/// y validación de asientos contables.
 /// </summary>
 public class ContabilidadService(
     IAsientoRepository asientoRepo,
@@ -13,9 +13,9 @@ public class ContabilidadService(
 {
     /// <summary>
     /// Crea y persiste un asiento contable completo validando
-    /// que el ejercicio estÃ© abierto y que el asiento cuadre.
+    /// que el ejercicio esté abierto y que el asiento cuadre.
     /// </summary>
-    public async Task<Asiento> RegistrarAsientoAsync(
+    public virtual async Task<Asiento> RegistrarAsientoAsync(
         long ejercicioId,
         long sucursalId,
         DateOnly fecha,
@@ -30,17 +30,17 @@ public class ContabilidadService(
         // 1. Validar ejercicio abierto
         var ejercicio = await ejercicioRepo.GetByIdAsync(ejercicioId, ct)
             ?? throw new InvalidOperationException(
-                $"No se encontrÃ³ el ejercicio ID {ejercicioId}.");
+                $"No se encontró el ejercicio ID {ejercicioId}.");
 
         if (ejercicio.Cerrado)
             throw new InvalidOperationException(
-                $"El ejercicio '{ejercicio.Descripcion}' estÃ¡ cerrado.");
+                $"El ejercicio '{ejercicio.Descripcion}' está cerrado.");
 
         if (!ejercicio.ContienesFecha(fecha))
             throw new InvalidOperationException(
                 $"La fecha {fecha} no pertenece al ejercicio '{ejercicio.Descripcion}'.");
 
-        // 2. Obtener prÃ³ximo nÃºmero
+        // 2. Obtener próximo número
         var numero = await asientoRepo.GetProximoNumeroAsync(
             ejercicioId, sucursalId, ct);
 
@@ -50,7 +50,7 @@ public class ContabilidadService(
             numero, descripcion,
             origenTabla, origenId, userId);
 
-        // 4. Agregar lÃ­neas
+        // 4. Agregar líneas
         short orden = 0;
         foreach (var (cuentaId, debe, haber, desc, centroCostoId) in lineas)
         {

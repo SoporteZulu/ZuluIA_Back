@@ -1,6 +1,8 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Comprobantes.Services;
+using ZuluIA_Back.Application.Features.Facturacion.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Enums;
@@ -13,6 +15,7 @@ public class EmitirComprobanteCommandHandler(
     IComprobanteRepository comprobanteRepo,
     IPeriodoIvaRepository periodoRepo,
     StockService stockService,
+    IAfipCaeComprobanteService afipCaeComprobanteService,
     IUnitOfWork uow,
     ICurrentUserService currentUser,
     IApplicationDbContext db)
@@ -64,6 +67,17 @@ public class EmitirComprobanteCommandHandler(
                 request.PuntoFacturacionId.Value,
                 request.TipoComprobanteId, ct);
         }
+
+        var timbradoValidation = await ParaguayTimbradoResolver.ValidarAsync(
+            db,
+            request.SucursalId,
+            request.PuntoFacturacionId,
+            request.TipoComprobanteId,
+            request.Fecha,
+            numero,
+            ct);
+        if (timbradoValidation.RequiereTimbrado && !timbradoValidation.EsValido)
+            return Result.Failure<long>(timbradoValidation.Mensaje!);
 
         // 5. Crear comprobante
         var comprobante = Comprobante.Crear(
@@ -127,8 +141,40 @@ public class EmitirComprobanteCommandHandler(
         // 8. Emitir
         comprobante.Emitir(currentUser.UserId);
 
+        if (timbradoValidation.TimbradoId.HasValue && !string.IsNullOrWhiteSpace(timbradoValidation.NroTimbrado))
+        {
+            comprobante.AsignarTimbrado(
+                timbradoValidation.TimbradoId.Value,
+                timbradoValidation.NroTimbrado,
+                currentUser.UserId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Cae))
+        {
+            if (!request.FechaVtoCae.HasValue)
+                return Result.Failure<long>("Debe indicar FechaVtoCae cuando informa un CAE manual.");
+
+            comprobante.AsignarCae(request.Cae, request.FechaVtoCae.Value, null, currentUser.UserId);
+        }
+
         // 9. Persistir
         await comprobanteRepo.AddAsync(comprobante, ct);
+
+        foreach (var impuesto in BuildImpuestos(comprobante))
+            db.ComprobantesImpuestos.Add(impuesto);
+
+        foreach (var tributo in await ComprobanteTributoResolver.ResolveAsync(db, comprobante, ct))
+            db.ComprobantesTributos.Add(tributo);
+
+        var requiereCaeAutomatico = await RequiereCaeAutomaticoAsync(request, tipoComp, ct);
+        if (requiereCaeAutomatico && string.IsNullOrWhiteSpace(comprobante.Cae))
+        {
+            await uow.SaveChangesAsync(ct);
+
+            var caeResult = await afipCaeComprobanteService.SolicitarYAsignarAsync(comprobante, ct);
+            if (caeResult.IsFailure)
+                return Result.Failure<long>(caeResult.Error ?? "No se pudo emitir CAE automaticamente en AFIP.");
+        }
 
         // 10. Afectar stock si corresponde
         if (request.AfectaStock && tipoComp.AfectaStock)
@@ -173,4 +219,40 @@ public class EmitirComprobanteCommandHandler(
         await uow.SaveChangesAsync(ct);
         return Result.Success(comprobante.Id);
     }
+
+    private async Task<bool> RequiereCaeAutomaticoAsync(
+        EmitirComprobanteCommand request,
+        ZuluIA_Back.Domain.Entities.Referencia.TipoComprobante tipoComp,
+        CancellationToken ct)
+    {
+        if (!request.PuntoFacturacionId.HasValue ||
+            !tipoComp.EsVenta ||
+            !tipoComp.TipoAfip.HasValue)
+        {
+            return false;
+        }
+
+        return await db.ConfiguracionesFiscales
+            .AsNoTracking()
+            .AnyAsync(
+                x => x.PuntoFacturacionId == request.PuntoFacturacionId.Value
+                     && x.TipoComprobanteId == request.TipoComprobanteId
+                     && x.Online,
+                ct);
+    }
+
+    private static IReadOnlyCollection<ComprobanteImpuesto> BuildImpuestos(Comprobante comprobante)
+    {
+        return comprobante.Items
+            .Where(x => x.IvaImporte > 0)
+            .GroupBy(x => new { x.AlicuotaIvaId, x.PorcentajeIva })
+            .Select(group => ComprobanteImpuesto.Crear(
+                comprobante.Id,
+                group.Key.AlicuotaIvaId,
+                group.Key.PorcentajeIva,
+                Math.Round(group.Sum(x => x.SubtotalNeto), 2),
+                Math.Round(group.Sum(x => x.IvaImporte), 2)))
+            .ToList();
+    }
+
 }

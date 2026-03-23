@@ -33,3 +33,39 @@ public class CreateFormulaProduccionCommandValidator
         });
     }
 }
+
+public class UpdateFormulaProduccionCommandValidator
+    : AbstractValidator<UpdateFormulaProduccionCommand>
+{
+    public UpdateFormulaProduccionCommandValidator()
+    {
+        RuleFor(x => x.Id)
+            .GreaterThan(0);
+
+        RuleFor(x => x.Descripcion)
+            .NotEmpty().WithMessage("La descripción es obligatoria.");
+
+        RuleFor(x => x.CantidadResultado)
+            .GreaterThan(0).WithMessage("La cantidad resultado debe ser mayor a 0.");
+    }
+}
+
+public class DeactivateFormulaProduccionCommandValidator
+    : AbstractValidator<DeactivateFormulaProduccionCommand>
+{
+    public DeactivateFormulaProduccionCommandValidator()
+    {
+        RuleFor(x => x.Id)
+            .GreaterThan(0);
+    }
+}
+
+public class ActivateFormulaProduccionCommandValidator
+    : AbstractValidator<ActivateFormulaProduccionCommand>
+{
+    public ActivateFormulaProduccionCommandValidator()
+    {
+        RuleFor(x => x.Id)
+            .GreaterThan(0);
+    }
+}

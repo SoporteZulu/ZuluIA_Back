@@ -5,6 +5,7 @@ using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Finanzas.Commands;
 using ZuluIA_Back.Application.Features.Finanzas.DTOs;
 using ZuluIA_Back.Application.Features.Finanzas.Queries;
+using ZuluIA_Back.Application.Features.Pagos.Commands;
 using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Api.Controllers;
@@ -173,6 +174,21 @@ public class PagosController(
     }
 
     /// <summary>
+    /// Registra un pago básico con medios, sin retenciones ni imputaciones.
+    /// </summary>
+    [HttpPost("basico")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RegistrarBasico(
+        [FromBody] CreatePagoCommand command,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(command, ct);
+        return CreatedFromResult(result, "GetPagoById",
+            new { id = result.IsSuccess ? result.Value : 0 });
+    }
+
+    /// <summary>
     /// Anula un pago registrado.
     /// </summary>
     [HttpPost("{id:long}/anular")]
@@ -181,14 +197,7 @@ public class PagosController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Anular(long id, CancellationToken ct)
     {
-        var pago = await repo.GetByIdAsync(id, ct);
-        if (pago is null)
-            return NotFound(new { error = $"No se encontró el pago con ID {id}." });
-
-        pago.Anular(null);
-        repo.Update(pago);
-        await db.SaveChangesAsync(ct);
-
-        return Ok(new { mensaje = "Pago anulado correctamente." });
+        var result = await Mediator.Send(new AnularPagoCommand(id), ct);
+        return FromResult(result);
     }
 }

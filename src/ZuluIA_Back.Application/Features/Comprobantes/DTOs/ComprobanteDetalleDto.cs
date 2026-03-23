@@ -1,5 +1,7 @@
 ﻿namespace ZuluIA_Back.Application.Features.Comprobantes.DTOs;
 
+using ZuluIA_Back.Domain.Enums;
+
 public class ComprobanteDetalleDto
 {
     public long Id { get; set; }
@@ -31,6 +33,18 @@ public class ComprobanteDetalleDto
     public decimal Retenciones { get; set; }
     public decimal Total { get; set; }
     public decimal Saldo { get; set; }
+    public long? TimbradoId { get; set; }
+    public string? NroTimbrado { get; set; }
+    public EstadoSifenParaguay? EstadoSifen { get; set; }
+    public string? SifenCodigoRespuesta { get; set; }
+    public string? SifenMensajeRespuesta { get; set; }
+    public string? SifenTrackingId { get; set; }
+    public string? SifenCdc { get; set; }
+    public string? SifenNumeroLote { get; set; }
+    public DateTimeOffset? SifenFechaRespuesta { get; set; }
+    public bool TieneIdentificadoresSifen { get; set; }
+    public bool PuedeReintentarSifen { get; set; }
+    public bool PuedeConciliarSifen { get; set; }
     public string? Cae { get; set; }
     public DateOnly? FechaVtoCae { get; set; }
     public string? QrData { get; set; }

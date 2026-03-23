@@ -1,7 +1,9 @@
 ﻿using ZuluIA_Back.Api.Middleware;
+using ZuluIA_Back.Api.Utilities;
 using ZuluIA_Back.Application;
 using ZuluIA_Back.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -21,7 +23,9 @@ try
     builder.Host.UseSerilog((ctx, lc) =>
         lc.ReadFrom.Configuration(ctx.Configuration));
 
-    builder.Services.AddControllers();
+    builder.Services.AddControllers(options =>
+        options.Conventions.Add(
+            new RouteTokenTransformerConvention(new KebabCaseRouteTransformer())));
     builder.Services.AddEndpointsApiExplorer();
 
     builder.Services.AddSwaggerGen(c =>

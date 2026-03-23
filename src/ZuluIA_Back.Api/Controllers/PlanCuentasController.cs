@@ -131,20 +131,82 @@ public class PlanCuentasController(
         [FromBody] UpdatePlanCuentaRequest request,
         CancellationToken ct)
     {
-        var cuenta = await repo.GetByIdAsync(id, ct);
-        if (cuenta is null)
-            return NotFound(new { error = $"No se encontró la cuenta con ID {id}." });
+        var result = await Mediator.Send(
+            new UpdatePlanCuentaCommand(
+                id,
+                request.Denominacion,
+                request.Imputable,
+                request.Tipo,
+                request.SaldoNormal),
+            ct);
 
-        cuenta.Actualizar(
-            request.Denominacion,
-            request.Imputable,
-            request.Tipo,
-            request.SaldoNormal);
-
-        repo.Update(cuenta);
-        await db.SaveChangesAsync(ct);
+        if (!result.IsSuccess)
+        {
+            var error = result.Error ?? "No fue posible actualizar la cuenta.";
+            var normalizedError = error.ToLowerInvariant();
+            return normalizedError.Contains("no se encontr")
+                || normalizedError.Contains("no encontrada")
+                || normalizedError.Contains("no encontrado")
+                || normalizedError.Contains("no existe")
+                ? NotFound(new { error })
+                : BadRequest(new { error });
+        }
 
         return Ok(new { mensaje = "Cuenta actualizada correctamente." });
+    }
+
+    // ─── Parámetros de Cuentas Contables ─────────────────────────────────────
+
+    /// <summary>
+    /// Retorna los parámetros (vinculaciones cuenta-registro) de un ejercicio.
+    /// VB6: clsPlanCuentasParametro / clsPlanCuentasParametro2 / PLANCUENTASPARAMETROS.
+    /// </summary>
+    [HttpGet("parametros")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetParametros(
+        [FromQuery] long? ejercicioId = null,
+        [FromQuery] string? tabla = null,
+        [FromQuery] long? idRegistro = null,
+        CancellationToken ct = default)
+    {
+        var query = db.PlanCuentasParametros.AsNoTracking();
+        if (ejercicioId.HasValue) query = query.Where(p => p.EjercicioId == ejercicioId.Value);
+        if (!string.IsNullOrEmpty(tabla)) query = query.Where(p => p.Tabla == tabla.ToLowerInvariant());
+        if (idRegistro.HasValue)  query = query.Where(p => p.IdRegistro == idRegistro.Value);
+
+        var lista = await query
+            .Select(p => new { p.Id, p.EjercicioId, p.CuentaId, p.Tabla, p.IdRegistro })
+            .ToListAsync(ct);
+        return Ok(lista);
+    }
+
+    /// <summary>Crea un parámetro de cuenta contable (vincula cuenta a registro).</summary>
+    [HttpPost("parametros")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateParametro([FromBody] PlanCuentaParametroRequest req, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new CreatePlanCuentaParametroCommand(req.EjercicioId, req.CuentaId, req.Tabla, req.IdRegistro),
+            ct);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { error = result.Error });
+
+        return CreatedAtAction(nameof(GetParametros), new { ejercicioId = req.EjercicioId }, new { Id = result.Value });
+    }
+
+    /// <summary>Elimina un parámetro de cuenta contable.</summary>
+    [HttpDelete("parametros/{id:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteParametro(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new DeletePlanCuentaParametroCommand(id), ct);
+        if (!result.IsSuccess)
+            return NotFound(new { error = result.Error });
+
+        return Ok();
     }
 }
 
@@ -153,3 +215,9 @@ public record UpdatePlanCuentaRequest(
     bool Imputable,
     string? Tipo,
     char? SaldoNormal);
+
+public record PlanCuentaParametroRequest(
+    long EjercicioId,
+    long CuentaId,
+    string Tabla,
+    long IdRegistro);

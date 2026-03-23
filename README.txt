@@ -171,6 +171,46 @@ ZuluIA_Back/
 
 ---
 
+## Endpoints principales
+
+Comprobantes Paraguay / SIFEN:
+
+- `GET /api/comprobantes/{id}`: detalle completo del comprobante; para Paraguay tambien expone `timbradoId`, `nroTimbrado`, `estadoSifen`, `trackingId`, `cdc`, `numeroLote`, `codigoRespuesta`, `mensajeRespuesta` y las banderas `tieneIdentificadoresSifen`, `puedeReintentarSifen`, `puedeConciliarSifen`.
+- `GET /api/comprobantes/{id}/resumen`: vista resumida del comprobante con los mismos campos operativos SIFEN y las banderas `tieneIdentificadoresSifen`, `puedeReintentarSifen`, `puedeConciliarSifen`.
+- `GET /api/comprobantes/{id}/paraguay/sifen-preview`: valida y arma el paquete previo al envio.
+- `GET /api/comprobantes/{id}/paraguay/sifen-estado`: devuelve el ultimo estado SIFEN persistido sobre el comprobante.
+- `GET /api/comprobantes/{id}/paraguay/sifen-historial`: devuelve el historial de intentos y respuestas persistidas.
+- `GET /api/comprobantes/paraguay/sifen/pendientes`: lista comprobantes Paraguay emitidos aun no aceptados, con filtros operativos por sucursal, estado, codigo de respuesta, reintento, rango de fechas, ordenamiento e identificadores.
+- `GET /api/comprobantes/paraguay/sifen/pendientes/resumen`: devuelve totales agregados de la bandeja, incluyendo reintentables, casos con identificadores, conciliables y distribucion por estado SIFEN.
+- `POST /api/comprobantes/{id}/paraguay/sifen`: envia el comprobante al integrador configurado.
+- `POST /api/comprobantes/{id}/paraguay/sifen/conciliar`: consulta el estado actual del integrador usando TrackingId, CDC o numero de lote persistidos.
+- `POST /api/comprobantes/paraguay/sifen/conciliar-pendientes`: concilia en lote comprobantes Paraguay emitidos aun no aceptados, usando identificadores persistidos y filtros por sucursal, estado, codigo de respuesta, reintento y rango de fechas; el resultado informa `totalElegibles` y `hayMasResultados` ademas del lote efectivamente procesado.
+- `POST /api/comprobantes/{id}/paraguay/sifen/reintentar`: reintenta el envio cuando el ultimo estado fue rechazo o error.
+
+Los endpoints de estado, detalle e historial exponen tambien `cdc`, `numeroLote`, `codigoRespuesta` y `mensajeRespuesta` cuando el integrador los devuelve.
+
+Tareas / Proyectos:
+
+- `PATCH /api/tareas/estimadas/{id}/desactivar`: desactiva una tarea estimada activa.
+- `PATCH /api/tareas/estimadas/{id}/activar`: reactiva una tarea estimada previamente desactivada.
+
+Tasas de interes:
+
+- `PATCH /api/tasas-interes/{id}/activar?userId={userId}`: reactiva una tasa de interes previamente desactivada y registra auditoria opcional por usuario.
+- `PATCH /api/tasas-interes/{id}/desactivar?userId={userId}`: desactiva una tasa de interes activa y registra auditoria opcional por usuario.
+- `POST /api/tasas-interes/{id}/desactivar?userId={userId}`: alias legacy mantenido por compatibilidad para clientes existentes.
+
+Menu:
+
+- `GET /api/menu`: devuelve el arbol completo de menu activo.
+- `GET /api/menu/{id}`: devuelve un item puntual de menu por identificador.
+- `POST /api/menu`: crea un item de menu.
+- `PUT /api/menu/{id}`: actualiza un item existente.
+- `DELETE /api/menu/{id}`: desactiva un item de menu.
+- `PATCH /api/menu/{id}/activar`: reactiva un item de menu previamente desactivado.
+
+---
+
 ## ⚙️ Configuración inicial
 
 ### 1. Clonar el repositorio
@@ -200,6 +240,48 @@ dotnet restore
 dotnet build
 ```
 
+### 5. Aplicar cambios manuales de esquema si corresponde
+
+Actualmente el repositorio no incluye migraciones EF Core versionadas. Cuando una
+feature agrega tablas nuevas, el cambio de esquema debe aplicarse manualmente en
+PostgreSQL con los scripts de `docs/sql`.
+
+Para el desglose persistido de tributos/percepciones por comprobante ejecutar:
+
+```sql
+docs/sql/2026-03-20-add-comprobantes-tributos.sql
+```
+
+Para persistir el timbrado aplicado sobre comprobantes Paraguay ejecutar:
+
+```sql
+docs/sql/2026-03-20-add-comprobante-timbrado-columns.sql
+```
+
+Para persistir el estado y tracking de envios SIFEN Paraguay ejecutar:
+
+```sql
+docs/sql/2026-03-20-add-comprobante-sifen-columns.sql
+```
+
+Para persistir el historial operativo de intentos y respuestas SIFEN ejecutar:
+
+```sql
+docs/sql/2026-03-20-add-comprobante-sifen-history.sql
+```
+
+Para persistir identificadores explicitos devueltos por el integrador SIFEN, como CDC y numero de lote, ejecutar:
+
+```sql
+docs/sql/2026-03-20-add-comprobante-sifen-provider-identifiers.sql
+```
+
+Para persistir campos estructurados de respuesta SIFEN, como codigo y mensaje de rechazo/error, ejecutar:
+
+```sql
+docs/sql/2026-03-20-add-comprobante-sifen-response-fields.sql
+```
+
 ---
 
 ## 🔐 Variables de entorno
@@ -218,6 +300,32 @@ SUPABASE_URL=https://TU_PROJECT_ID.supabase.co
 SUPABASE_ANON_KEY=TU_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY=TU_SERVICE_ROLE_KEY
 SUPABASE_JWT_SECRET=TU_JWT_SECRET
+
+# AFIP WSFE / WSAA (opcional)
+AFIP_WSFE_ENABLED=false
+AFIP_WSFE_BASE_URL=https://wswhomo.afip.gov.ar/wsfev1/service.asmx
+AFIP_WSFE_CUIT=20123456789
+AFIP_WSFE_USE_WSAA=true
+
+# Si se usan credenciales manuales en lugar de WSAA
+AFIP_WSFE_TOKEN=
+AFIP_WSFE_SIGN=
+AFIP_WSFE_TOKEN_EXPIRATION=2026-03-19T18:30:00-03:00
+
+AFIP_WSAA_ENABLED=false
+AFIP_WSAA_BASE_URL=https://wsaahomo.afip.gov.ar/ws/services/LoginCms
+AFIP_WSAA_CERTIFICATE_PATH=
+AFIP_WSAA_CERTIFICATE_PASSWORD=
+
+# Paraguay SIFEN / SET (opcional)
+PARAGUAY_SIFEN_ENABLED=false
+PARAGUAY_SIFEN_BASE_URL=https://sifen.test/api
+PARAGUAY_SIFEN_STATUS_URL=https://sifen.test/api/estado
+PARAGUAY_SIFEN_API_KEY=
+PARAGUAY_SIFEN_API_SECRET=
+PARAGUAY_SIFEN_ENVIRONMENT=test
+PARAGUAY_SIFEN_TRANSPORT_MODE=stub
+AFIP_WSAA_SERVICE=wsfe
 
 # JWT
 JWT_AUTHORITY=https://TU_PROJECT_ID.supabase.co/auth/v1
@@ -301,6 +409,24 @@ Servicios disponibles:
 ```bash
 dotnet test
 ```
+
+### Preview SIFEN Paraguay
+
+- `GET /api/comprobantes/{id}/paraguay/sifen-preview` devuelve el paquete fiscal preparado para un comprobante Paraguay.
+- `GET /api/comprobantes/{id}/paraguay/sifen-estado` devuelve el ultimo estado persistido de integracion SIFEN sobre el comprobante, incluyendo `tieneIdentificadores`, `puedeReintentar` y `puedeConciliar`.
+- `GET /api/comprobantes/paraguay/sifen/pendientes` devuelve una bandeja operativa de comprobantes no aceptados para seguimiento y conciliacion masiva; acepta `puedeReintentar`, `fechaDesde`, `fechaHasta` y `sortBy` (`fechaAsc`, `fechaDesc`, `estadoAsc`, `estadoDesc`, por defecto ultima respuesta desc), y ahora expone `tieneIdentificadores` y `puedeConciliar` por fila.
+- `GET /api/comprobantes/paraguay/sifen/pendientes/export` descarga la misma bandeja filtrada en CSV para seguimiento externo o soporte operativo, incluyendo columnas `tieneIdentificadores`, `puedeReintentar` y `puedeConciliar`.
+- `GET /api/comprobantes/paraguay/sifen/pendientes/resumen` usa los mismos filtros operativos de la bandeja y resume `total`, `reintentables`, `conIdentificadores`, `conciliables`, `sinEstadoSifen`, el conteo por estado y los `codigoRespuesta` y `mensajesRespuesta` mas frecuentes; acepta `topCodigos` y `topMensajes` para limitar esos rankings.
+- `GET /api/comprobantes/paraguay/sifen/reintentar-pendientes/preview` devuelve el lote exacto que entraria en el reintento masivo segun filtros, orden y `maxItems`, sin ejecutar el reenvio; tambien informa `totalElegibles`, `hayMasResultados` y un resumen del slice previsto por `estados`, `codigosRespuesta` y `mensajesRespuesta`.
+- `POST /api/comprobantes/paraguay/sifen/reintentar-pendientes` reintenta en lote comprobantes Paraguay con ultimo estado rechazado o error, usando filtros por sucursal, estado, codigo de respuesta y rango de fechas; el resultado informa `totalElegibles`, `hayMasResultados`, un resumen por `estados` exitosos y un ranking de `errores` del lote procesado.
+- `GET /api/comprobantes/paraguay/sifen/conciliar-pendientes/preview` devuelve el lote exacto que entraria en la conciliacion masiva segun filtros, orden y `maxItems`; solo incluye comprobantes con `trackingId`, `cdc` o `numeroLote` persistidos, e informa `totalElegibles`, `hayMasResultados` y un resumen del slice previsto por `estados`, `codigosRespuesta` y `mensajesRespuesta`.
+- `POST /api/comprobantes/paraguay/sifen/conciliar-pendientes` acepta `sucursalId`, `estadoSifen`, `codigoRespuesta`, `puedeReintentar`, `fechaDesde` y `fechaHasta`; internamente sigue exigiendo `trackingId`, `cdc` o `numeroLote` persistidos para poder consultar al integrador, y el resultado informa `totalElegibles`, `hayMasResultados`, un resumen por `estados` exitosos y un ranking de `errores` del lote procesado.
+- Los endpoints de estado, detalle e historial exponen `trackingId`, `cdc`, `numeroLote`, `codigoRespuesta` y `mensajeRespuesta` para soporte operativo.
+- El endpoint valida estado emitido, timbrado persistido, sucursal/tercero y configuracion `Paraguay:Sifen` o variables `PARAGUAY_SIFEN_*`.
+- Esta iteracion no transmite al SET todavia; deja lista y verificable la superficie de integracion.
+- `POST /api/comprobantes/{id}/paraguay/sifen` ejecuta el envio contra el integrador configurado y registra auditoria del intento, respuesta exitosa o error.
+- `POST /api/comprobantes/{id}/paraguay/sifen/reintentar` reintenta solo si el comprobante no quedo aceptado previamente.
+- Si `PARAGUAY_SIFEN_TRANSPORT_MODE=stub`, el envio responde aceptado localmente para pruebas integradas sin dependencia externa.
 
 ### Solo Unit Tests
 

@@ -116,5 +116,24 @@ public class CuentaCorrienteController(
 
         return Ok(resultado);
     }
+
+    /// <summary>
+    /// Retorna los saldos de cuenta corriente con intereses moratorios calculados
+    /// según la tasa vigente para la fecha de corte indicada.
+    /// </summary>
+    [HttpGet("{terceroId:long}/con-intereses")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetConIntereses(
+        long terceroId,
+        [FromQuery] long? sucursalId = null,
+        [FromQuery] DateOnly? fechaCalculo = null,
+        CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(
+            new ZuluIA_Back.Application.Features.TasasInteres.Queries.GetCuentaCorrienteConInteresQuery(
+                terceroId, sucursalId, fechaCalculo), ct);
+        return Ok(result);
+    }
 }
+
 

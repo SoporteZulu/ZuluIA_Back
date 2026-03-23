@@ -1,11 +1,13 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Usuarios.Commands;
 using ZuluIA_Back.Application.Features.Usuarios.Queries;
 
 namespace ZuluIA_Back.Api.Controllers;
 
-public class UsuariosController(IMediator mediator) : BaseController(mediator)
+public class UsuariosController(IMediator mediator, IApplicationDbContext db) : BaseController(mediator)
 {
     /// <summary>
     /// Retorna la lista paginada de usuarios.
@@ -125,6 +127,61 @@ public class UsuariosController(IMediator mediator) : BaseController(mediator)
     }
 
     /// <summary>
+    /// Reactiva un usuario desactivado.
+    /// </summary>
+    [HttpPatch("{id:long}/activar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Activar(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new ActivateUsuarioCommand(id), ct);
+        return FromResult(result);
+    }
+
+    // ─── Usuarios relacionados (grupos / miembros) ────────────────────────────
+
+    /// <summary>Retorna los usuarios vinculados a un usuario (como miembro o como grupo). VB6: clsUsuarioXUsuario / SEG_USUARIOXUSUARIO.</summary>
+    [HttpGet("{id:long}/usuarios-relacionados")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetUsuariosRelacionados(long id, CancellationToken ct)
+    {
+        var lista = await db.UsuariosXUsuario
+            .AsNoTracking()
+            .Where(u => u.UsuarioMiembroId == id || u.UsuarioGrupoId == id)
+            .Select(u => new { u.Id, u.UsuarioMiembroId, u.UsuarioGrupoId })
+            .ToListAsync(ct);
+        return Ok(lista);
+    }
+
+    /// <summary>Agrega un usuario relacionado.</summary>
+    [HttpPost("{id:long}/usuarios-relacionados")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> AddUsuarioRelacionado(long id, [FromBody] UsuarioRelacionadoRequest req, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new AddUsuarioRelacionadoCommand(id, req.UsuarioMiembroId, req.UsuarioGrupoId), ct);
+        if (!result.IsSuccess)
+            return result.Error?.Contains("ya existe", StringComparison.OrdinalIgnoreCase) == true
+                ? Conflict(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
+
+        return CreatedAtAction(nameof(GetUsuariosRelacionados), new { id }, new { Id = result.Value });
+    }
+
+    /// <summary>Elimina un usuario relacionado.</summary>
+    [HttpDelete("{id:long}/usuarios-relacionados/{uxuId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteUsuarioRelacionado(long id, long uxuId, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new DeleteUsuarioRelacionadoCommand(id, uxuId), ct);
+        if (!result.IsSuccess)
+            return NotFound(new { error = "Relacion no encontrada." });
+
+        return Ok();
+    }
+
+    /// <summary>
     /// Reemplaza los ítems de menú asignados a un usuario.
     /// </summary>
     [HttpPut("{id:long}/menu")]
@@ -138,6 +195,38 @@ public class UsuariosController(IMediator mediator) : BaseController(mediator)
         var result = await Mediator.Send(
             new SetMenuUsuarioCommand(id, request.MenuIds), ct);
         return FromResult(result);
+    }
+
+    /// <summary>
+    /// Agrega un ítem de menú individual al usuario (favorito / acceso directo).
+    /// VB6: clsMenuFavorito / clsMenuGestion — MNU_ITEMXMENU.Guardar().
+    /// </summary>
+    [HttpPost("{id:long}/menu/{menuItemId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AddMenuItem(long id, long menuItemId, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new AddUsuarioMenuItemCommand(id, menuItemId), ct);
+        if (!result.IsSuccess)
+            return Conflict(new { error = "El item ya esta asignado al usuario." });
+
+        return Ok(new { Id = result.Value });
+    }
+
+    /// <summary>
+    /// Elimina un ítem de menú individual del usuario.
+    /// VB6: clsMenuFavorito / clsMenuGestion — MNU_ITEMXMENU.Eliminar().
+    /// </summary>
+    [HttpDelete("{id:long}/menu/{menuItemId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoveMenuItem(long id, long menuItemId, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new RemoveUsuarioMenuItemCommand(id, menuItemId), ct);
+        if (!result.IsSuccess)
+            return NotFound(new { error = "El item no esta asignado al usuario." });
+
+        return Ok();
     }
 
     /// <summary>
@@ -178,3 +267,4 @@ public class UsuariosController(IMediator mediator) : BaseController(mediator)
 public record SetMenuRequest(IReadOnlyList<long> MenuIds);
 public record SetPermisoRequest(bool Valor);
 public record SetParametroRequest(string Clave, string? Valor);
+public record UsuarioRelacionadoRequest(long? UsuarioMiembroId = null, long? UsuarioGrupoId = null);

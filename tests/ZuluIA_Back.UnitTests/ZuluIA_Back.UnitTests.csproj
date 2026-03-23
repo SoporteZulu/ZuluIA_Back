@@ -14,9 +14,15 @@
 		<PackageReference Include="NSubstitute" Version="5.1.0" />
 		<PackageReference Include="Bogus" Version="35.4.0" />
 		<PackageReference Include="coverlet.collector" Version="6.0.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+	</ItemGroup>
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\ZuluIA_Back.Domain\ZuluIA_Back.Domain.csproj" />
 		<ProjectReference Include="..\..\src\ZuluIA_Back.Application\ZuluIA_Back.Application.csproj" />
+		<ProjectReference Include="..\..\src\ZuluIA_Back.Infrastructure\ZuluIA_Back.Infrastructure.csproj" />
+		<ProjectReference Include="..\..\src\ZuluIA_Back.Api\ZuluIA_Back.Api.csproj" />
 	</ItemGroup>
 </Project>

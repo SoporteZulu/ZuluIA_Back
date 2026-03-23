@@ -1,16 +1,29 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Contabilidad;
 using ZuluIA_Back.Domain.Entities.Extras;
+using ZuluIA_Back.Domain.Entities.Agro;
+using ZuluIA_Back.Domain.Entities.Auditoria;
+using ZuluIA_Back.Domain.Entities.Compras;
+using ZuluIA_Back.Domain.Entities.Facturacion;
 using ZuluIA_Back.Domain.Entities.Finanzas;
+using ZuluIA_Back.Domain.Entities.Franquicias;
+using ZuluIA_Back.Domain.Entities.Geografia;
+using ZuluIA_Back.Domain.Entities.Impuestos;
 using ZuluIA_Back.Domain.Entities.Items;
+using ZuluIA_Back.Domain.Entities.Logistica;
+using ZuluIA_Back.Domain.Entities.Ventas;
 using ZuluIA_Back.Domain.Entities.Produccion;
+using ZuluIA_Back.Domain.Entities.BI;
+using ZuluIA_Back.Domain.Entities.Referencia;
 using ZuluIA_Back.Domain.Entities.RRHH;
 using ZuluIA_Back.Domain.Entities.Stock;
 using ZuluIA_Back.Domain.Entities.Terceros;
+using ZuluIA_Back.Domain.Entities.Usuarios;
 using ZuluIA_Back.Domain.Interfaces;
 using ZuluIA_Back.Domain.Services;
 using ZuluIA_Back.Infrastructure.Persistence;
@@ -25,6 +38,8 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.AddMemoryCache();
+
         var connectionString =
             Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
             ?? configuration.GetConnectionString("DefaultConnection")
@@ -51,10 +66,16 @@ public static class DependencyInjection
 
         // Módulo 1 — Terceros
         services.AddScoped<ITerceroRepository, TerceroRepository>();
-        // Módulo Stock/Comprobantes/Contabilidad
-        services.AddScoped<IComprobanteRepository, ComprobanteRepository>();
-        services.AddScoped<IStockRepository, StockRepository>();
-        services.AddScoped<IAsientoRepository, AsientoRepository>();
+        services.AddScoped(typeof(IRepository<CategoriaCliente>),
+                   typeof(BaseRepository<CategoriaCliente>));
+        services.AddScoped(typeof(IRepository<CategoriaProveedor>),
+                   typeof(BaseRepository<CategoriaProveedor>));
+        services.AddScoped(typeof(IRepository<EstadoCliente>),
+                   typeof(BaseRepository<EstadoCliente>));
+        services.AddScoped(typeof(IRepository<EstadoProveedor>),
+                   typeof(BaseRepository<EstadoProveedor>));
+        services.AddScoped(typeof(IRepository<Seguridad>),
+                   typeof(BaseRepository<Seguridad>));
         // Módulo 2 — Sucursales y Configuración
         services.AddScoped<ISucursalRepository, SucursalRepository>();
         services.AddScoped<IConfiguracionRepository, ConfiguracionRepository>();
@@ -65,6 +86,12 @@ public static class DependencyInjection
         services.AddScoped<ICajaRepository, CajaRepository>();
         services.AddScoped<IChequeRepository, ChequeRepository>();
         services.AddScoped<ICotizacionMonedaRepository, CotizacionMonedaRepository>();
+        services.AddScoped(typeof(IRepository<Chequera>),
+                   typeof(BaseRepository<Chequera>));
+        services.AddScoped(typeof(IRepository<SeguimientoOrdenPago>),
+                   typeof(BaseRepository<SeguimientoOrdenPago>));
+        services.AddScoped(typeof(IRepository<Banco>),
+               typeof(BaseRepository<Banco>));
         services.AddScoped(typeof(IRepository<FormaPagoCaja>),
                            typeof(BaseRepository<FormaPagoCaja>));
         services.AddScoped(typeof(IRepository<TipoCajaCuenta>),
@@ -78,9 +105,6 @@ public static class DependencyInjection
         services.AddScoped<IMenuRepository, MenuRepository>();
         services.AddScoped<ISeguridadRepository, SeguridadRepository>();
         services.AddScoped<IParametroUsuarioRepository, ParametroUsuarioRepository>();
-        // ── Servicios de Dominio ──────────────────────────────────
-        services.AddScoped<NumeracionComprobanteService>();
-        services.AddScoped<PermisoService>();
         // ── M7 — Items, Categorías y Depósitos ────────────────────
         services.AddScoped<ICategoriaItemRepository, CategoriaItemRepository>();
         services.AddScoped<IItemRepository, ItemRepository>();
@@ -101,6 +125,8 @@ public static class DependencyInjection
         services.AddScoped<ICedulonRepository, CedulonRepository>();
         services.AddScoped(typeof(IRepository<Retencion>),
                            typeof(BaseRepository<Retencion>));
+        services.AddScoped(typeof(IRepository<RetencionXPersona>),
+                           typeof(BaseRepository<RetencionXPersona>));
         // ── M11 ───────────────────────────────────────────────────
         services.AddScoped<IEjercicioRepository, EjercicioRepository>();
         services.AddScoped<IPlanCuentasRepository, PlanCuentasRepository>();
@@ -125,28 +151,89 @@ public static class DependencyInjection
         // ── M12 ── Extras ─────────────────────────────────────────
         services.AddScoped(typeof(IRepository<Transportista>),
                            typeof(BaseRepository<Transportista>));
+        services.AddScoped(typeof(IRepository<Matricula>),
+                   typeof(BaseRepository<Matricula>));
+        services.AddScoped(typeof(IRepository<Integradora>),
+                           typeof(BaseRepository<Integradora>));
+        services.AddScoped(typeof(IRepository<Atributo>),
+                           typeof(BaseRepository<Atributo>));
+        services.AddScoped(typeof(IRepository<AtributoItem>),
+                   typeof(BaseRepository<AtributoItem>));
+        services.AddScoped(typeof(IRepository<Marca>),
+                   typeof(BaseRepository<Marca>));
+        services.AddScoped(typeof(IRepository<Jurisdiccion>),
+                   typeof(BaseRepository<Jurisdiccion>));
+        services.AddScoped(typeof(IRepository<UnidadMedida>),
+                   typeof(BaseRepository<UnidadMedida>));
+        services.AddScoped(typeof(IRepository<Zona>),
+                   typeof(BaseRepository<Zona>));
+        services.AddScoped(typeof(IRepository<Timbrado>),
+                   typeof(BaseRepository<Timbrado>));
+        services.AddScoped(typeof(IRepository<Impuesto>),
+                   typeof(BaseRepository<Impuesto>));
+        services.AddScoped(typeof(IRepository<ImpuestoPorPersona>),
+               typeof(BaseRepository<ImpuestoPorPersona>));
+        services.AddScoped(typeof(IRepository<ImpuestoPorItem>),
+               typeof(BaseRepository<ImpuestoPorItem>));
+        services.AddScoped(typeof(IRepository<ImpuestoPorSucursal>),
+               typeof(BaseRepository<ImpuestoPorSucursal>));
+        services.AddScoped(typeof(IRepository<ImpuestoPorTipoComprobante>),
+               typeof(BaseRepository<ImpuestoPorTipoComprobante>));
         services.AddScoped(typeof(IRepository<Busqueda>),
                            typeof(BaseRepository<Busqueda>));
+        services.AddScoped(typeof(IRepository<OrdenPreparacion>),
+                           typeof(BaseRepository<OrdenPreparacion>));
+        services.AddScoped(typeof(IRepository<DescuentoComercial>),
+                           typeof(BaseRepository<DescuentoComercial>));
+        services.AddScoped(typeof(IRepository<Region>),
+                   typeof(BaseRepository<Region>));
+        services.AddScoped(typeof(IRepository<Cubo>),
+                   typeof(BaseRepository<Cubo>));
+        services.AddScoped(typeof(IRepository<CuboCampo>),
+                   typeof(BaseRepository<CuboCampo>));
+        services.AddScoped(typeof(IRepository<CuboFiltro>),
+                   typeof(BaseRepository<CuboFiltro>));
 
+        // ── Servicios de Dominio ──────────────────────────────────
         services.AddScoped<NumeracionComprobanteService>();
         services.AddScoped<PermisoService>();
         services.AddScoped<CuentaCorrienteService>();
         services.AddScoped<ContabilidadService>();
         services.AddScoped<StockService>();
         services.AddScoped<ComprobanteService>();
-        services.AddScoped<CuentaCorrienteService>();
-        services.AddScoped<ContabilidadService>();
         services.AddScoped<ProduccionService>();
 
         services.AddScoped(typeof(IRepository<Cobro>), typeof(BaseRepository<Cobro>));
         services.AddScoped(typeof(IRepository<CobroMedio>), typeof(BaseRepository<CobroMedio>));
         services.AddScoped(typeof(IRepository<Pago>), typeof(BaseRepository<Pago>));
         services.AddScoped(typeof(IRepository<PagoMedio>), typeof(BaseRepository<PagoMedio>));
-        services.AddScoped(typeof(IRepository<AsientoLinea>), typeof(BaseRepository<AsientoLinea>));
         services.AddScoped(typeof(IRepository<ComprobanteItem>), typeof(BaseRepository<ComprobanteItem>));
+        services.AddScoped(typeof(IRepository<PlanTarjeta>), typeof(BaseRepository<PlanTarjeta>));
+        services.AddScoped(typeof(IRepository<TarjetaTipo>), typeof(BaseRepository<TarjetaTipo>));
 
         services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
         services.AddScoped<ICurrentUserService, HttpCurrentUserService>();
+        services.AddHttpClient<AfipWsaaAuthService>();
+        services.TryAddScoped<IAfipWsaaAuthService, CachedAfipWsaaAuthService>();
+        services.AddHttpClient<IAfipWsfeCaeService, AfipWsfeCaeService>();
+        services.AddHttpClient<IAfipWsfeCaeaService, AfipWsfeCaeaService>();
+        services.AddHttpClient<IParaguaySifenService, ParaguaySifenService>();
+
+        // ── Nuevas Features ──────────────────────────────────────────────────────
+        services.AddScoped<IReciboRepository, ReciboRepository>();
+        services.AddScoped<IRequisicionCompraRepository, RequisicionCompraRepository>();
+        services.AddScoped<ICotizacionCompraRepository, CotizacionCompraRepository>();
+        services.AddScoped<INotaPedidoRepository, NotaPedidoRepository>();
+        services.AddScoped<ILiquidacionGranosRepository, LiquidacionGranosRepository>();
+        services.AddScoped(typeof(IRepository<Caea>), typeof(BaseRepository<Caea>));
+        services.AddScoped(typeof(IRepository<ComisionVendedor>), typeof(BaseRepository<ComisionVendedor>));
+        services.AddScoped(typeof(IRepository<TasaInteres>), typeof(BaseRepository<TasaInteres>));
+        services.AddScoped(typeof(IRepository<PlanTrabajo>), typeof(BaseRepository<PlanTrabajo>));
+        services.AddScoped(typeof(IRepository<EvaluacionFranquicia>), typeof(BaseRepository<EvaluacionFranquicia>));
+        services.AddScoped(typeof(IRepository<AuditoriaComprobante>), typeof(BaseRepository<AuditoriaComprobante>));
+        services.AddScoped(typeof(IRepository<AuditoriaCaea>), typeof(BaseRepository<AuditoriaCaea>));
+        services.AddScoped(typeof(IRepository<ObjetivoVenta>), typeof(BaseRepository<ObjetivoVenta>));
+        services.AddScoped(typeof(IRepository<LiquidacionGranos>), typeof(BaseRepository<LiquidacionGranos>));
 
         return services;
     }

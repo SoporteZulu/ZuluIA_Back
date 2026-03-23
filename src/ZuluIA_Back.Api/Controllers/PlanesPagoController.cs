@@ -69,6 +69,18 @@ public class PlanesPagoController(IMediator mediator) : BaseController(mediator)
     }
 
     /// <summary>
+    /// Reactiva un plan de pago desactivado.
+    /// </summary>
+    [HttpPatch("{id:long}/activar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Activar(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new ActivatePlanPagoCommand(id), ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
     /// Calcula el importe de cada cuota dado un total y un plan.
     /// Endpoint utilitario para el frontend.
     /// </summary>

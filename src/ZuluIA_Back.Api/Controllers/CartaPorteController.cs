@@ -107,6 +107,38 @@ public class CartaPorteController(IMediator mediator, IApplicationDbContext db)
     }
 
     /// <summary>
+    /// Retorna un payload dedicado para reimpresion de la carta de porte.
+    /// </summary>
+    [HttpGet("{id:long}/reimpresion")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetReimpresion(long id, CancellationToken ct)
+    {
+        var carta = await db.CartasPorte
+            .AsNoTracking()
+            .Where(x => x.Id == id)
+            .Select(x => new CartaPorteDto
+            {
+                Id                = x.Id,
+                ComprobanteId     = x.ComprobanteId,
+                NroCtg            = x.NroCtg,
+                CuitRemitente     = x.CuitRemitente,
+                CuitDestinatario  = x.CuitDestinatario,
+                CuitTransportista = x.CuitTransportista,
+                FechaEmision      = x.FechaEmision,
+                Estado            = x.Estado.ToString().ToUpperInvariant(),
+                Observacion       = x.Observacion,
+                CreatedAt         = x.CreatedAt,
+                UpdatedAt         = x.UpdatedAt
+            })
+            .FirstOrDefaultAsync(ct);
+
+        return carta is null
+            ? NotFound()
+            : Ok(new CartaPorteReimpresionResponse(true, DateTimeOffset.UtcNow, carta));
+    }
+
+    /// <summary>
     /// Crea una nueva carta de porte en estado PENDIENTE.
     /// </summary>
     [HttpPost]
@@ -147,14 +179,11 @@ public class CartaPorteController(IMediator mediator, IApplicationDbContext db)
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Confirmar(long id, CancellationToken ct)
     {
-        var carta = await db.CartasPorte
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
-
-        if (carta is null)
-            return NotFound(new { error = $"No se encontró la carta de porte con ID {id}." });
-
-        carta.Confirmar(null);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new ConfirmarCartaPorteCommand(id), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("No se encontro", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Carta de porte confirmada correctamente." });
     }
@@ -171,14 +200,11 @@ public class CartaPorteController(IMediator mediator, IApplicationDbContext db)
         [FromBody] AnularCartaPorteRequest request,
         CancellationToken ct)
     {
-        var carta = await db.CartasPorte
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
-
-        if (carta is null)
-            return NotFound(new { error = $"No se encontró la carta de porte con ID {id}." });
-
-        carta.Anular(request.Observacion, null);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new AnularCartaPorteCommand(id, request.Observacion), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("No se encontro", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Carta de porte anulada correctamente." });
     }
@@ -186,3 +212,7 @@ public class CartaPorteController(IMediator mediator, IApplicationDbContext db)
 
 public record AsignarCtgRequest(string NroCtg);
 public record AnularCartaPorteRequest(string? Observacion);
+public record CartaPorteReimpresionResponse(
+    bool EsReimpresion,
+    DateTimeOffset GeneradoEn,
+    object Documento);

@@ -106,18 +106,18 @@ public class FormulasProduccionController(
         [FromBody] UpdateFormulaRequest request,
         CancellationToken ct)
     {
-        var formula = await repo.GetByIdAsync(id, ct);
-        if (formula is null)
-            return NotFound(new { error = $"No se encontró la fórmula con ID {id}." });
+        var result = await Mediator.Send(
+            new UpdateFormulaProduccionCommand(
+                id,
+                request.Descripcion,
+                request.CantidadResultado,
+                request.Observacion),
+            ct);
 
-        formula.Actualizar(
-            request.Descripcion,
-            request.CantidadResultado,
-            request.Observacion,
-            null);
-
-        repo.Update(formula);
-        await db.SaveChangesAsync(ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("No se encontró", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Fórmula actualizada correctamente." });
     }
@@ -130,15 +130,26 @@ public class FormulasProduccionController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Desactivar(long id, CancellationToken ct)
     {
-        var formula = await repo.GetByIdAsync(id, ct);
-        if (formula is null)
-            return NotFound(new { error = $"No se encontró la fórmula con ID {id}." });
-
-        formula.Desactivar(null);
-        repo.Update(formula);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new DeactivateFormulaProduccionCommand(id), ct);
+        if (result.IsFailure)
+            return NotFound(new { error = result.Error });
 
         return Ok(new { mensaje = "Fórmula desactivada correctamente." });
+    }
+
+    /// <summary>
+    /// Reactiva una fórmula de producción.
+    /// </summary>
+    [HttpPatch("{id:long}/activar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Activar(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new ActivateFormulaProduccionCommand(id), ct);
+        if (result.IsFailure)
+            return NotFound(new { error = result.Error });
+
+        return Ok(new { mensaje = "Fórmula activada correctamente." });
     }
 }
 

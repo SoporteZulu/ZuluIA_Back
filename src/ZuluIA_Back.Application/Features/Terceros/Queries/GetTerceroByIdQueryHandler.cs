@@ -21,7 +21,7 @@ public class GetTerceroByIdQueryHandler(
         var tercero = await repo.GetByIdAsync(request.Id, ct);
 
         if (tercero is null)
-            return (Result<TerceroDto>)Result<TerceroDto>.Failure(
+            return Result.Failure<TerceroDto>(
                 $"No se encontró el tercero con Id {request.Id}.");
 
         // ── 2. Mapeo base (campos escalares + Domicilio VO) ───────────────────

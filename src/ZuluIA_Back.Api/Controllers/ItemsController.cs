@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Items.Commands;
 using ZuluIA_Back.Application.Features.Items.Queries;
+using ZuluIA_Back.Domain.Common;
 
 namespace ZuluIA_Back.Api.Controllers;
 
@@ -222,6 +223,205 @@ public class ItemsController(IMediator mediator, IApplicationDbContext db)
         var result = await Mediator.Send(new DeleteItemCommand(id), ct);
         return FromResult(result);
     }
+
+    /// <summary>
+    /// Reactiva un ítem desactivado.
+    /// </summary>
+    [HttpPatch("{id:long}/activar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Activar(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new ActivateItemCommand(id), ct);
+        return FromResult(result);
+    }
+
+    // ── BOM / ItemComponente ──────────────────────────────────────────────────
+    // VB6: clsItemComponente / ITEMS_COMPONENTES
+
+    [HttpGet("{id:long}/componentes")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetComponentes(long id, CancellationToken ct)
+    {
+        var exists = await db.Items.AnyAsync(x => x.Id == id, ct);
+        if (!exists) return NotFound();
+
+        var componentes = await db.ItemsComponentes
+            .Where(x => x.ItemPadreId == id)
+            .Select(x => new
+            {
+                x.Id,
+                x.ItemPadreId,
+                x.ComponenteId,
+                x.Cantidad,
+                x.UnidadMedidaId
+            })
+            .ToListAsync(ct);
+
+        return Ok(componentes);
+    }
+
+    [HttpPost("{id:long}/componentes")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AddComponente(
+        long id, [FromBody] AddItemComponenteRequest req, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new AddItemComponenteCommand(id, req.ComponenteId, req.Cantidad, req.UnidadMedidaId),
+            ct);
+
+        if (!result.IsSuccess)
+        {
+            if (IsNotFoundError(result.Error))
+                return NotFound(new { error = result.Error });
+
+            if (IsConflictError(result.Error))
+                return Conflict(new { error = result.Error });
+
+            return BadRequest(new { error = result.Error });
+        }
+
+        return CreatedAtAction(nameof(GetComponentes), new { id }, new { Id = result.Value });
+    }
+
+    [HttpPut("{id:long}/componentes/{compId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateComponente(
+        long id, long compId, [FromBody] UpdateItemComponenteRequest req, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new UpdateItemComponenteCommand(id, compId, req.Cantidad, req.UnidadMedidaId),
+            ct);
+
+        if (!result.IsSuccess)
+            return IsNotFoundError(result.Error)
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
+
+        return Ok(new { Id = compId, Cantidad = req.Cantidad, req.UnidadMedidaId });
+    }
+
+    [HttpDelete("{id:long}/componentes/{compId:long}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteComponente(long id, long compId, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new DeleteItemComponenteCommand(id, compId), ct);
+        if (!result.IsSuccess)
+            return IsNotFoundError(result.Error)
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
+
+        return NoContent();
+    }
+
+    // ── Unidades de manipulación (ume_unidades_manipulacion) ──────────────────
+
+    /// <summary>
+    /// Retorna las unidades de manipulación de un ítem (cajas, pallets, etc.).
+    /// VB6: frmItems / ume_unidades_manipulacion.
+    /// </summary>
+    [HttpGet("{id:long}/unidades-manipulacion")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetUnidadesManipulacion(long id, CancellationToken ct)
+    {
+        var lista = await db.UnidadesManipulacion
+            .AsNoTracking()
+            .Where(u => u.ItemId == id)
+            .Select(u => new {
+                u.Id, u.Descripcion, u.Cantidad, u.UnidadMedidaId, u.TipoUnidadManipulacionId
+            })
+            .ToListAsync(ct);
+        return Ok(lista);
+    }
+
+    /// <summary>
+    /// Agrega una unidad de manipulación a un ítem.
+    /// VB6: frmItems / ume_unidades_manipulacion (INSERT).
+    /// </summary>
+    [HttpPost("{id:long}/unidades-manipulacion")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    public async Task<IActionResult> AddUnidadManipulacion(
+        long id, [FromBody] UnidadManipulacionRequest req, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new AddUnidadManipulacionCommand(
+                id,
+                req.Descripcion,
+                req.Cantidad,
+                req.UnidadMedidaId,
+                req.TipoUnidadManipulacionId),
+            ct);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { error = result.Error });
+
+        return CreatedAtAction(nameof(GetUnidadesManipulacion), new { id }, new { Id = result.Value });
+    }
+
+    /// <summary>
+    /// Actualiza una unidad de manipulación de un ítem.
+    /// </summary>
+    [HttpPut("{id:long}/unidades-manipulacion/{umanId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateUnidadManipulacion(
+        long id, long umanId, [FromBody] UnidadManipulacionRequest req, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new UpdateUnidadManipulacionCommand(
+                id,
+                umanId,
+                req.Descripcion,
+                req.Cantidad,
+                req.UnidadMedidaId,
+                req.TipoUnidadManipulacionId),
+            ct);
+
+        if (!result.IsSuccess)
+            return IsNotFoundError(result.Error)
+                ? NotFound(new { error = "Unidad de manipulación no encontrada." })
+                : BadRequest(new { error = result.Error });
+
+        return Ok(new { Id = umanId });
+    }
+
+    /// <summary>
+    /// Elimina una unidad de manipulación de un ítem.
+    /// VB6: frmItems / ume_unidades_manipulacion (DELETE).
+    /// </summary>
+    [HttpDelete("{id:long}/unidades-manipulacion/{umanId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteUnidadManipulacion(long id, long umanId, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new DeleteUnidadManipulacionCommand(id, umanId), ct);
+        if (!result.IsSuccess)
+            return IsNotFoundError(result.Error)
+                ? NotFound(new { error = "Unidad de manipulación no encontrada." })
+                : BadRequest(new { error = result.Error });
+
+        return Ok();
+    }
+
+    private static bool IsNotFoundError(string? error) =>
+        error?.Contains("no encontrado", StringComparison.OrdinalIgnoreCase) == true
+        || error?.Contains("no encontrada", StringComparison.OrdinalIgnoreCase) == true;
+
+    private static bool IsConflictError(string? error) =>
+        error?.Contains("ya esta asignado", StringComparison.OrdinalIgnoreCase) == true
+        || error?.Contains("ya está asignado", StringComparison.OrdinalIgnoreCase) == true;
 }
 
 public record UpdatePreciosRequest(decimal PrecioCosto, decimal PrecioVenta);
+public record AddItemComponenteRequest(long ComponenteId, decimal Cantidad, long? UnidadMedidaId = null);
+public record UpdateItemComponenteRequest(decimal Cantidad, long? UnidadMedidaId = null);
+public record UnidadManipulacionRequest(
+    string  Descripcion,
+    decimal Cantidad,
+    long    UnidadMedidaId,
+    long?   TipoUnidadManipulacionId = null);

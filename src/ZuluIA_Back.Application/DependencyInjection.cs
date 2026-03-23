@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using ZuluIA_Back.Application.Common.Behaviors;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Comprobantes.Services;
 
 namespace ZuluIA_Back.Application;
 
@@ -23,6 +24,8 @@ public static class DependencyInjection
         });
 
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IAfipCaeComprobanteService, AfipCaeComprobanteService>();
+        services.AddScoped<IParaguaySifenComprobanteService, ParaguaySifenComprobanteService>();
 
         return services;
     }

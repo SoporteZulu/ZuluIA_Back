@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Usuarios.Commands;
 using ZuluIA_Back.Domain.Entities.Usuarios;
 using ZuluIA_Back.Domain.Interfaces;
 
@@ -45,25 +46,17 @@ public class SeguridadController(
         [FromBody] CreateSeguridadRequest request,
         CancellationToken ct)
     {
-        var existe = await db.Seguridad
-            .AnyAsync(x => x.Identificador ==
-                request.Identificador.Trim().ToUpperInvariant(), ct);
+        var result = await Mediator.Send(
+            new CreateSeguridadCommand(
+                request.Identificador,
+                request.Descripcion,
+                request.AplicaSeguridadPorUsuario),
+            ct);
 
-        if (existe)
-            return BadRequest(new
-            {
-                error = $"Ya existe un permiso con el identificador '{request.Identificador}'."
-            });
+        if (result.IsFailure)
+            return BadRequest(new { error = result.Error });
 
-        var seguridad = Seguridad.Crear(
-            request.Identificador,
-            request.Descripcion,
-            request.AplicaSeguridadPorUsuario);
-
-        await db.Seguridad.AddAsync(seguridad, ct);
-        await db.SaveChangesAsync(ct);
-
-        return Ok(new { id = seguridad.Id });
+        return Ok(new { id = result.Value });
     }
 
     /// <summary>
