@@ -71,8 +71,38 @@ public class GetComprobanteDetalleQueryHandler(
             .Select(x => new { x.Id, x.Descripcion })
             .ToDictionaryAsync(x => x.Id, ct);
 
+        var comprobanteItemIds = comp.Items.Select(x => x.Id).ToList();
+        var atributosPorItem = await db.ComprobantesItemsAtributos.AsNoTracking()
+            .Where(x => comprobanteItemIds.Contains(x.ComprobanteItemId))
+            .Join(db.AtributosComerciales.AsNoTracking(),
+                a => a.AtributoComercialId,
+                d => d.Id,
+                (a, d) => new
+                {
+                    a.Id,
+                    a.ComprobanteItemId,
+                    a.AtributoComercialId,
+                    d.Codigo,
+                    d.Descripcion,
+                    a.Valor
+                })
+            .ToListAsync(ct);
+
+        var atributosLookup = atributosPorItem
+            .GroupBy(x => x.ComprobanteItemId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<ComprobanteItemAtributoDto>)g.Select(x => new ComprobanteItemAtributoDto
+                {
+                    Id = x.Id,
+                    AtributoComercialId = x.AtributoComercialId,
+                    AtributoCodigo = x.Codigo,
+                    AtributoDescripcion = x.Descripcion,
+                    Valor = x.Valor
+                }).ToList().AsReadOnly());
+
         // Imputaciones
-        var imputaciones = await imputRepo.GetByComprobanteDestinoAsync(comp.Id, ct);
+        var imputaciones = await imputRepo.GetByComprobanteDestinoAsync(comp.Id, true, ct);
         var origenIds = imputaciones.Select(x => x.ComprobanteOrigenId).ToList();
 
         var numerosOrigen = await db.Comprobantes.AsNoTracking()
@@ -126,8 +156,12 @@ public class GetComprobanteDetalleQueryHandler(
             Total                      = comp.Total,
             Saldo                      = comp.Saldo,
             Cae                        = comp.Cae,
+            Caea                       = comp.Caea,
             FechaVtoCae                = comp.FechaVtoCae,
             QrData                     = comp.QrData,
+            EstadoAfip                 = comp.EstadoAfip.ToString().ToUpperInvariant(),
+            UltimoErrorAfip            = comp.UltimoErrorAfip,
+            FechaUltimaConsultaAfip    = comp.FechaUltimaConsultaAfip,
             Estado                     = comp.Estado.ToString().ToUpperInvariant(),
             Observacion                = comp.Observacion,
             CreatedAt                  = comp.CreatedAt,
@@ -152,7 +186,8 @@ public class GetComprobanteDetalleQueryHandler(
                     ? depositos.GetValueOrDefault(i.DepositoId.Value)?.Descripcion
                     : null,
                 Orden              = i.Orden,
-                EsGravado          = i.EsGravado
+                EsGravado          = i.EsGravado,
+                Atributos          = atributosLookup.GetValueOrDefault(i.Id) ?? []
             }).ToList().AsReadOnly(),
             Imputaciones = imputDtos.AsReadOnly()
         };

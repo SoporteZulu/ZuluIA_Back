@@ -9,6 +9,8 @@ public class ItemDto
     public string? DescripcionAdicional { get; set; }
     public long? CategoriaId { get; set; }
     public string? CategoriaDescripcion { get; set; }
+    public long? MarcaId { get; set; }
+    public string? MarcaDescripcion { get; set; }
     public long UnidadMedidaId { get; set; }
     public string? UnidadMedidaDescripcion { get; set; }
     public long AlicuotaIvaId { get; set; }

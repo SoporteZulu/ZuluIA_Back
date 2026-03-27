@@ -19,4 +19,5 @@ public class ComprobanteItemDto
     public string? DepositoDescripcion { get; set; }
     public short Orden { get; set; }
     public bool EsGravado { get; set; }
+    public IReadOnlyList<ComprobanteItemAtributoDto> Atributos { get; set; } = [];
 }

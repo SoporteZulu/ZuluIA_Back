@@ -20,5 +20,6 @@ public record UpdateItemCommand(
     decimal PrecioVenta,
     decimal StockMinimo,
     decimal? StockMaximo,
-    string? CodigoAfip
+    string? CodigoAfip,
+    long? MarcaId = null
 ) : IRequest<Result>;

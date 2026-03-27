@@ -1,10 +1,16 @@
 ﻿using FluentValidation;
+using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Application.Features.Terceros.Commands;
 
 public class UpdateTerceroCommandValidator
     : AbstractValidator<UpdateTerceroCommand>
 {
+    private static readonly string[] PersoneriasValidas = [
+        TipoPersoneriaTercero.Juridica.ToString().ToUpperInvariant(),
+        TipoPersoneriaTercero.Fisica.ToString().ToUpperInvariant()
+    ];
+
     public UpdateTerceroCommandValidator()
     {
         // ─── Id ───────────────────────────────────────────────────────────────
@@ -20,6 +26,38 @@ public class UpdateTerceroCommandValidator
             .MaximumLength(200)
             .When(x => x.NombreFantasia is not null)
             .WithMessage("El nombre de fantasía no puede superar los 200 caracteres.");
+
+        RuleFor(x => x.TipoPersoneria)
+            .Must(x => string.IsNullOrWhiteSpace(x) || PersoneriasValidas.Contains(x.Trim().ToUpperInvariant()))
+            .WithMessage("La personería debe ser JURIDICA o FISICA.");
+
+        RuleFor(x => x.Nombre)
+            .NotEmpty().When(IsFisica)
+            .WithMessage("Debe ingresar el nombre para una persona física.")
+            .MaximumLength(150).When(x => !string.IsNullOrWhiteSpace(x.Nombre))
+            .WithMessage("El nombre no puede superar los 150 caracteres.");
+
+        RuleFor(x => x.Apellido)
+            .NotEmpty().When(IsFisica)
+            .WithMessage("Debe ingresar el apellido para una persona física.")
+            .MaximumLength(150).When(x => !string.IsNullOrWhiteSpace(x.Apellido))
+            .WithMessage("El apellido no puede superar los 150 caracteres.");
+
+        RuleFor(x => x)
+            .Must(x => !IsFisica(x) || !x.EsEntidadGubernamental)
+            .WithMessage("Una persona física no puede marcarse como entidad gubernamental.");
+
+        RuleFor(x => x.ClaveFiscal)
+            .MaximumLength(50)
+            .When(x => !string.IsNullOrWhiteSpace(x.ClaveFiscal));
+
+        RuleFor(x => x.ValorClaveFiscal)
+            .MaximumLength(30)
+            .When(x => !string.IsNullOrWhiteSpace(x.ValorClaveFiscal));
+
+        RuleFor(x => x)
+            .Must(x => string.IsNullOrWhiteSpace(x.ClaveFiscal) == string.IsNullOrWhiteSpace(x.ValorClaveFiscal))
+            .WithMessage("Debe informar tanto la clave fiscal como su valor.");
 
         // ─── Documento e IVA ──────────────────────────────────────────────────
         RuleFor(x => x.NroDocumento)
@@ -96,4 +134,7 @@ public class UpdateTerceroCommandValidator
             .When(x => x.NroMunicipal is not null)
             .WithMessage("El nro. municipal no puede superar los 30 caracteres.");
     }
+
+    private static bool IsFisica(UpdateTerceroCommand command)
+        => string.Equals(command.TipoPersoneria?.Trim(), TipoPersoneriaTercero.Fisica.ToString(), StringComparison.OrdinalIgnoreCase);
 }

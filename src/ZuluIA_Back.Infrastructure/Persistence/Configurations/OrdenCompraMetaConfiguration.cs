@@ -25,6 +25,19 @@ public class OrdenCompraMetaConfiguration : IEntityTypeConfiguration<OrdenCompra
         builder.Property(x => x.CondicionesEntrega)
                .HasColumnName("condiciones_entrega");
 
+        builder.Property(x => x.CantidadTotal)
+               .HasColumnName("cantidad_total")
+               .HasPrecision(18, 4)
+               .HasDefaultValue(0m);
+
+        builder.Property(x => x.CantidadRecibida)
+               .HasColumnName("cantidad_recibida")
+               .HasPrecision(18, 4)
+               .HasDefaultValue(0m);
+
+        builder.Property(x => x.FechaUltimaRecepcion)
+               .HasColumnName("fecha_ultima_recepcion");
+
         builder.Property(x => x.EstadoOc)
                .HasColumnName("estado_oc")
                .HasConversion(

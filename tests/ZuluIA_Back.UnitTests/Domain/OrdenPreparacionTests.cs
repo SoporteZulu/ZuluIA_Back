@@ -70,6 +70,8 @@ public class OrdenPreparacionTests
     {
         var orden = CrearOrdenConDetalle();
         orden.IniciarPreparacion(null);
+        var detalle = orden.Detalles.Single();
+        orden.RegistrarPicking(detalle.Id, detalle.Cantidad, null);
         orden.Confirmar(Hoy, null);
 
         var act = () => orden.AgregarDetalle(10L, 1L, 1m);
@@ -130,6 +132,8 @@ public class OrdenPreparacionTests
     {
         var orden = CrearOrdenConDetalle();
         orden.IniciarPreparacion(null);
+        var detalle = orden.Detalles.Single();
+        orden.RegistrarPicking(detalle.Id, detalle.Cantidad, null);
 
         orden.Confirmar(Hoy, null);
 
@@ -176,6 +180,8 @@ public class OrdenPreparacionTests
     {
         var orden = CrearOrdenConDetalle();
         orden.IniciarPreparacion(null);
+        var detalle = orden.Detalles.Single();
+        orden.RegistrarPicking(detalle.Id, detalle.Cantidad, null);
         orden.Confirmar(Hoy, null);
 
         var act = () => orden.Anular(null);
@@ -194,5 +200,17 @@ public class OrdenPreparacionTests
 
         act.Should().Throw<InvalidOperationException>()
            .WithMessage("*anulada*");
+    }
+
+    [Fact]
+    public void Confirmar_ConPickingIncompleto_DebeLanzarExcepcion()
+    {
+        var orden = CrearOrdenConDetalle();
+        orden.IniciarPreparacion(null);
+
+        var act = () => orden.Confirmar(Hoy, null);
+
+        act.Should().Throw<InvalidOperationException>()
+           .WithMessage("*picking incompleto*");
     }
 }

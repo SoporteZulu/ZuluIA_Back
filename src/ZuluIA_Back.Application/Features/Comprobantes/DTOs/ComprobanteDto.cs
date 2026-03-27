@@ -24,7 +24,11 @@ public class ComprobanteDto
     public decimal Total { get; set; }
     public decimal Saldo { get; set; }
     public string? Cae { get; set; }
+    public string? Caea { get; set; }
     public DateOnly? FechaVtoCae { get; set; }
+    public EstadoAfipWsfe EstadoAfip { get; set; }
+    public string? UltimoErrorAfip { get; set; }
+    public DateTimeOffset? FechaUltimaConsultaAfip { get; set; }
     public EstadoComprobante Estado { get; set; }
     public string? Observacion { get; set; }
     public List<ComprobanteItemDto> Items { get; set; } = [];

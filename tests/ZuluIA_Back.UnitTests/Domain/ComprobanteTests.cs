@@ -137,6 +137,20 @@ public class ComprobanteTests
         comp.Estado.Should().Be(EstadoComprobante.PagadoParcial);
     }
 
+    [Fact]
+    public void RevertirSaldo_DesdePagoParcial_DebeVolverAEmitidoConSaldoTotal()
+    {
+        var comp = CrearComprobante();
+        comp.AgregarItem(CrearItem(1000, 21));
+        comp.Emitir(null);
+        comp.ActualizarSaldo(comp.Total, null);
+
+        comp.RevertirSaldo(comp.Total, null);
+
+        comp.Saldo.Should().Be(comp.Total);
+        comp.Estado.Should().Be(EstadoComprobante.Emitido);
+    }
+
     // ── MarcarComoConvertido / SetComprobanteOrigen ───────────────────────────
 
     [Fact]
@@ -181,5 +195,27 @@ public class ComprobanteTests
         comp.SetComprobanteOrigen(42L);
 
         comp.ComprobanteOrigenId.Should().Be(42L);
+    }
+
+    [Fact]
+    public void VincularAComprobanteOrigen_ConOrigenValido_DebeAsignarlo()
+    {
+        var comp = CrearComprobante();
+
+        comp.VincularAComprobanteOrigen(24L, null);
+
+        comp.ComprobanteOrigenId.Should().Be(24L);
+    }
+
+    [Fact]
+    public void VincularAComprobanteOrigen_ConOrigenDistintoYYaAsignado_DebeLanzarExcepcion()
+    {
+        var comp = CrearComprobante();
+        comp.VincularAComprobanteOrigen(24L, null);
+
+        var act = () => comp.VincularAComprobanteOrigen(25L, null);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*origen comercial distinto*");
     }
 }

@@ -93,12 +93,14 @@ public class Cheque : AuditableEntity
         SetUpdated(userId);
     }
 
-    public void Entregar(long? userId)
+    public void Entregar(long? terceroId, string? observacion, long? userId)
     {
         if (Estado != EstadoCheque.Cartera)
             throw new InvalidOperationException(
                 $"Solo se pueden entregar cheques en estado Cartera. Estado actual: {Estado}.");
 
+        TerceroId = terceroId;
+        Observacion = observacion?.Trim();
         Estado = EstadoCheque.Entregado;
         SetUpdated(userId);
     }

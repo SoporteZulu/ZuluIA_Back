@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Produccion.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Produccion;
 using ZuluIA_Back.Domain.Interfaces;
@@ -8,6 +9,7 @@ namespace ZuluIA_Back.Application.Features.Produccion.Commands;
 
 public class CreateFormulaProduccionCommandHandler(
     IFormulaProduccionRepository repo,
+    FormulaProduccionHistorialService historialService,
     IUnitOfWork uow,
     ICurrentUserService currentUser)
     : IRequestHandler<CreateFormulaProduccionCommand, Result<long>>
@@ -45,6 +47,9 @@ public class CreateFormulaProduccionCommandHandler(
         }
 
         await repo.AddAsync(formula, ct);
+        await uow.SaveChangesAsync(ct);
+
+        await historialService.RegistrarSnapshotAsync(formula, "Alta fórmula", ct);
         await uow.SaveChangesAsync(ct);
 
         return Result.Success(formula.Id);

@@ -21,6 +21,12 @@ public record UpdateTerceroCommand(
     // ─── Identificación ───────────────────────────────────────────────────────
     string RazonSocial,
     string? NombreFantasia,
+    string? TipoPersoneria,
+    string? Nombre,
+    string? Apellido,
+    bool EsEntidadGubernamental,
+    string? ClaveFiscal,
+    string? ValorClaveFiscal,
 
     // ─── Documento e IVA ──────────────────────────────────────────────────────
     // NroDocumento opcional: null = no modificar

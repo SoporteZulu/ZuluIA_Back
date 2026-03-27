@@ -9,20 +9,35 @@ public class ImputacionRepository(AppDbContext context)
 {
     public async Task<IReadOnlyList<Imputacion>> GetByComprobanteOrigenAsync(
         long comprobanteId,
+        bool incluirAnuladas = false,
         CancellationToken ct = default) =>
         await DbSet
             .AsNoTracking()
             .Where(x => x.ComprobanteOrigenId == comprobanteId)
+            .Where(x => incluirAnuladas || !x.Anulada)
             .OrderByDescending(x => x.Fecha)
             .ToListAsync(ct);
 
     public async Task<IReadOnlyList<Imputacion>> GetByComprobanteDestinoAsync(
         long comprobanteId,
+        bool incluirAnuladas = false,
         CancellationToken ct = default) =>
         await DbSet
             .AsNoTracking()
             .Where(x => x.ComprobanteDestinoId == comprobanteId)
+            .Where(x => incluirAnuladas || !x.Anulada)
             .OrderByDescending(x => x.Fecha)
+            .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<Imputacion>> GetHistorialByComprobanteAsync(
+        long comprobanteId,
+        bool incluirAnuladas = true,
+        CancellationToken ct = default) =>
+        await DbSet
+            .AsNoTracking()
+            .Where(x => x.ComprobanteOrigenId == comprobanteId || x.ComprobanteDestinoId == comprobanteId)
+            .Where(x => incluirAnuladas || !x.Anulada)
+            .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(ct);
 
     public async Task<decimal> GetTotalImputadoAsync(
@@ -31,5 +46,6 @@ public class ImputacionRepository(AppDbContext context)
         await DbSet
             .AsNoTracking()
             .Where(x => x.ComprobanteDestinoId == comprobanteDestinoId)
+            .Where(x => !x.Anulada)
             .SumAsync(x => (decimal?)x.Importe, ct) ?? 0;
 }

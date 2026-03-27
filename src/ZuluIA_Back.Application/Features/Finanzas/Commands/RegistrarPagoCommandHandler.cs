@@ -1,20 +1,18 @@
 ﻿using MediatR;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Finanzas.Services;
+using ZuluIA_Back.Application.Features.Tesoreria.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Finanzas;
 using ZuluIA_Back.Domain.Interfaces;
-using ZuluIA_Back.Domain.Services;
 
 namespace ZuluIA_Back.Application.Features.Finanzas.Commands;
 
 public class RegistrarPagoCommandHandler(
     IPagoRepository pagoRepo,
-    IComprobanteRepository comprobanteRepo,
-    IImputacionRepository imputacionRepo,
-    CuentaCorrienteService ctaCteService,
+    PagoWorkflowService pagoWorkflowService,
     IUnitOfWork uow,
-    ICurrentUserService currentUser,
-    IApplicationDbContext db)
+    ICurrentUserService currentUser)
     : IRequestHandler<RegistrarPagoCommand, Result<long>>
 {
     public async Task<Result<long>> Handle(
@@ -49,55 +47,11 @@ public class RegistrarPagoCommandHandler(
         }
 
         await pagoRepo.AddAsync(pago, ct);
+        await uow.SaveChangesAsync(ct);
 
-        // 3. Agregar retenciones
-        foreach (var ret in request.Retenciones)
-        {
-            var retencion = Retencion.CrearEnPago(
-                pago.Id,
-                ret.Tipo,
-                ret.Importe,
-                ret.NroCertificado,
-                request.Fecha);
-
-            await db.Retenciones.AddAsync(retencion, ct);
-        }
-
-        // 4. Imputar comprobantes
-        foreach (var comp in request.ComprobantesAImputar)
-        {
-            var comprobante = await comprobanteRepo.GetByIdAsync(comp.ComprobanteId, ct);
-            if (comprobante is null) continue;
-
-            if (comp.Importe > comprobante.Saldo)
-                return Result.Failure<long>(
-                    $"El importe supera el saldo del comprobante {comprobante.Numero.Formateado}.");
-
-            comprobante.ActualizarSaldo(comp.Importe, currentUser.UserId);
-            comprobanteRepo.Update(comprobante);
-
-            var imputacion = Domain.Entities.Comprobantes.Imputacion.Crear(
-                pago.Id, comp.ComprobanteId,
-                comp.Importe, request.Fecha,
-                currentUser.UserId);
-
-            await imputacionRepo.AddAsync(imputacion, ct);
-        }
-
-        // 5. Acreditar cuenta corriente del proveedor
-        if (request.ComprobantesAImputar.Any())
-        {
-            var totalImputado = request.ComprobantesAImputar.Sum(x => x.Importe);
-            await ctaCteService.AcreditarAsync(
-                request.TerceroId,
-                request.SucursalId,
-                request.MonedaId,
-                totalImputado,
-                null,
-                request.Fecha,
-                $"Pago #{pago.Id}",
-                ct);
-        }
+        var workflowResult = await pagoWorkflowService.ApplyAsync(pago, request, currentUser.UserId, ct);
+        if (workflowResult is not null)
+            return workflowResult;
 
         await uow.SaveChangesAsync(ct);
         return Result.Success(pago.Id);

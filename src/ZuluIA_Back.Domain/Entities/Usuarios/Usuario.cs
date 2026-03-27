@@ -8,6 +8,7 @@ public class Usuario : AuditableEntity
     public string UserName { get; private set; } = string.Empty;
     public string? NombreCompleto { get; private set; }
     public string? Email { get; private set; }
+    public string? PasswordHash { get; private set; }
     public bool Activo { get; private set; } = true;
     public long? ArqueoActual { get; private set; }
 
@@ -45,6 +46,14 @@ public class Usuario : AuditableEntity
     {
         NombreCompleto = nombreCompleto?.Trim();
         Email          = email?.Trim().ToLowerInvariant();
+        SetUpdated(userId);
+    }
+
+    public void EstablecerPasswordHash(string passwordHash, long? userId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);
+
+        PasswordHash = passwordHash.Trim();
         SetUpdated(userId);
     }
 

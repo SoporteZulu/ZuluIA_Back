@@ -106,11 +106,28 @@ public class ComprobanteConfiguration : IEntityTypeConfiguration<Comprobante>
                .HasColumnName("cae")
                .HasMaxLength(50);
 
+        builder.Property(x => x.Caea)
+               .HasColumnName("caea")
+               .HasMaxLength(50);
+
         builder.Property(x => x.FechaVtoCae)
                .HasColumnName("fecha_vto_cae");
 
         builder.Property(x => x.QrData)
                .HasColumnName("qr_data");
+
+        builder.Property(x => x.EstadoAfip)
+               .HasColumnName("estado_afip")
+               .HasConversion(v => v.ToString().ToUpperInvariant(), v => Enum.Parse<EstadoAfipWsfe>(v, true))
+               .HasMaxLength(30)
+               .IsRequired();
+
+        builder.Property(x => x.UltimoErrorAfip)
+               .HasColumnName("ultimo_error_afip")
+               .HasMaxLength(2000);
+
+        builder.Property(x => x.FechaUltimaConsultaAfip)
+               .HasColumnName("fecha_ultima_consulta_afip");
 
         builder.Property(x => x.Estado)
                .HasColumnName("estado")
@@ -144,6 +161,7 @@ public class ComprobanteConfiguration : IEntityTypeConfiguration<Comprobante>
         builder.HasIndex(x => x.TerceroId);
         builder.HasIndex(x => x.Fecha);
         builder.HasIndex(x => x.Estado);
+        builder.HasIndex(x => x.EstadoAfip);
         builder.HasIndex(x => x.Cae);
     }
 }

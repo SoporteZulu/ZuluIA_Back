@@ -13,7 +13,9 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error no manejado: {Message}", ex.Message);
+            var correlationId = context.Items.TryGetValue(CorrelationIdMiddleware.ItemKey, out var corr) ? corr?.ToString() : null;
+            var userId = context.Items.TryGetValue("CurrentUserId", out var user) ? user?.ToString() : null;
+            logger.LogError(ex, "Error no manejado: {Message} CorrelationId={CorrelationId} UserId={UserId}", ex.Message, correlationId, userId);
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -32,12 +34,14 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         };
 
         context.Response.StatusCode = (int)statusCode;
+        var correlationId = context.Items.TryGetValue(CorrelationIdMiddleware.ItemKey, out var corr) ? corr?.ToString() : null;
 
         var response = new
         {
             status = (int)statusCode,
             message,
-            detail = exception.Message
+            detail = exception.Message,
+            correlationId
         };
 
         await context.Response.WriteAsync(

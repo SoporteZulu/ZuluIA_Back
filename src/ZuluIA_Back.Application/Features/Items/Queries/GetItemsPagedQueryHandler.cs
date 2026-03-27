@@ -37,10 +37,24 @@ public class GetItemsPagedQueryHandler(
             .Distinct()
             .ToList();
 
+        var marcaIds = result.Items
+            .Where(x => x.MarcaId.HasValue)
+            .Select(x => x.MarcaId!.Value)
+            .Distinct()
+            .ToList();
+
         var categorias = categoriaIds.Count > 0
             ? await db.CategoriasItems
                 .AsNoTracking()
                 .Where(x => categoriaIds.Contains(x.Id))
+                .Select(x => new KeyValuePair<long, string>(x.Id, x.Descripcion))
+                .ToDictionaryAsync(x => x.Key, x => x.Value, ct)
+            : new Dictionary<long, string>();
+
+        var marcas = marcaIds.Count > 0
+            ? await db.MarcasComerciales
+                .AsNoTracking()
+                .Where(x => marcaIds.Contains(x.Id))
                 .Select(x => new KeyValuePair<long, string>(x.Id, x.Descripcion))
                 .ToDictionaryAsync(x => x.Key, x => x.Value, ct)
             : new Dictionary<long, string>();
@@ -62,6 +76,10 @@ public class GetItemsPagedQueryHandler(
             CategoriaId             = i.CategoriaId,
             CategoriaDescripcion    = i.CategoriaId.HasValue
                 ? categorias.GetValueOrDefault(i.CategoriaId.Value)
+                : null,
+            MarcaId                 = i.MarcaId,
+            MarcaDescripcion        = i.MarcaId.HasValue
+                ? marcas.GetValueOrDefault(i.MarcaId.Value)
                 : null,
             UnidadMedidaId          = i.UnidadMedidaId,
             UnidadMedidaDescripcion = unidades.GetValueOrDefault(i.UnidadMedidaId),

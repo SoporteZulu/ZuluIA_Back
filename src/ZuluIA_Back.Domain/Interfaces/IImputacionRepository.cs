@@ -6,10 +6,17 @@ public interface IImputacionRepository : IRepository<Imputacion>
 {
     Task<IReadOnlyList<Imputacion>> GetByComprobanteOrigenAsync(
         long comprobanteId,
+        bool incluirAnuladas = false,
         CancellationToken ct = default);
 
     Task<IReadOnlyList<Imputacion>> GetByComprobanteDestinoAsync(
         long comprobanteId,
+        bool incluirAnuladas = false,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<Imputacion>> GetHistorialByComprobanteAsync(
+        long comprobanteId,
+        bool incluirAnuladas = true,
         CancellationToken ct = default);
 
     Task<decimal> GetTotalImputadoAsync(

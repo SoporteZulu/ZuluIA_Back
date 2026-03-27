@@ -1,7 +1,11 @@
 ﻿using ZuluIA_Back.Api.Middleware;
+using ZuluIA_Back.Api.HostedServices;
 using ZuluIA_Back.Application;
+using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Integraciones.Services;
 using ZuluIA_Back.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -66,6 +70,10 @@ try
     var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
                    ?? builder.Configuration["Jwt:Audience"]!;
 
+    var requireHttpsMetadata = bool.TryParse(builder.Configuration["JwtSettings:RequireHttpsMetadata"], out var requireHttps)
+        ? requireHttps
+        : !builder.Environment.IsDevelopment();
+
     var isDevelopment = builder.Environment.IsDevelopment();
 
     if (string.IsNullOrWhiteSpace(jwtSecret))
@@ -85,11 +93,11 @@ try
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
-            options.Authority = jwtIssuer; // https://jygtddlvzaojekyvdyan.supabase.co/auth/v1
-            options.RequireHttpsMetadata = !isDevelopment;
+            options.RequireHttpsMetadata = requireHttpsMetadata;
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
                 ValidateIssuer   = true,
                 ValidIssuer      = jwtIssuer,
                 ValidateAudience = true,
@@ -100,6 +108,8 @@ try
         });
 
     builder.Services.AddAuthorization();
+    builder.Services.AddScoped<ZuluIA_Back.Api.Security.PermissionAuthorizationFilter>();
+    builder.Services.AddScoped<ZuluIA_Back.Api.Security.CriticalOperationAuditFilter>();
 
     var allowedOrigins = (Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS")
                          ?? string.Join(",", builder.Configuration
@@ -121,8 +131,12 @@ try
     builder.Services.AddApplicationServices();
     builder.Services.AddInfrastructureServices(builder.Configuration);
     builder.Services.AddHttpContextAccessor();
+    builder.Services.AddHostedService<BatchSchedulerHostedService>();
+    builder.Services.AddHostedService<ImpresionSpoolHostedService>();
 
     var app = builder.Build();
+
+    app.UseMiddleware<CorrelationIdMiddleware>();
 
     app.UseSerilogRequestLogging(opts =>
     {
@@ -144,12 +158,54 @@ try
     app.UseMiddleware<ExceptionMiddleware>();
     app.UseMiddleware<CurrentUserMiddleware>();
     app.MapControllers();
-    app.MapGet("/health", () => Results.Ok(new
+    app.MapGet("/health", async (IApplicationDbContext db, IWebHostEnvironment env, OperacionesBatchSettingsService batchSettingsService, CancellationToken ct) =>
     {
-        status = "healthy",
-        app = "ZuluIA_Back",
-        timestamp = DateTime.UtcNow
-    })).AllowAnonymous();
+        var dbOk = await db.Config.AnyAsync(ct);
+        var batch = await batchSettingsService.ResolveAsync(ct);
+
+        return Results.Ok(new
+        {
+            status = "healthy",
+            app = "ZuluIA_Back",
+            environment = env.EnvironmentName,
+            database = dbOk ? "online" : "no-data",
+            schedulerEnabled = batch.SchedulerHabilitado,
+            spoolEnabled = batch.SpoolHabilitado,
+            timestamp = DateTime.UtcNow
+        });
+    }).AllowAnonymous();
+
+    app.MapGet("/health/detailed", async (IApplicationDbContext db, IWebHostEnvironment env, OperacionesBatchSettingsService batchSettingsService, GoLiveOperativoReadinessService goLiveOperativoReadinessService, FiscalHardwareDiagnosticService fiscalHardwareDiagnosticService, CancellationToken ct) =>
+    {
+        var ahora = DateTimeOffset.UtcNow;
+        var batch = await batchSettingsService.ResolveAsync(ct);
+        var readiness = await goLiveOperativoReadinessService.EvaluateAsync(ct);
+        var hardware = await fiscalHardwareDiagnosticService.DiagnoseAsync(ct);
+
+        return Results.Ok(new
+        {
+            status = readiness.ReadyForGoLive ? "healthy" : "degraded",
+            app = "ZuluIA_Back",
+            environment = env.EnvironmentName,
+            database = await db.Config.AnyAsync(ct) ? "online" : "no-data",
+            scheduler = new
+            {
+                batch.SchedulerHabilitado,
+                batch.SchedulerPollSeconds,
+                ProgramacionesVencidas = await db.BatchProgramaciones.AsNoTracking().CountAsync(x => x.Activa && x.DeletedAt == null && x.ProximaEjecucion <= ahora, ct)
+            },
+            spool = new
+            {
+                batch.SpoolHabilitado,
+                batch.SpoolPollSeconds,
+                Pendientes = await db.ImpresionSpoolTrabajos.AsNoTracking().CountAsync(x => x.DeletedAt == null && x.Estado == ZuluIA_Back.Domain.Enums.EstadoImpresionSpool.Pendiente, ct),
+                Errores = await db.ImpresionSpoolTrabajos.AsNoTracking().CountAsync(x => x.DeletedAt == null && x.Estado == ZuluIA_Back.Domain.Enums.EstadoImpresionSpool.Error, ct)
+            },
+            readiness,
+            hardware,
+            timestamp = DateTime.UtcNow
+        });
+    }).AllowAnonymous();
 
     app.Run();
 }

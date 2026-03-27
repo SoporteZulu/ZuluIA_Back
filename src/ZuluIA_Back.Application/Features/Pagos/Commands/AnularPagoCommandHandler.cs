@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Finanzas;
@@ -8,6 +9,7 @@ namespace ZuluIA_Back.Application.Features.Pagos.Commands;
 
 public class AnularPagoCommandHandler(
     IRepository<Pago> repo,
+    IApplicationDbContext db,
     IUnitOfWork uow,
     ICurrentUserService currentUser)
     : IRequestHandler<AnularPagoCommand, Result>
@@ -23,6 +25,14 @@ public class AnularPagoCommandHandler(
         {
             pago.Anular(currentUser.UserId);
             repo.Update(pago);
+
+            var movimientos = await db.TesoreriaMovimientos
+                .Where(x => x.ReferenciaTipo == "PAGO" && x.ReferenciaId == pago.Id && !x.Anulado)
+                .ToListAsync(ct);
+
+            foreach (var movimiento in movimientos)
+                movimiento.Anular(currentUser.UserId);
+
             await uow.SaveChangesAsync(ct);
             return Result.Success();
         }

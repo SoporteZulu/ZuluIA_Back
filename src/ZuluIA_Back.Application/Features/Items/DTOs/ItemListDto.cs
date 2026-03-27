@@ -8,6 +8,8 @@ public class ItemListDto
     public string Descripcion { get; set; } = string.Empty;
     public long? CategoriaId { get; set; }
     public string? CategoriaDescripcion { get; set; }
+    public long? MarcaId { get; set; }
+    public string? MarcaDescripcion { get; set; }
     public long UnidadMedidaId { get; set; }
     public string? UnidadMedidaDescripcion { get; set; }
     public bool EsProducto { get; set; }

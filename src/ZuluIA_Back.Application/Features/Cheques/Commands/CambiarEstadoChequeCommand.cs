@@ -10,5 +10,6 @@ public record CambiarEstadoChequeCommand(
     AccionCheque Accion,
     DateOnly? Fecha,
     DateOnly? FechaAcreditacion,
-    string? Observacion
+    string? Observacion,
+    long? TerceroId = null
 ) : IRequest<Result>;

@@ -3,6 +3,7 @@
 public enum EstadoOrdenCompra
 {
     Pendiente,
+    ParcialmenteRecibida,
     Recibida,
     Cancelada
 }

@@ -78,6 +78,72 @@ public class TercerosController(IMediator mediator) : BaseController(mediator)
     }
 
     /// <summary>
+    /// Retorna el perfil comercial ampliado del tercero.
+    /// Equivalente al bloque comercial ampliado del ABM histórico.
+    /// GET /api/terceros/42/perfil-comercial
+    /// </summary>
+    [HttpGet("{id:long}/perfil-comercial")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPerfilComercial(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new GetTerceroPerfilComercialQuery(id), ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Retorna los contactos múltiples del tercero.
+    /// GET /api/terceros/42/contactos
+    /// </summary>
+    [HttpGet("{id:long}/contactos")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetContactos(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new GetTerceroContactosQuery(id), ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Retorna las sucursales / puntos de entrega del tercero.
+    /// GET /api/terceros/42/sucursales-entrega
+    /// </summary>
+    [HttpGet("{id:long}/sucursales-entrega")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetSucursalesEntrega(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new GetTerceroSucursalesEntregaQuery(id), ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Retorna los transportes vinculados al tercero.
+    /// GET /api/terceros/42/transportes
+    /// </summary>
+    [HttpGet("{id:long}/transportes")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetTransportes(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new GetTerceroTransportesQuery(id), ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Retorna las ventanas de cobranza del tercero.
+    /// GET /api/terceros/42/ventanas-cobranza
+    /// </summary>
+    [HttpGet("{id:long}/ventanas-cobranza")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetVentanasCobranza(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new GetTerceroVentanasCobranzaQuery(id), ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
     /// Lista de clientes activos para combos y selectores.
     /// Equivalente al llenarComboClientes() del VB6.
     /// GET /api/terceros/clientes-activos?sucursalId=1
@@ -185,6 +251,106 @@ public class TercerosController(IMediator mediator) : BaseController(mediator)
     public async Task<IActionResult> Activar(long id, CancellationToken ct)
     {
         var result = await Mediator.Send(new ActivarTerceroCommand(id), ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Crea o actualiza el perfil comercial ampliado del tercero.
+    /// PUT /api/terceros/42/perfil-comercial
+    /// </summary>
+    [HttpPut("{id:long}/perfil-comercial")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpsertPerfilComercial(
+        long id,
+        [FromBody] UpsertTerceroPerfilComercialCommand command,
+        CancellationToken ct)
+    {
+        if (id != command.TerceroId)
+            return BadRequest(new { error = "El Id de la URL no coincide con el del body." });
+
+        var result = await Mediator.Send(command, ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Reemplaza la colección de contactos múltiples del tercero.
+    /// PUT /api/terceros/42/contactos
+    /// </summary>
+    [HttpPut("{id:long}/contactos")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReplaceContactos(
+        long id,
+        [FromBody] ReplaceTerceroContactosCommand command,
+        CancellationToken ct)
+    {
+        if (id != command.TerceroId)
+            return BadRequest(new { error = "El Id de la URL no coincide con el del body." });
+
+        var result = await Mediator.Send(command, ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Reemplaza la colección de sucursales / puntos de entrega del tercero.
+    /// PUT /api/terceros/42/sucursales-entrega
+    /// </summary>
+    [HttpPut("{id:long}/sucursales-entrega")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReplaceSucursalesEntrega(
+        long id,
+        [FromBody] ReplaceTerceroSucursalesEntregaCommand command,
+        CancellationToken ct)
+    {
+        if (id != command.TerceroId)
+            return BadRequest(new { error = "El Id de la URL no coincide con el del body." });
+
+        var result = await Mediator.Send(command, ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Reemplaza la colección de transportes vinculados al tercero.
+    /// PUT /api/terceros/42/transportes
+    /// </summary>
+    [HttpPut("{id:long}/transportes")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReplaceTransportes(
+        long id,
+        [FromBody] ReplaceTerceroTransportesCommand command,
+        CancellationToken ct)
+    {
+        if (id != command.TerceroId)
+            return BadRequest(new { error = "El Id de la URL no coincide con el del body." });
+
+        var result = await Mediator.Send(command, ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Reemplaza la colección de ventanas de cobranza del tercero.
+    /// PUT /api/terceros/42/ventanas-cobranza
+    /// </summary>
+    [HttpPut("{id:long}/ventanas-cobranza")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ReplaceVentanasCobranza(
+        long id,
+        [FromBody] ReplaceTerceroVentanasCobranzaCommand command,
+        CancellationToken ct)
+    {
+        if (id != command.TerceroId)
+            return BadRequest(new { error = "El Id de la URL no coincide con el del body." });
+
+        var result = await Mediator.Send(command, ct);
         return FromResult(result);
     }
 }

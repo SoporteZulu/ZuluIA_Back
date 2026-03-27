@@ -29,8 +29,12 @@ public class Comprobante : AuditableEntity
     public decimal Total { get; private set; }
     public decimal Saldo { get; private set; }
     public string? Cae { get; private set; }
+    public string? Caea { get; private set; }
     public DateOnly? FechaVtoCae { get; private set; }
     public string? QrData { get; private set; }
+    public EstadoAfipWsfe EstadoAfip { get; private set; } = EstadoAfipWsfe.Pendiente;
+    public string? UltimoErrorAfip { get; private set; }
+    public DateTimeOffset? FechaUltimaConsultaAfip { get; private set; }
     public EstadoComprobante Estado { get; private set; }
     public string? Observacion { get; private set; }
 
@@ -176,8 +180,29 @@ public class Comprobante : AuditableEntity
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(cae);
         Cae         = cae.Trim();
+        Caea        = null;
         FechaVtoCae = fechaVto;
         QrData      = qrData;
+        EstadoAfip  = EstadoAfipWsfe.AutorizadoCae;
+        UltimoErrorAfip = null;
+        SetUpdated(userId);
+    }
+
+    public void AsignarCaea(string caea, DateOnly fechaVto, long? userId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(caea);
+        Caea = caea.Trim();
+        FechaVtoCae = fechaVto;
+        EstadoAfip = EstadoAfipWsfe.AutorizadoCaea;
+        UltimoErrorAfip = null;
+        SetUpdated(userId);
+    }
+
+    public void RegistrarEstadoAfip(EstadoAfipWsfe estadoAfip, string? ultimoError, DateTimeOffset fechaConsulta, long? userId)
+    {
+        EstadoAfip = estadoAfip;
+        UltimoErrorAfip = ultimoError?.Trim();
+        FechaUltimaConsultaAfip = fechaConsulta;
         SetUpdated(userId);
     }
 
@@ -208,6 +233,21 @@ public class Comprobante : AuditableEntity
     /// <summary>Establece el comprobante de origen cuando se convierte un presupuesto.</summary>
     public void SetComprobanteOrigen(long origenId) => ComprobanteOrigenId = origenId;
 
+    public void VincularAComprobanteOrigen(long origenId, long? userId)
+    {
+        if (origenId <= 0)
+            throw new InvalidOperationException("El comprobante origen es obligatorio.");
+
+        if (Id != 0 && origenId == Id)
+            throw new InvalidOperationException("No se puede vincular un comprobante consigo mismo.");
+
+        if (ComprobanteOrigenId.HasValue && ComprobanteOrigenId.Value != origenId)
+            throw new InvalidOperationException("El comprobante ya tiene un origen comercial distinto.");
+
+        ComprobanteOrigenId = origenId;
+        SetUpdated(userId);
+    }
+
     public void ActualizarSaldo(decimal importeImputado, long? userId)
     {
         Saldo -= importeImputado;
@@ -217,6 +257,28 @@ public class Comprobante : AuditableEntity
             Estado = EstadoComprobante.Pagado;
         else if (Saldo < Total)
             Estado = EstadoComprobante.PagadoParcial;
+
+        SetUpdated(userId);
+    }
+
+    public void RevertirSaldo(decimal importeDesimputado, long? userId)
+    {
+        if (importeDesimputado <= 0)
+            throw new InvalidOperationException("El importe a revertir debe ser mayor a 0.");
+
+        if (Estado == EstadoComprobante.Anulado)
+            throw new InvalidOperationException("No se puede revertir saldo sobre un comprobante anulado.");
+
+        Saldo += importeDesimputado;
+        if (Saldo > Total)
+            Saldo = Total;
+
+        if (Saldo == 0)
+            Estado = EstadoComprobante.Pagado;
+        else if (Saldo < Total)
+            Estado = EstadoComprobante.PagadoParcial;
+        else
+            Estado = EstadoComprobante.Emitido;
 
         SetUpdated(userId);
     }

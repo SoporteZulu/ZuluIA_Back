@@ -30,6 +30,7 @@ public class UpdateItemCommandHandler(
             request.EsFinanciero,
             request.ManejaStock,
             request.CategoriaId,
+            request.MarcaId,
             request.CodigoAfip,
             request.StockMinimo,
             request.StockMaximo,

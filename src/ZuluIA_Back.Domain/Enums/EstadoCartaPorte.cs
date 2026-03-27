@@ -3,6 +3,9 @@
 public enum EstadoCartaPorte
 {
     Pendiente,
+    OrdenCargaAsignada,
+    CtgSolicitado,
+    CtgError,
     Activa,
     Confirmada,
     Anulada

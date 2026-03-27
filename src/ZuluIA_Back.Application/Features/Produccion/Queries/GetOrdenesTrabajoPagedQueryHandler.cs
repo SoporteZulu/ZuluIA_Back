@@ -51,6 +51,7 @@ public class GetOrdenesTrabajoPagedQueryHandler(
             FechaFinPrevista          = ot.FechaFinPrevista,
             FechaFinReal              = ot.FechaFinReal,
             Cantidad                  = ot.Cantidad,
+            CantidadProducida         = ot.CantidadProducida,
             Estado                    = ot.Estado.ToString().ToUpperInvariant(),
             Observacion               = ot.Observacion,
             CreatedAt                 = ot.CreatedAt

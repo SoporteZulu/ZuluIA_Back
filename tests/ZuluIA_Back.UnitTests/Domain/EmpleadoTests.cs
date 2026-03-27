@@ -53,4 +53,15 @@ public class EmpleadoTests
         empleado.Area.Should().Be("IT");
         empleado.SueldoBasico.Should().Be(150000m);
     }
+
+    [Fact]
+    public void SuspenderYReactivar_DebeCambiarEstado()
+    {
+        var empleado = CrearEmpleado();
+
+        empleado.Suspender();
+        empleado.Reactivar();
+
+        empleado.Estado.Should().Be(EstadoEmpleado.Activo);
+    }
 }

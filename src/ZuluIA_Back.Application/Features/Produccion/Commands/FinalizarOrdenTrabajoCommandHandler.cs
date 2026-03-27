@@ -22,12 +22,22 @@ public class FinalizarOrdenTrabajoCommandHandler(
             return Result.Failure(
                 $"No se encontró la OT con ID {request.Id}.");
 
-        // Ejecutar movimientos de stock (consumo + ingreso)
+        var consumos = request.Consumos?
+            .GroupBy(x => x.ItemId)
+            .ToDictionary(x => x.Key, x => x.Last().CantidadConsumida);
+
+        if (ot.Estado == Domain.Enums.EstadoOrdenTrabajo.Pendiente)
+            ot.Iniciar(currentUser.UserId);
+
         await produccionService.EjecutarProduccionAsync(
-            ot, currentUser.UserId, ct);
+            ot,
+            request.CantidadProducida,
+            consumos,
+            currentUser.UserId,
+            ct);
 
         // Finalizar la OT
-        ot.Finalizar(request.FechaFinReal, currentUser.UserId);
+        ot.Finalizar(request.FechaFinReal, request.CantidadProducida ?? ot.Cantidad, currentUser.UserId);
         repo.Update(ot);
 
         await uow.SaveChangesAsync(ct);

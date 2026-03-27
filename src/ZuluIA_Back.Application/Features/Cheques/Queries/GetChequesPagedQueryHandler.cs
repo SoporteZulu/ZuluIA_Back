@@ -18,7 +18,7 @@ public class GetChequesPagedQueryHandler(
         var result = await repo.GetPagedAsync(
             request.Page, request.PageSize,
             request.CajaId, request.TerceroId,
-            request.Estado, request.Desde, request.Hasta,
+            request.Estado, request.Banco, request.NroCheque, request.Desde, request.Hasta,
             ct);
 
         var items = mapper.Map<IReadOnlyList<ChequeDto>>(result.Items);

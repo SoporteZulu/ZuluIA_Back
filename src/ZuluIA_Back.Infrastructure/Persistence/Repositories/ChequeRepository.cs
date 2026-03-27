@@ -15,6 +15,8 @@ public class ChequeRepository(AppDbContext context)
         long? cajaId,
         long? terceroId,
         EstadoCheque? estado,
+        string? banco,
+        string? nroCheque,
         DateOnly? desde,
         DateOnly? hasta,
         CancellationToken ct = default)
@@ -29,6 +31,12 @@ public class ChequeRepository(AppDbContext context)
 
         if (estado.HasValue)
             query = query.Where(x => x.Estado == estado.Value);
+
+        if (!string.IsNullOrWhiteSpace(banco))
+            query = query.Where(x => x.Banco.Contains(banco.Trim()));
+
+        if (!string.IsNullOrWhiteSpace(nroCheque))
+            query = query.Where(x => x.NroCheque.Contains(nroCheque.Trim()));
 
         if (desde.HasValue)
             query = query.Where(x => x.FechaEmision >= desde.Value);

@@ -8,5 +8,6 @@ public record CreateUsuarioCommand(
     string? NombreCompleto,
     string? Email,
     Guid? SupabaseUserId,
+    string? Password,
     IReadOnlyList<long> SucursalIds
 ) : IRequest<Result<long>>;

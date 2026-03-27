@@ -15,5 +15,10 @@ public class CreateUsuarioCommandValidator : AbstractValidator<CreateUsuarioComm
         RuleFor(x => x.Email)
             .EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email))
             .WithMessage("El email no tiene un formato válido.");
+
+        RuleFor(x => x.Password)
+            .MinimumLength(8)
+            .When(x => !string.IsNullOrWhiteSpace(x.Password))
+            .WithMessage("La contraseña debe tener al menos 8 caracteres.");
     }
 }

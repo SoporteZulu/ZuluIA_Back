@@ -21,5 +21,6 @@ public record CreateItemCommand(
     decimal StockMinimo,
     decimal? StockMaximo,
     string? CodigoAfip,
-    long? SucursalId
+    long? SucursalId,
+    long? MarcaId = null
 ) : IRequest<Result<long>>;

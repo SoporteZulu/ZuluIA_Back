@@ -45,6 +45,10 @@ public class OrdenesCompraController(IMediator mediator, IApplicationDbContext d
                 x.ProveedorId,
                 x.FechaEntregaReq,
                 x.CondicionesEntrega,
+                x.CantidadTotal,
+                x.CantidadRecibida,
+                SaldoPendiente = x.CantidadTotal - x.CantidadRecibida,
+                x.FechaUltimaRecepcion,
                 EstadoOc = x.EstadoOc.ToString().ToUpperInvariant(),
                 x.Habilitada,
                 x.CreatedAt
@@ -72,6 +76,10 @@ public class OrdenesCompraController(IMediator mediator, IApplicationDbContext d
                 x.ProveedorId,
                 x.FechaEntregaReq,
                 x.CondicionesEntrega,
+                x.CantidadTotal,
+                x.CantidadRecibida,
+                SaldoPendiente = x.CantidadTotal - x.CantidadRecibida,
+                x.FechaUltimaRecepcion,
                 EstadoOc = x.EstadoOc.ToString().ToUpperInvariant(),
                 x.Habilitada,
                 x.CreatedAt

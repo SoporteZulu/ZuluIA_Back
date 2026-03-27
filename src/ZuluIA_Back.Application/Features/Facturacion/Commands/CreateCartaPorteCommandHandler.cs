@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Facturacion.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Facturacion;
 using ZuluIA_Back.Domain.Interfaces;
@@ -8,6 +9,7 @@ namespace ZuluIA_Back.Application.Features.Facturacion.Commands;
 
 public class CreateCartaPorteCommandHandler(
     ICartaPorteRepository repo,
+    CartaPorteWorkflowService workflowService,
     IUnitOfWork uow,
     ICurrentUserService currentUser)
     : IRequestHandler<CreateCartaPorteCommand, Result<long>>
@@ -26,6 +28,9 @@ public class CreateCartaPorteCommandHandler(
             currentUser.UserId);
 
         await repo.AddAsync(carta, ct);
+        await uow.SaveChangesAsync(ct);
+
+        await workflowService.RegistrarAltaAsync(carta, ct);
         await uow.SaveChangesAsync(ct);
 
         return Result.Success(carta.Id);

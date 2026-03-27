@@ -60,6 +60,9 @@ public class Empleado : BaseEntity
         long monedaId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(cargo);
+        if (sueldoBasico < 0)
+            throw new InvalidOperationException("El sueldo básico no puede ser negativo.");
+
         Cargo        = cargo.Trim();
         Area         = area?.Trim();
         SueldoBasico = sueldoBasico;
@@ -69,8 +72,27 @@ public class Empleado : BaseEntity
 
     public void Egresar(DateOnly fechaEgreso)
     {
+        if (fechaEgreso < FechaIngreso)
+            throw new InvalidOperationException("La fecha de egreso no puede ser anterior a la fecha de ingreso.");
+
         FechaEgreso = fechaEgreso;
         Estado      = EstadoEmpleado.Inactivo;
         UpdatedAt   = DateTimeOffset.UtcNow;
+    }
+
+    public void Suspender()
+    {
+        if (Estado == EstadoEmpleado.Inactivo)
+            throw new InvalidOperationException("No se puede suspender un empleado inactivo.");
+
+        Estado = EstadoEmpleado.Suspendido;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void Reactivar()
+    {
+        Estado = EstadoEmpleado.Activo;
+        FechaEgreso = null;
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

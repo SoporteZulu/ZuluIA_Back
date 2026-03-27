@@ -1,4 +1,5 @@
 ﻿using ZuluIA_Back.Domain.Common;
+using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Events.Terceros;
 using ZuluIA_Back.Domain.ValueObjects;
 
@@ -10,6 +11,12 @@ public class Tercero : AuditableEntity
     public string Legajo { get; private set; } = string.Empty;
     public string RazonSocial { get; private set; } = string.Empty;
     public string? NombreFantasia { get; private set; }
+    public TipoPersoneriaTercero TipoPersoneria { get; private set; } = TipoPersoneriaTercero.Juridica;
+    public string? Nombre { get; private set; }
+    public string? Apellido { get; private set; }
+    public bool EsEntidadGubernamental { get; private set; }
+    public string? ClaveFiscal { get; private set; }
+    public string? ValorClaveFiscal { get; private set; }
 
     // ─── Documento e IVA ──────────────────────────────────────────────────────
     public long TipoDocumentoId { get; private set; }
@@ -69,7 +76,6 @@ public class Tercero : AuditableEntity
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(legajo, nameof(legajo));
         ArgumentException.ThrowIfNullOrWhiteSpace(razonSocial, nameof(razonSocial));
-        ArgumentException.ThrowIfNullOrWhiteSpace(nroDocumento, nameof(nroDocumento));
 
         if (!esCliente && !esProveedor && !esEmpleado)
             throw new ArgumentException(
@@ -80,7 +86,7 @@ public class Tercero : AuditableEntity
             Legajo          = legajo.Trim().ToUpperInvariant(),
             RazonSocial     = razonSocial.Trim(),
             TipoDocumentoId = tipoDocumentoId,
-            NroDocumento    = nroDocumento.Trim(),
+            NroDocumento    = nroDocumento?.Trim() ?? string.Empty,
             CondicionIvaId  = condicionIvaId,
             EsCliente       = esCliente,
             EsProveedor     = esProveedor,
@@ -139,6 +145,36 @@ public class Tercero : AuditableEntity
         PctComisionVendedor   = pctComisionVendedor;
         Observacion           = observacion?.Trim();
 
+        SetUpdated(userId);
+    }
+
+    public void ActualizarPersoneriaFiscal(
+        TipoPersoneriaTercero tipoPersoneria,
+        string? nombre,
+        string? apellido,
+        bool esEntidadGubernamental,
+        string? claveFiscal,
+        string? valorClaveFiscal,
+        long? userId)
+    {
+        if (tipoPersoneria == TipoPersoneriaTercero.Fisica)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(nombre, nameof(nombre));
+            ArgumentException.ThrowIfNullOrWhiteSpace(apellido, nameof(apellido));
+
+            if (esEntidadGubernamental)
+                throw new ArgumentException("Una persona física no puede marcarse como entidad gubernamental.", nameof(esEntidadGubernamental));
+        }
+
+        if (string.IsNullOrWhiteSpace(claveFiscal) ^ string.IsNullOrWhiteSpace(valorClaveFiscal))
+            throw new ArgumentException("Debe informar tanto la clave fiscal como su valor.");
+
+        TipoPersoneria = tipoPersoneria;
+        Nombre = Normalize(nombre);
+        Apellido = Normalize(apellido);
+        EsEntidadGubernamental = esEntidadGubernamental;
+        ClaveFiscal = Normalize(claveFiscal);
+        ValorClaveFiscal = Normalize(valorClaveFiscal);
         SetUpdated(userId);
     }
 
@@ -262,6 +298,9 @@ public class Tercero : AuditableEntity
             throw new ArgumentOutOfRangeException(paramName,
                 "El porcentaje debe estar entre 0 y 100.");
     }
+
+    private static string? Normalize(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private void ClearDeletedAt() => base.SetDeletedAt(null);
 }

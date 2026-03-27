@@ -13,6 +13,7 @@ public class OrdenTrabajo : AuditableEntity
     public DateOnly? FechaFinPrevista { get; private set; }
     public DateOnly? FechaFinReal { get; private set; }
     public decimal Cantidad { get; private set; }
+    public decimal? CantidadProducida { get; private set; }
     public EstadoOrdenTrabajo Estado { get; private set; }
     public string? Observacion { get; private set; }
 
@@ -61,13 +62,34 @@ public class OrdenTrabajo : AuditableEntity
     }
 
     public void Finalizar(DateOnly fechaFinReal, long? userId)
+        => Finalizar(fechaFinReal, Cantidad, userId);
+
+    public void Finalizar(DateOnly fechaFinReal, decimal cantidadProducida, long? userId)
     {
         if (Estado != EstadoOrdenTrabajo.EnProceso)
             throw new InvalidOperationException(
                 $"No se puede finalizar una OT en estado {Estado}.");
 
+        if (cantidadProducida <= 0)
+            throw new InvalidOperationException("La cantidad producida debe ser mayor a 0.");
+
         Estado       = EstadoOrdenTrabajo.Finalizada;
         FechaFinReal = fechaFinReal;
+        CantidadProducida = cantidadProducida;
+        SetUpdated(userId);
+    }
+
+    public void AjustarCantidad(decimal cantidad, string? observacion, long? userId)
+    {
+        if (Estado == EstadoOrdenTrabajo.Finalizada)
+            throw new InvalidOperationException("No se puede ajustar una OT finalizada.");
+
+        if (cantidad <= 0)
+            throw new InvalidOperationException("La cantidad ajustada debe ser mayor a 0.");
+
+        Cantidad = cantidad;
+        if (!string.IsNullOrWhiteSpace(observacion))
+            Observacion = observacion.Trim();
         SetUpdated(userId);
     }
 

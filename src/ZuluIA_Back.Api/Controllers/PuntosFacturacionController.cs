@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Facturacion.Commands;
+using ZuluIA_Back.Application.Features.Facturacion.DTOs;
 using ZuluIA_Back.Application.Features.Facturacion.Queries;
 
 namespace ZuluIA_Back.Api.Controllers;
@@ -116,6 +117,50 @@ public class PuntosFacturacionController(IMediator mediator, IApplicationDbConte
 
         return Ok(new { mensaje = "Punto de facturación desactivado correctamente." });
     }
+
+    [HttpGet("{id:long}/afip")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetAfipConfiguracion(long id, CancellationToken ct)
+    {
+        var config = await db.AfipWsfeConfiguraciones.AsNoTracking()
+            .Where(x => x.PuntoFacturacionId == id)
+            .Select(x => new AfipWsfeConfiguracionDto
+            {
+                Id = x.Id,
+                SucursalId = x.SucursalId,
+                PuntoFacturacionId = x.PuntoFacturacionId,
+                Habilitado = x.Habilitado,
+                Produccion = x.Produccion,
+                UsaCaeaPorDefecto = x.UsaCaeaPorDefecto,
+                CuitEmisor = x.CuitEmisor,
+                CertificadoAlias = x.CertificadoAlias,
+                Observacion = x.Observacion
+            })
+            .FirstOrDefaultAsync(ct);
+
+        return OkOrNotFound(config);
+    }
+
+    [HttpPut("{id:long}/afip")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpsertAfipConfiguracion(long id, [FromBody] UpsertAfipWsfeConfiguracionRequest request, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new UpsertAfipWsfeConfiguracionCommand(
+                id,
+                request.Habilitado,
+                request.Produccion,
+                request.UsaCaeaPorDefecto,
+                request.CuitEmisor,
+                request.CertificadoAlias,
+                request.Observacion),
+            ct);
+
+        return FromResult(result);
+    }
 }
 
 public record UpdatePuntoFacturacionRequest(long TipoId, string? Descripcion);
+public record UpsertAfipWsfeConfiguracionRequest(bool Habilitado, bool Produccion, bool UsaCaeaPorDefecto, string CuitEmisor, string? CertificadoAlias, string? Observacion);

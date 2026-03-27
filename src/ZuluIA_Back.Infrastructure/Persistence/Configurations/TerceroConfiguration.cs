@@ -37,6 +37,34 @@ public class TerceroConfiguration : IEntityTypeConfiguration<Tercero>
                .HasColumnName("nombre_fantasia")
                .HasMaxLength(200);
 
+        builder.Property(x => x.TipoPersoneria)
+               .HasColumnName("tipo_personeria")
+               .HasConversion(v => v.ToString().ToUpperInvariant(), v => Enum.Parse<ZuluIA_Back.Domain.Enums.TipoPersoneriaTercero>(v, true))
+               .HasMaxLength(20)
+               .HasDefaultValue(ZuluIA_Back.Domain.Enums.TipoPersoneriaTercero.Juridica)
+               .IsRequired();
+
+        builder.Property(x => x.Nombre)
+               .HasColumnName("nombre")
+               .HasMaxLength(150);
+
+        builder.Property(x => x.Apellido)
+               .HasColumnName("apellido")
+               .HasMaxLength(150);
+
+        builder.Property(x => x.EsEntidadGubernamental)
+               .HasColumnName("es_entidad_gubernamental")
+               .HasDefaultValue(false)
+               .IsRequired();
+
+        builder.Property(x => x.ClaveFiscal)
+               .HasColumnName("clave_fiscal")
+               .HasMaxLength(50);
+
+        builder.Property(x => x.ValorClaveFiscal)
+               .HasColumnName("valor_clave_fiscal")
+               .HasMaxLength(30);
+
         // ─── Documento e IVA ──────────────────────────────────────────────────
         builder.Property(x => x.TipoDocumentoId)
                .HasColumnName("tipo_documento_id")

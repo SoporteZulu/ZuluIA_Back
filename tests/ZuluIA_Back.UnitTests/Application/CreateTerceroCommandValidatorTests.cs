@@ -13,6 +13,12 @@ public class CreateTerceroCommandValidatorTests
         Legajo: "CLI001",
         RazonSocial: "Empresa SA",
         NombreFantasia: null,
+        TipoPersoneria: null,
+        Nombre: null,
+        Apellido: null,
+        EsEntidadGubernamental: false,
+        ClaveFiscal: null,
+        ValorClaveFiscal: null,
         TipoDocumentoId: 1,
         NroDocumento: "30-11111111-1",
         CondicionIvaId: 1,
@@ -52,11 +58,11 @@ public class CreateTerceroCommandValidatorTests
     }
 
     [Fact]
-    public void Validar_LegajoVacio_DebeHaveError()
+    public void Validar_LegajoVacio_NoDebeHaveError()
     {
         var cmd = ComandoValido() with { Legajo = "" };
         var result = _validator.TestValidate(cmd);
-        result.ShouldHaveValidationErrorFor(x => x.Legajo);
+        result.ShouldNotHaveValidationErrorFor(x => x.Legajo);
     }
 
     [Fact]
@@ -100,10 +106,10 @@ public class CreateTerceroCommandValidatorTests
     }
 
     [Fact]
-    public void Validar_TipoDocumentoIdCero_DebeHaveError()
+    public void Validar_TipoDocumentoIdCero_NoDebeHaveError()
     {
         var cmd = ComandoValido() with { TipoDocumentoId = 0 };
         var result = _validator.TestValidate(cmd);
-        result.ShouldHaveValidationErrorFor(x => x.TipoDocumentoId);
+        result.ShouldNotHaveValidationErrorFor(x => x.TipoDocumentoId);
     }
 }

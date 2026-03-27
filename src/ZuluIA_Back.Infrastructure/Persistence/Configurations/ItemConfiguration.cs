@@ -35,6 +35,9 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
         builder.Property(x => x.CategoriaId)
                .HasColumnName("categoria_id");
 
+        builder.Property(x => x.MarcaId)
+               .HasColumnName("marca_id");
+
         builder.Property(x => x.UnidadMedidaId)
                .HasColumnName("unidad_medida_id")
                .IsRequired();
@@ -109,6 +112,7 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
         builder.HasIndex(x => x.Codigo).IsUnique();
         builder.HasIndex(x => x.CodigoBarras);
         builder.HasIndex(x => x.CategoriaId);
+        builder.HasIndex(x => x.MarcaId);
         builder.HasIndex(x => x.Activo);
         builder.HasIndex(x => x.EsProducto);
         builder.HasIndex(x => x.EsServicio);

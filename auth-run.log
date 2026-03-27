@@ -1,0 +1,139 @@
+Usando la configuración de inicio de src\ZuluIA_Back.Api\Properties\launchSettings.json...
+Compilando...
+[18:48:52 INF] Iniciando ZuluIA Back API...
+[18:48:53 WRN] Microsoft.EntityFrameworkCore.Model.Validation The foreign key property 'ListaPreciosItem.ListaId1' was created in shadow state because a conflicting property with the simple name 'ListaId' exists in the entity type, but is either not mapped, is already used for another relationship, or is incompatible with the associated primary key type. See https://aka.ms/efcore-relationships for information on mapping relationships in EF Core.
+[18:48:54 INF] Microsoft.EntityFrameworkCore.Database.Command Executed DbCommand (12ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT c.id, c.campo, c.created_at, c.descripcion, c.tipo_dato, c.updated_at, c.valor
+FROM config AS c
+WHERE c.campo LIKE 'OPERACIONES%'
+[18:48:54 INF] Microsoft.EntityFrameworkCore.Database.Command Executed DbCommand (11ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT c.id, c.campo, c.created_at, c.descripcion, c.tipo_dato, c.updated_at, c.valor
+FROM config AS c
+WHERE c.campo LIKE 'OPERACIONES%'
+[18:48:54 INF] Microsoft.EntityFrameworkCore.Database.Command Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT c.id, c.campo, c.created_at, c.descripcion, c.tipo_dato, c.updated_at, c.valor
+FROM config AS c
+WHERE c.campo LIKE 'OPERACIONES%'
+[18:48:54 INF] Microsoft.EntityFrameworkCore.Database.Command Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='60']
+SELECT c.id, c.campo, c.created_at, c.descripcion, c.tipo_dato, c.updated_at, c.valor
+FROM config AS c
+WHERE c.campo LIKE 'OPERACIONES%'
+[18:48:54 INF] Microsoft.EntityFrameworkCore.Database.Command Executed DbCommand (8ms) [Parameters=[@__ahora_0='?' (DbType = DateTime), @__p_1='?' (DbType = Int32)], CommandType='Text', CommandTimeout='60']
+SELECT b.id, b.activa, b.created_at, b.created_by, b.deleted_at, b.intervalo_minutos, b.nombre, b.observacion, b.payload_json, b.proxima_ejecucion, b.tipo_proceso, b.ultima_ejecucion, b.updated_at, b.updated_by
+FROM batch_programaciones AS b
+WHERE b.activa AND b.tipo_proceso = 'FACTURACIONAUTOMATICA' AND b.proxima_ejecucion <= @__ahora_0 AND b.deleted_at IS NULL
+ORDER BY b.proxima_ejecucion
+LIMIT @__p_1
+[18:48:54 INF] Microsoft.EntityFrameworkCore.Database.Command Executed DbCommand (8ms) [Parameters=[@__ahora_0='?' (DbType = DateTime), @__p_1='?' (DbType = Int32)], CommandType='Text', CommandTimeout='60']
+SELECT i.id, i.comprobante_id, i.created_at, i.created_by, i.deleted_at, i.destino, i.estado, i.intentos, i.mensaje_error, i.payload_generado, i.proximo_intento, i.tipo_trabajo, i.updated_at, i.updated_by
+FROM impresion_spool_trabajos AS i
+WHERE i.deleted_at IS NULL AND ((i.estado = 'PENDIENTE' AND (i.proximo_intento IS NULL OR i.proximo_intento <= @__ahora_0)) OR (i.estado = 'ERROR' AND i.proximo_intento IS NOT NULL AND i.proximo_intento <= @__ahora_0))
+ORDER BY i.created_at
+LIMIT @__p_1
+[18:49:02 WRN] Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware Failed to determine the https port for redirect.
+[18:49:02 ERR] Microsoft.EntityFrameworkCore.Database.Command Failed executing DbCommand (5ms) [Parameters=[@__normalizedLogin_0='?', @__normalizedLogin_0_1='?'], CommandType='Text', CommandTimeout='60']
+SELECT u.id, u.activo, u.arqueo_actual, u.created_at, u.deleted_at, u.email, u.nombre_completo, u.password_hash, u.supabase_user_id, u.updated_at, u.usuario
+FROM usuarios AS u
+WHERE u.usuario = @__normalizedLogin_0 OR (u.email IS NOT NULL AND u.email = @__normalizedLogin_0_1)
+LIMIT 1
+[18:49:02 ERR] Microsoft.EntityFrameworkCore.Query An exception occurred while iterating over the results of a query for context type 'ZuluIA_Back.Infrastructure.Persistence.AppDbContext'.
+Npgsql.PostgresException (0x80004005): 42703: no existe la columna u.password_hash
+
+POSITION: 97
+   at Npgsql.Internal.NpgsqlConnector.ReadMessageLong(Boolean async, DataRowLoadingMode dataRowLoadingMode, Boolean readingNotifications, Boolean isReadingPrependedMessage)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteDbDataReaderAsync(CommandBehavior behavior, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.InitializeReaderAsync(AsyncEnumerator enumerator, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.<>c__DisplayClass30_0`2.<<ExecuteAsync>b__0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.ExecuteImplementationAsync[TState,TResult](Func`4 operation, Func`4 verifySucceeded, TState state, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.ExecuteImplementationAsync[TState,TResult](Func`4 operation, Func`4 verifySucceeded, TState state, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.MoveNextAsync()
+  Exception data:
+    Severity: ERROR
+    SqlState: 42703
+    MessageText: no existe la columna u.password_hash
+    Position: 97
+    File: parse_relation.c
+    Line: 3827
+    Routine: errorMissingColumn
+Npgsql.PostgresException (0x80004005): 42703: no existe la columna u.password_hash
+
+POSITION: 97
+   at Npgsql.Internal.NpgsqlConnector.ReadMessageLong(Boolean async, DataRowLoadingMode dataRowLoadingMode, Boolean readingNotifications, Boolean isReadingPrependedMessage)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteDbDataReaderAsync(CommandBehavior behavior, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.InitializeReaderAsync(AsyncEnumerator enumerator, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.<>c__DisplayClass30_0`2.<<ExecuteAsync>b__0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.ExecuteImplementationAsync[TState,TResult](Func`4 operation, Func`4 verifySucceeded, TState state, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.ExecuteImplementationAsync[TState,TResult](Func`4 operation, Func`4 verifySucceeded, TState state, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.MoveNextAsync()
+  Exception data:
+    Severity: ERROR
+    SqlState: 42703
+    MessageText: no existe la columna u.password_hash
+    Position: 97
+    File: parse_relation.c
+    Line: 3827
+    Routine: errorMissingColumn
+[18:49:02 ERR] ZuluIA_Back.Api.Middleware.ExceptionMiddleware Error no manejado: 42703: no existe la columna u.password_hash
+
+POSITION: 97 CorrelationId=51603d9b2eef40f38e2558cd28571527 UserId=null
+Npgsql.PostgresException (0x80004005): 42703: no existe la columna u.password_hash
+
+POSITION: 97
+   at Npgsql.Internal.NpgsqlConnector.ReadMessageLong(Boolean async, DataRowLoadingMode dataRowLoadingMode, Boolean readingNotifications, Boolean isReadingPrependedMessage)
+   at System.Runtime.CompilerServices.PoolingAsyncValueTaskMethodBuilder`1.StateMachineBox`1.System.Threading.Tasks.Sources.IValueTaskSource<TResult>.GetResult(Int16 token)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlDataReader.NextResult(Boolean async, Boolean isConsuming, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteReader(Boolean async, CommandBehavior behavior, CancellationToken cancellationToken)
+   at Npgsql.NpgsqlCommand.ExecuteDbDataReaderAsync(CommandBehavior behavior, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.RelationalCommand.ExecuteReaderAsync(RelationalCommandParameterObject parameterObject, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.InitializeReaderAsync(AsyncEnumerator enumerator, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.<>c__DisplayClass30_0`2.<<ExecuteAsync>b__0>d.MoveNext()
+--- End of stack trace from previous location ---
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.ExecuteImplementationAsync[TState,TResult](Func`4 operation, Func`4 verifySucceeded, TState state, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.ExecuteImplementationAsync[TState,TResult](Func`4 operation, Func`4 verifySucceeded, TState state, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Storage.ExecutionStrategy.ExecuteAsync[TState,TResult](TState state, Func`4 operation, Func`4 verifySucceeded, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.Internal.SingleQueryingEnumerable`1.AsyncEnumerator.MoveNextAsync()
+   at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.SingleOrDefaultAsync[TSource](IAsyncEnumerable`1 asyncEnumerable, CancellationToken cancellationToken)
+   at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.SingleOrDefaultAsync[TSource](IAsyncEnumerable`1 asyncEnumerable, CancellationToken cancellationToken)
+   at ZuluIA_Back.Infrastructure.Persistence.Repositories.UsuarioRepository.GetByUserNameOrEmailAsync(String login, CancellationToken ct) in C:\Zulu\ZuluIA_Back\src\ZuluIA_Back.Infrastructure\Persistence\Repositories\UsuarioRepository.cs:line 25
+   at ZuluIA_Back.Api.Controllers.AuthController.Login(AuthLoginRequest request, CancellationToken ct) in C:\Zulu\ZuluIA_Back\src\ZuluIA_Back.Api\Controllers\AuthController.cs:line 33
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.TaskOfIActionResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeActionMethodAsync>g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeNextActionFilterAsync>g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State& next, Scope& scope, Object& state, Boolean& isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.<InvokeInnerFilterAsync>g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeFilterPipelineAsync>g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.<InvokeAsync>g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)
+   at ZuluIA_Back.Api.Middleware.CurrentUserMiddleware.InvokeAsync(HttpContext context, ICurrentUserService currentUserService) in C:\Zulu\ZuluIA_Back\src\ZuluIA_Back.Api\Middleware\CurrentUserMiddleware.cs:line 31
+   at ZuluIA_Back.Api.Middleware.ExceptionMiddleware.InvokeAsync(HttpContext context) in C:\Zulu\ZuluIA_Back\src\ZuluIA_Back.Api\Middleware\ExceptionMiddleware.cs:line 12
+  Exception data:
+    Severity: ERROR
+    SqlState: 42703
+    MessageText: no existe la columna u.password_hash
+    Position: 97
+    File: parse_relation.c
+    Line: 3827
+    Routine: errorMissingColumn
+[18:49:02 ERR] Serilog.AspNetCore.RequestLoggingMiddleware HTTP POST /api/auth/login respondió 500 en 100.1685 ms

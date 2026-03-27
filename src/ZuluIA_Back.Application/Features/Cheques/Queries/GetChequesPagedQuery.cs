@@ -11,6 +11,8 @@ public record GetChequesPagedQuery(
     long? CajaId,
     long? TerceroId,
     EstadoCheque? Estado,
+    string? Banco,
+    string? NroCheque,
     DateOnly? Desde,
     DateOnly? Hasta
 ) : IRequest<PagedResult<ChequeDto>>;

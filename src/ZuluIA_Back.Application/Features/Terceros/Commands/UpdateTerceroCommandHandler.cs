@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Common;
+using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Interfaces;
 using ZuluIA_Back.Domain.ValueObjects;
 
@@ -9,7 +10,8 @@ namespace ZuluIA_Back.Application.Features.Terceros.Commands;
 public class UpdateTerceroCommandHandler(
     ITerceroRepository repo,
     IUnitOfWork uow,
-    ICurrentUserService currentUser)
+    ICurrentUserService currentUser,
+    IApplicationDbContext db)
     : IRequestHandler<UpdateTerceroCommand, Result>
 {
     public async Task<Result> Handle(UpdateTerceroCommand command, CancellationToken ct)
@@ -70,12 +72,41 @@ public class UpdateTerceroCommandHandler(
             command.LocalidadId,
             command.BarrioId);
 
+        var tipoPersoneria = ResolveTipoPersoneria(command.TipoPersoneria);
+        var nroDocumento = string.IsNullOrWhiteSpace(command.NroDocumento) ? tercero.NroDocumento : command.NroDocumento.Trim();
+
+        var fiscalValidation = await TerceroFiscalRules.ValidateAsync(
+            db,
+            command.CondicionIvaId,
+            tercero.TipoDocumentoId,
+            nroDocumento,
+            tipoPersoneria,
+            command.ClaveFiscal,
+            command.ValorClaveFiscal,
+            ct);
+
+        if (fiscalValidation is not null)
+            return Result.Failure(fiscalValidation);
+
         // ── 5. Actualizar datos principales ────────────────────────────────────
         try
         {
+            var nombreFantasia = string.IsNullOrWhiteSpace(command.NombreFantasia)
+                ? command.RazonSocial
+                : command.NombreFantasia;
+
+            tercero.ActualizarPersoneriaFiscal(
+                tipoPersoneria,
+                command.Nombre,
+                command.Apellido,
+                command.EsEntidadGubernamental,
+                command.ClaveFiscal,
+                command.ValorClaveFiscal,
+                currentUser.UserId);
+
             tercero.Actualizar(
                 command.RazonSocial,
-                command.NombreFantasia,
+                nombreFantasia,
                 command.CondicionIvaId,
                 command.Telefono,
                 command.Celular,
@@ -107,5 +138,15 @@ public class UpdateTerceroCommandHandler(
         await uow.SaveChangesAsync(ct);
 
         return Result.Success();
+    }
+
+    private static TipoPersoneriaTercero ResolveTipoPersoneria(string? tipoPersoneria)
+    {
+        if (string.IsNullOrWhiteSpace(tipoPersoneria))
+            return TipoPersoneriaTercero.Juridica;
+
+        return Enum.TryParse<TipoPersoneriaTercero>(tipoPersoneria, true, out var parsed)
+            ? parsed
+            : TipoPersoneriaTercero.Juridica;
     }
 }

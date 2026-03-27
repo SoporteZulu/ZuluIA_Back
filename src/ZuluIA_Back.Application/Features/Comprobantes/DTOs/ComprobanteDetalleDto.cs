@@ -32,8 +32,12 @@ public class ComprobanteDetalleDto
     public decimal Total { get; set; }
     public decimal Saldo { get; set; }
     public string? Cae { get; set; }
+    public string? Caea { get; set; }
     public DateOnly? FechaVtoCae { get; set; }
     public string? QrData { get; set; }
+    public string EstadoAfip { get; set; } = string.Empty;
+    public string? UltimoErrorAfip { get; set; }
+    public DateTimeOffset? FechaUltimaConsultaAfip { get; set; }
     public string Estado { get; set; } = string.Empty;
     public string? Observacion { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

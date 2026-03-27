@@ -19,6 +19,8 @@ public class ComprobanteService(
         long comprobanteDestinoId,
         decimal importe,
         DateOnly fecha,
+        long? tipoComprobanteOrigenId,
+        long? tipoComprobanteDestinoId,
         long? userId,
         CancellationToken ct = default)
     {
@@ -29,6 +31,12 @@ public class ComprobanteService(
         var destino = await comprobanteRepo.GetByIdAsync(comprobanteDestinoId, ct)
             ?? throw new InvalidOperationException(
                 $"No se encontró el comprobante destino ID {comprobanteDestinoId}.");
+
+        if (tipoComprobanteOrigenId.HasValue && origen.TipoComprobanteId != tipoComprobanteOrigenId.Value)
+            throw new InvalidOperationException("El comprobante origen no coincide con el tipo de documento requerido.");
+
+        if (tipoComprobanteDestinoId.HasValue && destino.TipoComprobanteId != tipoComprobanteDestinoId.Value)
+            throw new InvalidOperationException("El comprobante destino no coincide con el tipo de documento requerido.");
 
         if (importe > origen.Saldo)
             throw new InvalidOperationException(
@@ -53,6 +61,36 @@ public class ComprobanteService(
         comprobanteRepo.Update(origen);
         comprobanteRepo.Update(destino);
         await imputacionRepo.AddAsync(imputacion, ct);
+
+        return imputacion;
+    }
+
+    public async Task<Imputacion> DesimputarAsync(
+        long imputacionId,
+        DateOnly fecha,
+        string? motivo,
+        long? userId,
+        CancellationToken ct = default)
+    {
+        var imputacion = await imputacionRepo.GetByIdAsync(imputacionId, ct)
+            ?? throw new InvalidOperationException($"No se encontró la imputación ID {imputacionId}.");
+
+        if (imputacion.Anulada)
+            throw new InvalidOperationException("La imputación indicada ya fue desimputada.");
+
+        var origen = await comprobanteRepo.GetByIdAsync(imputacion.ComprobanteOrigenId, ct)
+            ?? throw new InvalidOperationException($"No se encontró el comprobante origen ID {imputacion.ComprobanteOrigenId}.");
+
+        var destino = await comprobanteRepo.GetByIdAsync(imputacion.ComprobanteDestinoId, ct)
+            ?? throw new InvalidOperationException($"No se encontró el comprobante destino ID {imputacion.ComprobanteDestinoId}.");
+
+        origen.RevertirSaldo(imputacion.Importe, userId);
+        destino.RevertirSaldo(imputacion.Importe, userId);
+        imputacion.Desimputar(fecha, motivo, userId);
+
+        comprobanteRepo.Update(origen);
+        comprobanteRepo.Update(destino);
+        imputacionRepo.Update(imputacion);
 
         return imputacion;
     }

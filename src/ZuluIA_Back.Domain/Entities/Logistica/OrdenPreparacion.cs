@@ -65,10 +65,28 @@ public class OrdenPreparacion : AuditableEntity
         SetUpdated(userId);
     }
 
+    public void RegistrarPicking(long detalleId, decimal cantidadEntregada, long? userId)
+    {
+        if (Estado == EstadoOrdenPreparacion.Pendiente)
+            IniciarPreparacion(userId);
+
+        if (Estado != EstadoOrdenPreparacion.EnProceso)
+            throw new InvalidOperationException("Solo se puede registrar picking en una orden en proceso.");
+
+        var detalle = _detalles.FirstOrDefault(x => x.Id == detalleId)
+            ?? throw new InvalidOperationException($"No se encontró el detalle de orden {detalleId}.");
+
+        detalle.RegistrarEntrega(cantidadEntregada);
+        SetUpdated(userId);
+    }
+
     public void Confirmar(DateOnly fechaConfirmacion, long? userId)
     {
         if (Estado != EstadoOrdenPreparacion.EnProceso)
             throw new InvalidOperationException("Solo se puede confirmar una orden en estado En Proceso.");
+
+        if (_detalles.Any() && _detalles.Any(x => !x.EstaCompleto))
+            throw new InvalidOperationException("No se puede confirmar una orden con picking incompleto.");
 
         Estado             = EstadoOrdenPreparacion.Completada;
         FechaConfirmacion  = fechaConfirmacion;

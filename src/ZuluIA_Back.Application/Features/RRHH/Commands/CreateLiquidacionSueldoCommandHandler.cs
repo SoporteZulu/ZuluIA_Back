@@ -27,6 +27,14 @@ public class CreateLiquidacionSueldoCommandHandler(
             return Result.Failure<long>(
                 $"Ya existe una liquidación para el período {request.Anio}/{request.Mes:D2}.");
 
+        var empleado = await db.Empleados.AsNoTracking().FirstOrDefaultAsync(x => x.Id == request.EmpleadoId, ct);
+        if (empleado is null)
+            return Result.Failure<long>($"No se encontró el empleado ID {request.EmpleadoId}.");
+        if (empleado.Estado != Domain.Enums.EstadoEmpleado.Activo)
+            return Result.Failure<long>("Solo se pueden liquidar empleados activos.");
+        if (!await db.Monedas.AsNoTracking().AnyAsync(x => x.Id == request.MonedaId, ct))
+            return Result.Failure<long>($"No se encontró la moneda ID {request.MonedaId}.");
+
         var liq = LiquidacionSueldo.Crear(
             request.EmpleadoId,
             request.SucursalId,

@@ -1,9 +1,11 @@
 ﻿using AutoMapper;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Features.Terceros.DTOs;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Interfaces;
+using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Application.Features.Terceros.Queries;
 
@@ -76,6 +78,95 @@ public class GetTerceroByIdQueryHandler(
                 .FindAsync(new object[] { tercero.SucursalId.Value }, ct);
             dto.SucursalDescripcion = sucursal?.RazonSocial ?? string.Empty;
         }
+
+        var perfil = await db.TercerosPerfilesComerciales
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.TerceroId == tercero.Id && x.DeletedAt == null, ct);
+
+        if (perfil is not null)
+        {
+            dto.PerfilComercial = mapper.Map<TerceroPerfilComercialDto>(perfil);
+
+            if (perfil.ZonaComercialId.HasValue)
+            {
+                dto.PerfilComercial.ZonaComercialDescripcion = await db.ZonasComerciales
+                    .AsNoTracking()
+                    .Where(x => x.Id == perfil.ZonaComercialId.Value)
+                    .Select(x => x.Descripcion)
+                    .FirstOrDefaultAsync(ct);
+            }
+        }
+        else
+        {
+            dto.PerfilComercial = new TerceroPerfilComercialDto
+            {
+                TerceroId = tercero.Id,
+                RiesgoCrediticio = RiesgoCrediticioComercial.Normal.ToString().ToUpperInvariant()
+            };
+        }
+
+        var contactos = await db.TercerosContactos
+            .AsNoTracking()
+            .Where(x => x.TerceroId == tercero.Id && x.DeletedAt == null)
+            .OrderByDescending(x => x.Principal)
+            .ThenBy(x => x.Orden)
+            .ThenBy(x => x.Nombre)
+            .ToListAsync(ct);
+
+        dto.Contactos = mapper.Map<IReadOnlyList<TerceroContactoDto>>(contactos);
+
+        var sucursalesEntrega = await db.TercerosSucursalesEntrega
+            .AsNoTracking()
+            .Where(x => x.TerceroId == tercero.Id && x.DeletedAt == null)
+            .OrderByDescending(x => x.Principal)
+            .ThenBy(x => x.Orden)
+            .ThenBy(x => x.Descripcion)
+            .ToListAsync(ct);
+
+        dto.SucursalesEntrega = mapper.Map<IReadOnlyList<TerceroSucursalEntregaDto>>(sucursalesEntrega);
+
+        var transportes = await db.TercerosTransportes
+            .AsNoTracking()
+            .Where(x => x.TerceroId == tercero.Id && x.DeletedAt == null)
+            .OrderByDescending(x => x.Principal)
+            .ThenBy(x => x.Orden)
+            .ThenBy(x => x.Nombre)
+            .ToListAsync(ct);
+
+        var transportesDto = mapper.Map<List<TerceroTransporteDto>>(transportes);
+        var transportistaIds = transportes
+            .Where(x => x.TransportistaId.HasValue)
+            .Select(x => x.TransportistaId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (transportistaIds.Count > 0)
+        {
+            var nombresTransportistas = await db.Transportistas
+                .AsNoTracking()
+                .Where(x => transportistaIds.Contains(x.Id))
+                .Join(db.Terceros.AsNoTracking(), t => t.TerceroId, ter => ter.Id, (t, ter) => new { t.Id, ter.RazonSocial })
+                .ToDictionaryAsync(x => x.Id, x => x.RazonSocial, ct);
+
+            for (var i = 0; i < transportesDto.Count; i++)
+            {
+                var source = transportes[i];
+                if (source.TransportistaId.HasValue && nombresTransportistas.TryGetValue(source.TransportistaId.Value, out var nombre))
+                    transportesDto[i].TransportistaNombre = nombre;
+            }
+        }
+
+        dto.Transportes = transportesDto;
+
+        var ventanasCobranza = await db.TercerosVentanasCobranza
+            .AsNoTracking()
+            .Where(x => x.TerceroId == tercero.Id && x.DeletedAt == null)
+            .OrderByDescending(x => x.Principal)
+            .ThenBy(x => x.Orden)
+            .ThenBy(x => x.Dia)
+            .ToListAsync(ct);
+
+        dto.VentanasCobranza = mapper.Map<IReadOnlyList<TerceroVentanaCobranzaDto>>(ventanasCobranza);
 
 
         // ── 4. Resolver descripciones del Domicilio ───────────────────────────

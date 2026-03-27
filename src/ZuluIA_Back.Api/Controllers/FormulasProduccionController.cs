@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Produccion.Commands;
 using ZuluIA_Back.Application.Features.Produccion.Queries;
+using ZuluIA_Back.Application.Features.Produccion.Services;
 using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Api.Controllers;
@@ -11,6 +12,7 @@ namespace ZuluIA_Back.Api.Controllers;
 public class FormulasProduccionController(
     IMediator mediator,
     IFormulaProduccionRepository repo,
+    FormulaProduccionHistorialService historialService,
     IApplicationDbContext db)
     : BaseController(mediator)
 {
@@ -119,7 +121,40 @@ public class FormulasProduccionController(
         repo.Update(formula);
         await db.SaveChangesAsync(ct);
 
+        var formulaCompleta = await repo.GetByIdConIngredientesAsync(id, ct);
+        if (formulaCompleta is not null)
+        {
+            await historialService.RegistrarSnapshotAsync(formulaCompleta, "Actualización fórmula", ct);
+            await db.SaveChangesAsync(ct);
+        }
+
         return Ok(new { mensaje = "Fórmula actualizada correctamente." });
+    }
+
+    [HttpGet("{id:long}/historial")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetHistorial(long id, CancellationToken ct)
+    {
+        var historial = await db.FormulasProduccionHistorial.AsNoTracking()
+            .Where(x => x.FormulaId == id)
+            .OrderByDescending(x => x.Version)
+            .ThenByDescending(x => x.Id)
+            .Select(x => new
+            {
+                x.Id,
+                x.FormulaId,
+                x.Version,
+                x.Codigo,
+                x.Descripcion,
+                x.CantidadResultado,
+                x.Motivo,
+                x.SnapshotJson,
+                x.CreatedAt,
+                x.CreatedBy
+            })
+            .ToListAsync(ct);
+
+        return Ok(historial);
     }
 
     /// <summary>

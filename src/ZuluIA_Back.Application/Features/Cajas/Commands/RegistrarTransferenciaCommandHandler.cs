@@ -1,14 +1,17 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Tesoreria.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Finanzas;
+using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Application.Features.Cajas.Commands;
 
 public class RegistrarTransferenciaCommandHandler(
     IApplicationDbContext db,
+    TesoreriaService tesoreriaService,
     IUnitOfWork uow)
     : IRequestHandler<RegistrarTransferenciaCommand, Result<long>>
 {
@@ -43,6 +46,24 @@ public class RegistrarTransferenciaCommandHandler(
             userId: null);
 
         db.TransferenciasCaja.Add(transferencia);
+        await uow.SaveChangesAsync(ct);
+
+        var movimientos = await tesoreriaService.RegistrarMovimientoEntreCajasAsync(
+            request.SucursalId,
+            request.CajaOrigenId,
+            request.CajaDestinoId,
+            request.Fecha,
+            TipoOperacionTesoreria.TransferenciaEgreso,
+            TipoOperacionTesoreria.TransferenciaIngreso,
+            request.Importe,
+            request.MonedaId,
+            request.Cotizacion,
+            "TRANSFERENCIA",
+            transferencia.Id,
+            request.Concepto,
+            ct);
+
+        transferencia.AsignarMovimientos(movimientos.origen.Id, movimientos.destino.Id);
         await uow.SaveChangesAsync(ct);
 
         return Result.Success(transferencia.Id);

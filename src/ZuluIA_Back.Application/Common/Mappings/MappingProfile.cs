@@ -67,6 +67,12 @@ public class MappingProfile : Profile
         CreateMap<Tercero, TerceroDto>()
             .ForMember(d => d.Domicilio,
                        o => o.MapFrom(s => s.Domicilio))
+            .ForMember(d => d.TipoPersoneria, o => o.MapFrom(s => s.TipoPersoneria.ToString().ToUpperInvariant()))
+            .ForMember(d => d.Contactos, o => o.Ignore())
+            .ForMember(d => d.SucursalesEntrega, o => o.Ignore())
+            .ForMember(d => d.Transportes, o => o.Ignore())
+            .ForMember(d => d.VentanasCobranza, o => o.Ignore())
+            .ForMember(d => d.PerfilComercial, o => o.Ignore())
 
             // Descripciones resueltas por el Handler (joins a catálogos)
             .ForMember(d => d.TipoDocumentoDescripcion, o => o.Ignore())
@@ -81,6 +87,14 @@ public class MappingProfile : Profile
         // RolDisplay se calcula en el AfterMap para no duplicar lógica
         // en cada query handler.
         CreateMap<Tercero, TerceroListDto>()
+            .ForMember(d => d.TipoPersoneria, o => o.MapFrom(s => s.TipoPersoneria.ToString().ToUpperInvariant()))
+            .ForMember(d => d.Calle, o => o.MapFrom(s => s.Domicilio.Calle))
+            .ForMember(d => d.Nro, o => o.MapFrom(s => s.Domicilio.Nro))
+            .ForMember(d => d.Piso, o => o.MapFrom(s => s.Domicilio.Piso))
+            .ForMember(d => d.Dpto, o => o.MapFrom(s => s.Domicilio.Dpto))
+            .ForMember(d => d.CodigoPostal, o => o.MapFrom(s => s.Domicilio.CodigoPostal))
+            .ForMember(d => d.LocalidadId, o => o.MapFrom(s => s.Domicilio.LocalidadId))
+            .ForMember(d => d.BarrioId, o => o.MapFrom(s => s.Domicilio.BarrioId))
             .ForMember(d => d.CondicionIvaDescripcion, o => o.Ignore())
             .ForMember(d => d.LocalidadDescripcion, o => o.Ignore())
             .AfterMap((src, dst) =>
@@ -101,5 +115,15 @@ public class MappingProfile : Profile
         // ── Tercero → TerceroSelectorDto (combos y lookups) ───────────────────
         // Display es una propiedad calculada en el DTO, no requiere mapeo.
         CreateMap<Tercero, TerceroSelectorDto>();
+
+        CreateMap<TerceroPerfilComercial, TerceroPerfilComercialDto>()
+            .ForMember(d => d.RiesgoCrediticio, o => o.MapFrom(s => s.RiesgoCrediticio.ToString().ToUpperInvariant()))
+            .ForMember(d => d.ZonaComercialDescripcion, o => o.Ignore());
+
+        CreateMap<TerceroContacto, TerceroContactoDto>();
+        CreateMap<TerceroSucursalEntrega, TerceroSucursalEntregaDto>();
+        CreateMap<TerceroTransporte, TerceroTransporteDto>()
+            .ForMember(d => d.TransportistaNombre, o => o.Ignore());
+        CreateMap<TerceroVentanaCobranza, TerceroVentanaCobranzaDto>();
     }
 }

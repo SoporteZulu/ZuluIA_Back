@@ -24,6 +24,14 @@ public class GetItemByIdQueryHandler(
                 .FirstOrDefaultAsync(ct)
             : null;
 
+        var marca = item.MarcaId.HasValue
+            ? await db.MarcasComerciales
+                .AsNoTracking()
+                .Where(x => x.Id == item.MarcaId.Value)
+                .Select(x => new { x.Descripcion })
+                .FirstOrDefaultAsync(ct)
+            : null;
+
         var unidad = await db.UnidadesMedida
             .AsNoTracking()
             .Where(x => x.Id == item.UnidadMedidaId)
@@ -45,6 +53,8 @@ public class GetItemByIdQueryHandler(
             DescripcionAdicional    = item.DescripcionAdicional,
             CategoriaId             = item.CategoriaId,
             CategoriaDescripcion    = categoria?.Descripcion,
+            MarcaId                 = item.MarcaId,
+            MarcaDescripcion        = marca?.Descripcion,
             UnidadMedidaId          = item.UnidadMedidaId,
             UnidadMedidaDescripcion = unidad?.Descripcion,
             AlicuotaIvaId           = item.AlicuotaIvaId,

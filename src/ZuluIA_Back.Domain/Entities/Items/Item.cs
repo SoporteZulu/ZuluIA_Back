@@ -10,6 +10,7 @@ public class Item : AuditableEntity
     public string Descripcion { get; private set; } = string.Empty;
     public string? DescripcionAdicional { get; private set; }
     public long? CategoriaId { get; private set; }
+    public long? MarcaId { get; private set; }
     public long UnidadMedidaId { get; private set; }
     public long AlicuotaIvaId { get; private set; }
     public long MonedaId { get; private set; }
@@ -47,6 +48,49 @@ public class Item : AuditableEntity
         string? codigoAfip,
         long? sucursalId,
         long? userId)
+        => Crear(
+            codigo,
+            descripcion,
+            unidadMedidaId,
+            alicuotaIvaId,
+            monedaId,
+            esProducto,
+            esServicio,
+            esFinanciero,
+            manejaStock,
+            precioCosto,
+            precioVenta,
+            categoriaId,
+            null,
+            stockMinimo,
+            stockMaximo,
+            codigoBarras,
+            descripcionAdicional,
+            codigoAfip,
+            sucursalId,
+            userId);
+
+    public static Item Crear(
+        string codigo,
+        string descripcion,
+        long unidadMedidaId,
+        long alicuotaIvaId,
+        long monedaId,
+        bool esProducto,
+        bool esServicio,
+        bool esFinanciero,
+        bool manejaStock,
+        decimal precioCosto,
+        decimal precioVenta,
+        long? categoriaId,
+        long? marcaId,
+        decimal stockMinimo,
+        decimal? stockMaximo,
+        string? codigoBarras,
+        string? descripcionAdicional,
+        string? codigoAfip,
+        long? sucursalId,
+        long? userId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(codigo);
         ArgumentException.ThrowIfNullOrWhiteSpace(descripcion);
@@ -77,6 +121,7 @@ public class Item : AuditableEntity
             PrecioCosto         = precioCosto,
             PrecioVenta         = precioVenta,
             CategoriaId         = categoriaId,
+            MarcaId             = marcaId,
             StockMinimo         = stockMinimo,
             StockMaximo         = stockMaximo,
             CodigoBarras        = codigoBarras?.Trim(),
@@ -109,6 +154,43 @@ public class Item : AuditableEntity
         decimal? stockMaximo,
         long? sucursalId,
         long? userId)
+        => Actualizar(
+            descripcion,
+            descripcionAdicional,
+            codigoBarras,
+            unidadMedidaId,
+            alicuotaIvaId,
+            monedaId,
+            esProducto,
+            esServicio,
+            esFinanciero,
+            manejaStock,
+            categoriaId,
+            null,
+            codigoAfip,
+            stockMinimo,
+            stockMaximo,
+            sucursalId,
+            userId);
+
+    public void Actualizar(
+        string descripcion,
+        string? descripcionAdicional,
+        string? codigoBarras,
+        long unidadMedidaId,
+        long alicuotaIvaId,
+        long monedaId,
+        bool esProducto,
+        bool esServicio,
+        bool esFinanciero,
+        bool manejaStock,
+        long? categoriaId,
+        long? marcaId,
+        string? codigoAfip,
+        decimal stockMinimo,
+        decimal? stockMaximo,
+        long? sucursalId,
+        long? userId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(descripcion);
 
@@ -130,6 +212,7 @@ public class Item : AuditableEntity
         EsFinanciero         = esFinanciero;
         ManejaStock          = manejaStock && esProducto;
         CategoriaId          = categoriaId;
+        MarcaId              = marcaId;
         CodigoAfip           = codigoAfip?.Trim();
         StockMinimo          = stockMinimo;
         StockMaximo          = stockMaximo;

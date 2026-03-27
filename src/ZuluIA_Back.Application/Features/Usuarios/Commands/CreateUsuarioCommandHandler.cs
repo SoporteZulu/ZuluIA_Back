@@ -9,7 +9,8 @@ namespace ZuluIA_Back.Application.Features.Usuarios.Commands;
 public class CreateUsuarioCommandHandler(
     IUsuarioRepository repo,
     IUnitOfWork uow,
-    ICurrentUserService currentUser)
+    ICurrentUserService currentUser,
+    IPasswordHasherService passwordHasher)
     : IRequestHandler<CreateUsuarioCommand, Result<long>>
 {
     public async Task<Result<long>> Handle(CreateUsuarioCommand request, CancellationToken ct)
@@ -24,6 +25,9 @@ public class CreateUsuarioCommandHandler(
             request.Email,
             request.SupabaseUserId,
             currentUser.UserId);
+
+        if (!string.IsNullOrWhiteSpace(request.Password))
+            usuario.EstablecerPasswordHash(passwordHasher.HashPassword(request.Password), currentUser.UserId);
 
         foreach (var sucursalId in request.SucursalIds)
             usuario.AsignarSucursal(sucursalId);

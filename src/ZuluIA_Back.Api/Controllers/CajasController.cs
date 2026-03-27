@@ -5,6 +5,7 @@ using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Cajas.Commands;
 using ZuluIA_Back.Application.Features.Cajas.Queries;
 using ZuluIA_Back.Application.Features.Cajas.DTOs;
+using ZuluIA_Back.Application.Features.Tesoreria.Commands;
 
 namespace ZuluIA_Back.Api.Controllers;
 
@@ -129,20 +130,27 @@ public class CajasController(IMediator mediator, IApplicationDbContext db)
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> CerrarArqueo(long id, CancellationToken ct)
     {
-        var caja = await db.CajasCuentasBancarias
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
+        var result = await Mediator.Send(
+            new CerrarCajaTesoreriaCommand(
+                id,
+                DateOnly.FromDateTime(DateTime.Today),
+                0m,
+                "Cierre desde CajasController"),
+            ct);
 
-        if (caja is null)
-            return NotFound(new { error = $"No se encontró la caja con ID {id}." });
+        if (!result.IsSuccess)
+            return BadRequest(new { error = result.Error });
 
-        var nroCierre = caja.CerrarArqueo(null);
-        await db.SaveChangesAsync(ct);
+        var cierre = await db.TesoreriaCierres.AsNoTracking()
+            .Where(x => x.Id == result.Value)
+            .Select(x => new { x.NroCierre })
+            .FirstOrDefaultAsync(ct);
 
         return Ok(new
         {
             cajaId = id,
-            nroCierre,
-            mensaje = $"Arqueo cerrado. Número de cierre: {nroCierre}."
+            nroCierre = cierre?.NroCierre,
+            mensaje = $"Arqueo cerrado. Número de cierre: {cierre?.NroCierre}."
         });
     }
 
@@ -159,14 +167,16 @@ public class CajasController(IMediator mediator, IApplicationDbContext db)
         [FromBody] AbrirCajaRequest request,
         CancellationToken ct)
     {
-        var caja = await db.CajasCuentasBancarias
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
+        var result = await Mediator.Send(
+            new AbrirCajaTesoreriaCommand(
+                id,
+                request.FechaApertura,
+                request.SaldoInicial,
+                "Apertura desde CajasController"),
+            ct);
 
-        if (caja is null)
-            return NotFound(new { error = $"No se encontró la caja con ID {id}." });
-
-        caja.AbrirCaja(request.FechaApertura, request.SaldoInicial, null);
-        await db.SaveChangesAsync(ct);
+        if (!result.IsSuccess)
+            return BadRequest(new { error = result.Error });
 
         return Ok(new
         {

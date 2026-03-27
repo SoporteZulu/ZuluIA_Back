@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Comprobantes.Commands;
 using ZuluIA_Back.Application.Features.Comprobantes.Queries;
+using ZuluIA_Back.Application.Features.Facturacion.Commands;
+using ZuluIA_Back.Application.Features.Facturacion.DTOs;
 using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Api.Controllers;
@@ -174,6 +176,60 @@ public class ComprobantesController(IMediator mediator, IApplicationDbContext db
         await db.SaveChangesAsync(ct);
 
         return Ok(new { mensaje = "CAE asignado correctamente." });
+    }
+
+    [HttpPost("{id:long}/afip/cae")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SolicitarCaeAfip(long id, CancellationToken ct)
+        => FromResult(await Mediator.Send(new AutorizarComprobanteAfipWsfeCommand(id, false), ct));
+
+    [HttpPost("{id:long}/afip/caea")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SolicitarCaeaAfip(long id, CancellationToken ct)
+        => FromResult(await Mediator.Send(new AutorizarComprobanteAfipWsfeCommand(id, true), ct));
+
+    [HttpGet("{id:long}/afip")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ConsultarAfip(long id, CancellationToken ct)
+        => FromResult(await Mediator.Send(new ConsultarComprobanteAfipWsfeCommand(id), ct));
+
+    [HttpPost("{id:long}/afip/refresh")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RefreshAfip(long id, CancellationToken ct)
+        => FromResult(await Mediator.Send(new RefreshEstadoAfipWsfeCommand(id), ct));
+
+    [HttpGet("{id:long}/afip/auditoria")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAuditoriaAfip(long id, CancellationToken ct)
+    {
+        var items = await db.AfipWsfeAudits.AsNoTracking()
+            .Where(x => x.ComprobanteId == id)
+            .OrderByDescending(x => x.FechaOperacion)
+            .ThenByDescending(x => x.Id)
+            .Select(x => new AfipWsfeAuditDto
+            {
+                Id = x.Id,
+                ComprobanteId = x.ComprobanteId,
+                SucursalId = x.SucursalId,
+                PuntoFacturacionId = x.PuntoFacturacionId,
+                Operacion = x.Operacion.ToString().ToUpperInvariant(),
+                Exitoso = x.Exitoso,
+                RequestPayload = x.RequestPayload,
+                ResponsePayload = x.ResponsePayload,
+                MensajeError = x.MensajeError,
+                Cae = x.Cae,
+                Caea = x.Caea,
+                FechaOperacion = x.FechaOperacion,
+                CreatedAt = x.CreatedAt,
+                CreatedBy = x.CreatedBy
+            })
+            .ToListAsync(ct);
+
+        return Ok(items);
     }
 
     /// <summary>

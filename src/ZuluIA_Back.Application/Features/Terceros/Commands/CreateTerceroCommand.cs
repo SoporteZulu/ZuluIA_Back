@@ -11,13 +11,19 @@ namespace ZuluIA_Back.Application.Features.Terceros.Commands;
 /// </summary>
 public record CreateTerceroCommand(
     // ─── Identificación obligatoria ───────────────────────────────────────────
-    string Legajo,
+    string? Legajo,
     string RazonSocial,
     string? NombreFantasia,
+    string? TipoPersoneria,
+    string? Nombre,
+    string? Apellido,
+    bool EsEntidadGubernamental,
+    string? ClaveFiscal,
+    string? ValorClaveFiscal,
 
     // ─── Documento e IVA ──────────────────────────────────────────────────────
-    long TipoDocumentoId,
-    string NroDocumento,
+    long? TipoDocumentoId,
+    string? NroDocumento,
     long CondicionIvaId,
 
     // ─── Roles (al menos uno requerido) ──────────────────────────────────────

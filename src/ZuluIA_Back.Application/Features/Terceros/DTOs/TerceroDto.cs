@@ -13,6 +13,12 @@ public class TerceroDto
     public string Legajo { get; set; } = string.Empty;
     public string RazonSocial { get; set; } = string.Empty;
     public string? NombreFantasia { get; set; }
+    public string TipoPersoneria { get; set; } = "JURIDICA";
+    public string? Nombre { get; set; }
+    public string? Apellido { get; set; }
+    public bool EsEntidadGubernamental { get; set; }
+    public string? ClaveFiscal { get; set; }
+    public string? ValorClaveFiscal { get; set; }
 
     // ─── Documento e IVA ──────────────────────────────────────────────────────
     public long TipoDocumentoId { get; set; }
@@ -65,6 +71,11 @@ public class TerceroDto
     public string? VendedorNombre { get; set; }
     public decimal PctComisionVendedor { get; set; }
     public string? Observacion { get; set; }
+    public TerceroPerfilComercialDto PerfilComercial { get; set; } = new();
+    public IReadOnlyList<TerceroContactoDto> Contactos { get; set; } = [];
+    public IReadOnlyList<TerceroSucursalEntregaDto> SucursalesEntrega { get; set; } = [];
+    public IReadOnlyList<TerceroTransporteDto> Transportes { get; set; } = [];
+    public IReadOnlyList<TerceroVentanaCobranzaDto> VentanasCobranza { get; set; } = [];
 
     // ─── Control ──────────────────────────────────────────────────────────────
     public long? SucursalId { get; set; }

@@ -1,0 +1,82 @@
+using ZuluIA_Back.Domain.Common;
+using ZuluIA_Back.Domain.Enums;
+
+namespace ZuluIA_Back.Domain.Entities.Terceros;
+
+public class TerceroPerfilComercial : AuditableEntity
+{
+    public long TerceroId { get; private set; }
+    public long? ZonaComercialId { get; private set; }
+    public string? Rubro { get; private set; }
+    public string? Subrubro { get; private set; }
+    public string? Sector { get; private set; }
+    public string? CondicionCobranza { get; private set; }
+    public RiesgoCrediticioComercial RiesgoCrediticio { get; private set; }
+    public decimal? SaldoMaximoVigente { get; private set; }
+    public string? VigenciaSaldo { get; private set; }
+    public string? CondicionVenta { get; private set; }
+    public string? PlazoCobro { get; private set; }
+    public string? FacturadorPorDefecto { get; private set; }
+    public decimal? MinimoFacturaMipymes { get; private set; }
+    public string? ObservacionComercial { get; private set; }
+
+    private TerceroPerfilComercial() { }
+
+    public static TerceroPerfilComercial Crear(long terceroId, long? userId)
+    {
+        if (terceroId <= 0)
+            throw new ArgumentException("El tercero es obligatorio.", nameof(terceroId));
+
+        var perfil = new TerceroPerfilComercial
+        {
+            TerceroId = terceroId,
+            RiesgoCrediticio = RiesgoCrediticioComercial.Normal
+        };
+
+        perfil.SetCreated(userId);
+        return perfil;
+    }
+
+    public void Actualizar(
+        long? zonaComercialId,
+        string? rubro,
+        string? subrubro,
+        string? sector,
+        string? condicionCobranza,
+        RiesgoCrediticioComercial riesgoCrediticio,
+        decimal? saldoMaximoVigente,
+        string? vigenciaSaldo,
+        string? condicionVenta,
+        string? plazoCobro,
+        string? facturadorPorDefecto,
+        decimal? minimoFacturaMipymes,
+        string? observacionComercial,
+        long? userId)
+    {
+        if (saldoMaximoVigente.HasValue && saldoMaximoVigente.Value < 0)
+            throw new ArgumentException("El saldo máximo vigente no puede ser negativo.", nameof(saldoMaximoVigente));
+
+        if (minimoFacturaMipymes.HasValue && minimoFacturaMipymes.Value < 0)
+            throw new ArgumentException("El mínimo de facturas MiPyMES no puede ser negativo.", nameof(minimoFacturaMipymes));
+
+        ZonaComercialId = zonaComercialId;
+        Rubro = Normalize(rubro);
+        Subrubro = Normalize(subrubro);
+        Sector = Normalize(sector);
+        CondicionCobranza = Normalize(condicionCobranza);
+        RiesgoCrediticio = riesgoCrediticio;
+        SaldoMaximoVigente = saldoMaximoVigente;
+        VigenciaSaldo = Normalize(vigenciaSaldo);
+        CondicionVenta = Normalize(condicionVenta);
+        PlazoCobro = Normalize(plazoCobro);
+        FacturadorPorDefecto = Normalize(facturadorPorDefecto);
+        MinimoFacturaMipymes = minimoFacturaMipymes;
+        ObservacionComercial = Normalize(observacionComercial);
+        SetUpdated(userId);
+    }
+
+    private static string? Normalize(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+}
