@@ -1,5 +1,6 @@
 ﻿using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Enums;
+using ZuluIA_Back.Domain.Events.Comprobantes;
 using ZuluIA_Back.Domain.ValueObjects;
 
 namespace ZuluIA_Back.Domain.Entities.Comprobantes;
@@ -28,6 +29,15 @@ public class Comprobante : AuditableEntity
     public decimal Retenciones { get; private set; }
     public decimal Total { get; private set; }
     public decimal Saldo { get; private set; }
+    public long? TimbradoId { get; private set; }
+    public string? NroTimbrado { get; private set; }
+    public EstadoSifenParaguay? EstadoSifen { get; private set; }
+    public string? SifenCodigoRespuesta { get; private set; }
+    public string? SifenMensajeRespuesta { get; private set; }
+    public string? SifenTrackingId { get; private set; }
+    public string? SifenCdc { get; private set; }
+    public string? SifenNumeroLote { get; private set; }
+    public DateTimeOffset? SifenFechaRespuesta { get; private set; }
     public string? Cae { get; private set; }
     public string? Caea { get; private set; }
     public DateOnly? FechaVtoCae { get; private set; }
@@ -173,6 +183,7 @@ public class Comprobante : AuditableEntity
 
         Estado = EstadoComprobante.Emitido;
         Saldo  = Total;
+        AddDomainEvent(new ComprobanteEmitidoEvent(Id, SucursalId, TerceroId, Total, MonedaId));
         SetUpdated(userId);
     }
 
@@ -206,6 +217,38 @@ public class Comprobante : AuditableEntity
         SetUpdated(userId);
     }
 
+    public void AsignarTimbrado(long timbradoId, string nroTimbrado, long? userId)
+    {
+        if (timbradoId <= 0)
+            throw new ArgumentException("El timbrado es requerido.", nameof(timbradoId));
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(nroTimbrado);
+
+        TimbradoId = timbradoId;
+        NroTimbrado = nroTimbrado.Trim();
+        SetUpdated(userId);
+    }
+
+    public void RegistrarResultadoSifen(
+        EstadoSifenParaguay estado,
+        string? codigoRespuesta,
+        string? mensajeRespuesta,
+        string? trackingId,
+        string? cdc,
+        string? numeroLote,
+        DateTimeOffset? fechaRespuesta,
+        long? userId)
+    {
+        EstadoSifen = estado;
+        SifenCodigoRespuesta = string.IsNullOrWhiteSpace(codigoRespuesta) ? null : codigoRespuesta.Trim();
+        SifenMensajeRespuesta = string.IsNullOrWhiteSpace(mensajeRespuesta) ? null : mensajeRespuesta.Trim();
+        SifenTrackingId = string.IsNullOrWhiteSpace(trackingId) ? null : trackingId.Trim();
+        SifenCdc = string.IsNullOrWhiteSpace(cdc) ? null : cdc.Trim();
+        SifenNumeroLote = string.IsNullOrWhiteSpace(numeroLote) ? null : numeroLote.Trim();
+        SifenFechaRespuesta = fechaRespuesta ?? DateTimeOffset.UtcNow;
+        SetUpdated(userId);
+    }
+
     public void Anular(long? userId)
     {
         if (Estado == EstadoComprobante.Anulado)
@@ -213,6 +256,7 @@ public class Comprobante : AuditableEntity
 
         Estado = EstadoComprobante.Anulado;
         Saldo  = 0;
+        AddDomainEvent(new ComprobanteAnuladoEvent(Id, SucursalId, TerceroId, Total, MonedaId));
         SetDeleted();
         SetUpdated(userId);
     }

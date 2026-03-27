@@ -8,6 +8,7 @@ using ZuluIA_Back.Application.Features.Items.Queries;
 
 namespace ZuluIA_Back.Api.Controllers;
 
+[Route("api/categorias-items")]
 public class CategoriasItemsController(IMediator mediator, IApplicationDbContext db)
     : BaseController(mediator)
 {
@@ -77,19 +78,15 @@ public class CategoriasItemsController(IMediator mediator, IApplicationDbContext
         [FromBody] UpdateCategoriaItemRequest request,
         CancellationToken ct)
     {
-        var categoria = await db.CategoriasItems
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
+        var result = await Mediator.Send(
+            new UpdateCategoriaItemCommand(id, request.Codigo, request.Descripcion, request.OrdenNivel),
+            ct);
 
-        if (categoria is null)
-            return NotFound(new { error = $"No se encontró la categoría con ID {id}." });
+        if (result.IsFailure)
+            return result.Error?.Contains("No se encontró", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
-        categoria.Actualizar(
-            request.Codigo,
-            request.Descripcion,
-            request.OrdenNivel,
-            null);
-
-        await db.SaveChangesAsync(ct);
         return Ok(new { mensaje = "Categoría actualizada correctamente." });
     }
 
@@ -102,26 +99,36 @@ public class CategoriasItemsController(IMediator mediator, IApplicationDbContext
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(long id, CancellationToken ct)
     {
-        var categoria = await db.CategoriasItems
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
+        var result = await Mediator.Send(new DeleteCategoriaItemCommand(id), ct);
 
-        if (categoria is null)
-            return NotFound(new { error = $"No se encontró la categoría con ID {id}." });
+        if (result.IsFailure)
+        {
+            if (result.Error?.Contains("No se encontró", StringComparison.OrdinalIgnoreCase) == true)
+                return NotFound(new { error = result.Error });
 
-        // Verificar que no tenga ítems asociados activos
-        var tieneItems = await db.Items
-            .AnyAsync(x => x.CategoriaId == id && x.Activo, ct);
+            if (result.Error?.Contains("ítems activos", StringComparison.OrdinalIgnoreCase) == true)
+                return Conflict(new { error = result.Error });
 
-        if (tieneItems)
-            return Conflict(new
-            {
-                error = "No se puede desactivar una categoría que tiene ítems activos asociados."
-            });
-
-        categoria.Desactivar(null);
-        await db.SaveChangesAsync(ct);
+            return BadRequest(new { error = result.Error });
+        }
 
         return Ok(new { mensaje = "Categoría desactivada correctamente." });
+    }
+
+    /// <summary>
+    /// Reactiva una categoría desactivada.
+    /// </summary>
+    [HttpPatch("{id:long}/activar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Activar(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new ActivateCategoriaItemCommand(id), ct);
+
+        if (result.IsFailure)
+            return NotFound(new { error = result.Error });
+
+        return Ok(new { mensaje = "Categoría activada correctamente." });
     }
 }
 

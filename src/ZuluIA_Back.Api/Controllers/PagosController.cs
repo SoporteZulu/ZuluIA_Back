@@ -174,6 +174,21 @@ public class PagosController(
     }
 
     /// <summary>
+    /// Registra un pago básico con medios, sin retenciones ni imputaciones.
+    /// </summary>
+    [HttpPost("basico")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RegistrarBasico(
+        [FromBody] CreatePagoCommand command,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(command, ct);
+        return CreatedFromResult(result, "GetPagoById",
+            new { id = result.IsSuccess ? result.Value : 0 });
+    }
+
+    /// <summary>
     /// Anula un pago registrado.
     /// </summary>
     [HttpPost("{id:long}/anular")]

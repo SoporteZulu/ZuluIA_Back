@@ -25,3 +25,28 @@ public class CreateEjercicioCommandValidator
             .NotEmpty().WithMessage("Debe asignar al menos una sucursal.");
     }
 }
+
+public class CerrarEjercicioCommandValidator : AbstractValidator<CerrarEjercicioCommand>
+{
+    public CerrarEjercicioCommandValidator()
+    {
+        RuleFor(x => x.Id).GreaterThan(0);
+    }
+}
+
+public class ReabrirEjercicioCommandValidator : AbstractValidator<ReabrirEjercicioCommand>
+{
+    public ReabrirEjercicioCommandValidator()
+    {
+        RuleFor(x => x.Id).GreaterThan(0);
+    }
+}
+
+public class AsignarSucursalEjercicioCommandValidator : AbstractValidator<AsignarSucursalEjercicioCommand>
+{
+    public AsignarSucursalEjercicioCommandValidator()
+    {
+        RuleFor(x => x.EjercicioId).GreaterThan(0);
+        RuleFor(x => x.SucursalId).GreaterThan(0);
+    }
+}

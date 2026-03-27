@@ -21,4 +21,12 @@ public class Barrio : AuditableEntity
             Descripcion = descripcion.Trim()
         };
     }
+
+    public void Actualizar(long localidadId, string descripcion)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(descripcion);
+
+        LocalidadId = localidadId;
+        Descripcion = descripcion.Trim();
+    }
 }

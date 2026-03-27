@@ -106,4 +106,42 @@ public class ApiLayerTests
                      "sino de interfaces. Controladores con dependencia directa: " +
                      string.Join(", ", controllersConDependenciaDirecta));
     }
+
+    [Fact]
+    public void Middleware_DebenTenerMetodoInvokeAsync()
+    {
+        var middlewaresInvalidos = AssemblyReferences.ApiAssembly
+            .GetTypes()
+            .Where(t => t.Name.EndsWith("Middleware") && !t.IsAbstract && t.IsClass)
+            .Where(t => !t.GetMethods().Any(m => m.Name == "InvokeAsync"))
+            .Select(t => t.Name)
+            .ToList();
+
+        middlewaresInvalidos.Should().BeEmpty(
+            because: "Todos los Middleware deben exponer un método InvokeAsync (convención ASP.NET Core). " +
+                     "Tipos inválidos: " + string.Join(", ", middlewaresInvalidos));
+    }
+
+    [Fact]
+    public void Controllers_NoDebenInyectarServiciosConcretosDeApplication()
+    {
+        var controllersConDependenciaConcreta = AssemblyReferences.ApiAssembly
+            .GetTypes()
+            .Where(t => t.Name.EndsWith("Controller") && !t.IsAbstract && t.IsClass)
+            .Where(t =>
+            {
+                var ctors = t.GetConstructors();
+                return ctors.Any(c =>
+                    c.GetParameters().Any(p =>
+                        p.ParameterType.Namespace?.StartsWith("ZuluIA_Back.Application") == true
+                        && !p.ParameterType.IsInterface));
+            })
+            .Select(t => t.Name)
+            .ToList();
+
+        controllersConDependenciaConcreta.Should().BeEmpty(
+            because: "Los Controllers sólo deben depender de interfaces de Application, no de clases concretas. " +
+                     "Controladores con dependencia concreta: " +
+                     string.Join(", ", controllersConDependenciaConcreta));
+    }
 }

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Comprobantes.DTOs;
+using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Application.Features.Comprobantes.Queries;
@@ -124,6 +125,10 @@ public class GetComprobanteDetalleQueryHandler(
             CreatedAt            = i.CreatedAt
         }).ToList();
 
+        var tieneIdentificadoresSifen = comp.SifenTrackingId != null
+            || comp.SifenCdc != null
+            || comp.SifenNumeroLote != null;
+
         return new ComprobanteDetalleDto
         {
             Id                         = comp.Id,
@@ -155,6 +160,21 @@ public class GetComprobanteDetalleQueryHandler(
             Retenciones                = comp.Retenciones,
             Total                      = comp.Total,
             Saldo                      = comp.Saldo,
+            TimbradoId                 = comp.TimbradoId,
+            NroTimbrado                = comp.NroTimbrado,
+            EstadoSifen                = comp.EstadoSifen,
+            SifenCodigoRespuesta       = comp.SifenCodigoRespuesta,
+            SifenMensajeRespuesta      = comp.SifenMensajeRespuesta,
+            SifenTrackingId            = comp.SifenTrackingId,
+            SifenCdc                   = comp.SifenCdc,
+            SifenNumeroLote            = comp.SifenNumeroLote,
+            SifenFechaRespuesta        = comp.SifenFechaRespuesta,
+            TieneIdentificadoresSifen  = tieneIdentificadoresSifen,
+            PuedeReintentarSifen       = comp.EstadoSifen == EstadoSifenParaguay.Rechazado
+                || comp.EstadoSifen == EstadoSifenParaguay.Error,
+            PuedeConciliarSifen        = comp.Estado != EstadoComprobante.Borrador
+                && comp.EstadoSifen != EstadoSifenParaguay.Aceptado
+                && tieneIdentificadoresSifen,
             Cae                        = comp.Cae,
             Caea                       = comp.Caea,
             FechaVtoCae                = comp.FechaVtoCae,

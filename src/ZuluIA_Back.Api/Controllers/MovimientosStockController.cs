@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Stock.Commands;
 using ZuluIA_Back.Application.Features.Stock.Queries;
 using ZuluIA_Back.Domain.Enums;
 
@@ -168,4 +169,69 @@ public class MovimientosStockController(IMediator mediator, IApplicationDbContex
             estadisticas = stats
         });
     }
+
+    // ── MovimientoStockAtributos ──────────────────────────────────────────────
+    // VB6: clsMovimientosStockAtributos / MOVIMIENTOSTOCKATRIBUTOS (trazabilidad lotes/series)
+
+    [HttpGet("{id:long}/atributos")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetAtributos(long id, CancellationToken ct)
+    {
+        var exists = await db.MovimientosStock.AnyAsync(x => x.Id == id, ct);
+        if (!exists) return NotFound();
+
+        var atributos = await db.MovimientosStockAtributos
+            .Where(x => x.MovimientoStockId == id)
+            .Select(x => new { x.Id, x.MovimientoStockId, x.AtributoId, x.Valor })
+            .ToListAsync(ct);
+
+        return Ok(atributos);
+    }
+
+    [HttpPost("{id:long}/atributos")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddAtributo(
+        long id, [FromBody] AddMovAtributoRequest req, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new AddMovimientoStockAtributoCommand(id, req.AtributoId, req.Valor), ct);
+        if (!result.IsSuccess)
+        {
+            var error = result.Error ?? "No fue posible agregar el atributo al movimiento.";
+            return error.Contains("no encontrado", StringComparison.OrdinalIgnoreCase)
+                ? NotFound(new { error })
+                : BadRequest(new { error });
+        }
+
+        return CreatedAtAction(nameof(GetAtributos), new { id }, new { Id = result.Value });
+    }
+
+    [HttpPut("{id:long}/atributos/{atribId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateAtributo(
+        long id, long atribId, [FromBody] UpdateMovAtributoRequest req, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new UpdateMovimientoStockAtributoCommand(id, atribId, req.Valor), ct);
+        if (!result.IsSuccess)
+            return NotFound(new { error = result.Error });
+
+        return Ok(new { Id = atribId, req.Valor });
+    }
+
+    [HttpDelete("{id:long}/atributos/{atribId:long}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteAtributo(long id, long atribId, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new DeleteMovimientoStockAtributoCommand(id, atribId), ct);
+        if (!result.IsSuccess)
+            return NotFound(new { error = result.Error });
+
+        return NoContent();
+    }
 }
+
+public record AddMovAtributoRequest(long AtributoId, string Valor);
+public record UpdateMovAtributoRequest(string Valor);

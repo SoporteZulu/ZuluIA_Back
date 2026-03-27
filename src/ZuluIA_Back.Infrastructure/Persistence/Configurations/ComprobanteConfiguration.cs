@@ -102,6 +102,43 @@ public class ComprobanteConfiguration : IEntityTypeConfiguration<Comprobante>
                .HasPrecision(18, 4)
                .HasDefaultValue(0m);
 
+        builder.Property(x => x.TimbradoId)
+               .HasColumnName("timbrado_id");
+
+        builder.Property(x => x.NroTimbrado)
+               .HasColumnName("nro_timbrado")
+               .HasMaxLength(50);
+
+        builder.Property(x => x.EstadoSifen)
+               .HasColumnName("estado_sifen")
+               .HasConversion(
+                   v => v.HasValue ? v.Value.ToString().ToUpperInvariant() : null,
+                   v => string.IsNullOrWhiteSpace(v) ? null : Enum.Parse<EstadoSifenParaguay>(v, true))
+               .HasMaxLength(30);
+
+        builder.Property(x => x.SifenCodigoRespuesta)
+               .HasColumnName("sifen_codigo_respuesta")
+               .HasMaxLength(100);
+
+        builder.Property(x => x.SifenMensajeRespuesta)
+               .HasColumnName("sifen_mensaje_respuesta")
+               .HasMaxLength(500);
+
+        builder.Property(x => x.SifenTrackingId)
+               .HasColumnName("sifen_tracking_id")
+               .HasMaxLength(100);
+
+        builder.Property(x => x.SifenCdc)
+               .HasColumnName("sifen_cdc")
+               .HasMaxLength(100);
+
+        builder.Property(x => x.SifenNumeroLote)
+               .HasColumnName("sifen_numero_lote")
+               .HasMaxLength(100);
+
+        builder.Property(x => x.SifenFechaRespuesta)
+               .HasColumnName("sifen_fecha_respuesta");
+
         builder.Property(x => x.Cae)
                .HasColumnName("cae")
                .HasMaxLength(50);
@@ -163,5 +200,9 @@ public class ComprobanteConfiguration : IEntityTypeConfiguration<Comprobante>
         builder.HasIndex(x => x.Estado);
         builder.HasIndex(x => x.EstadoAfip);
         builder.HasIndex(x => x.Cae);
+              builder.HasIndex(x => x.EstadoSifen);
+              builder.HasIndex(x => x.SifenTrackingId);
+                builder.HasIndex(x => x.SifenCdc);
+                       builder.HasIndex(x => x.SifenCodigoRespuesta);
     }
 }

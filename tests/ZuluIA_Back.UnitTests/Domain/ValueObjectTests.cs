@@ -68,6 +68,14 @@ public class ValueObjectTests
     }
 
     [Fact]
+    public void NroComprobante_ToString_DevuelveFormateado()
+    {
+        var nro = new NroComprobante(3, 45);
+
+        nro.ToString().Should().Be("0003-00000045");
+    }
+
+    [Fact]
     public void Dinero_ConMismosDatos_DebeSerIgual()
     {
         var d1 = new Dinero(1000m, 1);

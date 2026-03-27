@@ -9,7 +9,8 @@ namespace ZuluIA_Back.Application.Features.Comprobantes.Commands;
 public class CreateComprobanteCommandHandler(
     IComprobanteRepository repo,
     IUnitOfWork uow,
-    ICurrentUserService currentUser)
+    ICurrentUserService currentUser,
+    IApplicationDbContext db)
     : IRequestHandler<CreateComprobanteCommand, Result<long>>
 {
     public async Task<Result<long>> Handle(CreateComprobanteCommand request, CancellationToken ct)
@@ -64,6 +65,25 @@ public class CreateComprobanteCommandHandler(
         await repo.AddAsync(comprobante, ct);
         await uow.SaveChangesAsync(ct);
 
+        foreach (var impuesto in BuildImpuestos(comprobante))
+            db.ComprobantesImpuestos.Add(impuesto);
+
+        await uow.SaveChangesAsync(ct);
+
         return Result.Success(comprobante.Id);
+    }
+
+    private static IReadOnlyCollection<ComprobanteImpuesto> BuildImpuestos(Comprobante comprobante)
+    {
+        return comprobante.Items
+            .Where(x => x.IvaImporte > 0)
+            .GroupBy(x => new { x.AlicuotaIvaId, x.PorcentajeIva })
+            .Select(group => ComprobanteImpuesto.Crear(
+                comprobante.Id,
+                group.Key.AlicuotaIvaId,
+                group.Key.PorcentajeIva,
+                Math.Round(group.Sum(x => x.SubtotalNeto), 2),
+                Math.Round(group.Sum(x => x.IvaImporte), 2)))
+            .ToList();
     }
 }

@@ -49,7 +49,7 @@ public class ComprobanteItem : BaseEntity
         var importeBruto = cantidadEfectiva * precioUnitario;
         var descuento = importeBruto * (descuentoPct / 100);
         var baseNeta = importeBruto - descuento;
-        var ivaImporte = esGravado ? baseNeta * (porcentajeIva / 100) : 0;
+        var ivaImporte = esGravado ? baseNeta * (porcentajeIva / 100m) : 0;
         var totalLinea = baseNeta + ivaImporte;
 
         return new ComprobanteItem

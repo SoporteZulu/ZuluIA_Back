@@ -140,4 +140,165 @@ public class TerceroTests
 
         tercero.Activo.Should().BeTrue();
     }
+
+    // ── ActualizarNroDocumento ────────────────────────────────────────────────
+
+    [Fact]
+    public void ActualizarNroDocumento_NroValido_ActualizaPropiedad()
+    {
+        var tercero = Tercero.Crear(
+            "CLI001", "Empresa SA",
+            1, "30-11111111-1", 1,
+            true, false, false, null, null);
+
+        tercero.ActualizarNroDocumento("20-22222222-2", null);
+
+        tercero.NroDocumento.Should().Be("20-22222222-2");
+    }
+
+    [Fact]
+    public void ActualizarNroDocumento_NroVacio_LanzaExcepcion()
+    {
+        var tercero = Tercero.Crear(
+            "CLI001", "Empresa SA",
+            1, "30-11111111-1", 1,
+            true, false, false, null, null);
+
+        var act = () => tercero.ActualizarNroDocumento("   ", null);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    // ── SetCobrador ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public void SetCobrador_PorcentajeValido_AsignaValores()
+    {
+        var tercero = Tercero.Crear(
+            "CLI001", "Empresa SA",
+            1, "30-11111111-1", 1,
+            true, false, false, null, null);
+
+        tercero.SetCobrador(5L, 10m);
+
+        tercero.CobradorId.Should().Be(5L);
+        tercero.PctComisionCobrador.Should().Be(10m);
+    }
+
+    [Fact]
+    public void SetCobrador_PorcentajeMayorA100_LanzaExcepcion()
+    {
+        var tercero = Tercero.Crear(
+            "CLI001", "Empresa SA",
+            1, "30-11111111-1", 1,
+            true, false, false, null, null);
+
+        var act = () => tercero.SetCobrador(5L, 101m);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void SetCobrador_PorcentajeNegativo_LanzaExcepcion()
+    {
+        var tercero = Tercero.Crear(
+            "CLI001", "Empresa SA",
+            1, "30-11111111-1", 1,
+            true, false, false, null, null);
+
+        var act = () => tercero.SetCobrador(5L, -1m);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    // ── SetVendedor ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public void SetVendedor_PorcentajeValido_AsignaValores()
+    {
+        var tercero = Tercero.Crear(
+            "CLI001", "Empresa SA",
+            1, "30-11111111-1", 1,
+            true, false, false, null, null);
+
+        tercero.SetVendedor(7L, 5m);
+
+        tercero.VendedorId.Should().Be(7L);
+        tercero.PctComisionVendedor.Should().Be(5m);
+    }
+
+    [Fact]
+    public void SetVendedor_PorcentajeMayorA100_LanzaExcepcion()
+    {
+        var tercero = Tercero.Crear(
+            "CLI001", "Empresa SA",
+            1, "30-11111111-1", 1,
+            true, false, false, null, null);
+
+        var act = () => tercero.SetVendedor(7L, 150m);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void SetVendedor_PorcentajeNegativo_LanzaExcepcion()
+    {
+        var tercero = Tercero.Crear(
+            "CLI001", "Empresa SA",
+            1, "30-11111111-1", 1,
+            true, false, false, null, null);
+
+        var act = () => tercero.SetVendedor(7L, -1m);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void SetMoneda_AsignaValor()
+    {
+        var tercero = Tercero.Crear("CLI001", "Empresa SA", 1, "30-11111111-1", 1, true, false, false, null, null);
+        tercero.SetMoneda(3L);
+        tercero.MonedaId.Should().Be(3L);
+    }
+
+    [Fact]
+    public void SetMoneda_Null_LimpiaMoned()
+    {
+        var tercero = Tercero.Crear("CLI001", "Empresa SA", 1, "30-11111111-1", 1, true, false, false, null, null);
+        tercero.SetMoneda(null);
+        tercero.MonedaId.Should().BeNull();
+    }
+
+    [Fact]
+    public void SetCategoria_AsignaValor()
+    {
+        var tercero = Tercero.Crear("CLI001", "Empresa SA", 1, "30-11111111-1", 1, true, false, false, null, null);
+        tercero.SetCategoria(5L);
+        tercero.CategoriaId.Should().Be(5L);
+    }
+
+    [Fact]
+    public void SetSucursal_AsignaValor()
+    {
+        var tercero = Tercero.Crear("CLI001", "Empresa SA", 1, "30-11111111-1", 1, true, false, false, null, null);
+        tercero.SetSucursal(2L);
+        tercero.SucursalId.Should().Be(2L);
+    }
+
+    [Fact]
+    public void SetDomicilio_AsignaDomicilio()
+    {
+        var tercero = Tercero.Crear("CLI001", "Empresa SA", 1, "30-11111111-1", 1, true, false, false, null, null);
+        var dom = new ZuluIA_Back.Domain.ValueObjects.Domicilio("San Martín", "123", null, null, "5000", 1L, null);
+        tercero.SetDomicilio(dom);
+        tercero.Domicilio.Calle.Should().Be("San Martín");
+    }
+
+    [Fact]
+    public void SetNroIngresosBrutos_ConEspacios_Recorta()
+    {
+        var tercero = Tercero.Crear("CLI001", "Empresa SA", 1, "30-11111111-1", 1, true, false, false, null, null);
+        tercero.SetNroIngresosBrutos("  IB-001  ");
+        tercero.NroIngresosBrutos.Should().Be("IB-001");
+    }
 }

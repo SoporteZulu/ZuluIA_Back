@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Stock.Commands;
 using ZuluIA_Back.Application.Features.Stock.Queries;
+using ZuluIA_Back.Domain.Entities.Stock;
 
 namespace ZuluIA_Back.Api.Controllers;
 
@@ -244,4 +245,95 @@ public class StockController(IMediator mediator, IApplicationDbContext db)
             totalPages = (int)Math.Ceiling(total / (double)pageSize)
         });
     }
+
+    // ── Inventarios / Conteos físicos ─────────────────────────────────────────
+
+    /// <summary>
+    /// Retorna los inventarios de conteo registrados.
+    /// </summary>
+    [HttpGet("inventarios")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetInventarios(
+        [FromQuery] bool soloAbiertos = false,
+        CancellationToken ct = default)
+    {
+        var q = db.InventariosConteo.AsNoTracking();
+        if (soloAbiertos)
+            q = q.Where(i => i.FechaCierre == null);
+
+        var lista = await q
+            .OrderByDescending(i => i.FechaApertura)
+            .Select(i => new
+            {
+                i.Id,
+                i.NroAuditoria,
+                i.UsuarioId,
+                i.FechaApertura,
+                i.FechaCierre,
+                i.FechaAlta,
+                Cerrado = i.FechaCierre != null
+            })
+            .ToListAsync(ct);
+        return Ok(lista);
+    }
+
+    /// <summary>
+    /// Retorna el detalle de un inventario de conteo.
+    /// </summary>
+    [HttpGet("inventarios/{id:long}", Name = "GetInventarioConteoById")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetInventarioById(long id, CancellationToken ct)
+    {
+        var inv = await db.InventariosConteo.FindAsync([id], ct);
+        return inv is null ? NotFound(new { error = $"Inventario {id} no encontrado." }) : Ok(inv);
+    }
+
+    /// <summary>
+    /// Abre un nuevo inventario de conteo físico.
+    /// </summary>
+    [HttpPost("inventarios")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CreateInventario(
+        [FromBody] CreateInventarioConteoRequest req,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new CreateInventarioConteoCommand(req.UsuarioId, req.FechaApertura, req.NroAuditoria),
+            ct);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { error = result.Error });
+
+        return CreatedAtRoute("GetInventarioConteoById", new { id = result.Value }, new { Id = result.Value });
+    }
+
+    /// <summary>
+    /// Cierra un inventario de conteo abierto.
+    /// </summary>
+    [HttpPatch("inventarios/{id:long}/cerrar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CerrarInventario(
+        long id,
+        [FromBody] CerrarInventarioRequest req,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(new CerrarInventarioConteoCommand(id, req.FechaCierre), ct);
+        if (!result.IsSuccess)
+        {
+            var error = result.Error ?? "No fue posible cerrar el inventario.";
+            return error.Contains("no encontrado", StringComparison.OrdinalIgnoreCase)
+                ? NotFound(new { error })
+                : BadRequest(new { error });
+        }
+
+        return Ok();
+    }
 }
+
+// ── Request bodies ────────────────────────────────────────────────────────────
+public record CreateInventarioConteoRequest(long UsuarioId, DateTimeOffset FechaApertura, int NroAuditoria);
+public record CerrarInventarioRequest(DateTimeOffset FechaCierre);

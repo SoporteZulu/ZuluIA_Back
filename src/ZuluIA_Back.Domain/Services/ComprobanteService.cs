@@ -1,10 +1,10 @@
-ï»¿using ZuluIA_Back.Domain.Entities.Comprobantes;
+using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Domain.Services;
 
 /// <summary>
-/// Servicio de dominio que centraliza la lÃ³gica de imputaciÃ³n entre comprobantes.
+/// Servicio de dominio que centraliza la lógica de imputación entre comprobantes.
 /// </summary>
 public class ComprobanteService(
     IComprobanteRepository comprobanteRepo,
@@ -14,7 +14,7 @@ public class ComprobanteService(
     /// Imputa un comprobante origen (NC, anticipo) contra un destino (Factura).
     /// Actualiza los saldos de ambos comprobantes.
     /// </summary>
-    public async Task<Imputacion> ImputarAsync(
+    public virtual async Task<Imputacion> ImputarAsync(
         long comprobanteOrigenId,
         long comprobanteDestinoId,
         decimal importe,
@@ -26,11 +26,11 @@ public class ComprobanteService(
     {
         var origen = await comprobanteRepo.GetByIdAsync(comprobanteOrigenId, ct)
             ?? throw new InvalidOperationException(
-                $"No se encontrÃ³ el comprobante origen ID {comprobanteOrigenId}.");
+                $"No se encontró el comprobante origen ID {comprobanteOrigenId}.");
 
         var destino = await comprobanteRepo.GetByIdAsync(comprobanteDestinoId, ct)
             ?? throw new InvalidOperationException(
-                $"No se encontrÃ³ el comprobante destino ID {comprobanteDestinoId}.");
+                $"No se encontró el comprobante destino ID {comprobanteDestinoId}.");
 
         if (tipoComprobanteOrigenId.HasValue && origen.TipoComprobanteId != tipoComprobanteOrigenId.Value)
             throw new InvalidOperationException("El comprobante origen no coincide con el tipo de documento requerido.");

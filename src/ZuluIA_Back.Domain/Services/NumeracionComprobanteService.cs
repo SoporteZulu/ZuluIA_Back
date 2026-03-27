@@ -11,7 +11,7 @@ public class NumeracionComprobanteService(IPuntoFacturacionRepository puntoRepo)
     /// <summary>
     /// Obtiene el próximo número de comprobante para un punto de facturación y tipo.
     /// </summary>
-    public async Task<(short Prefijo, long Numero)> ObtenerProximoNumeroAsync(
+    public virtual async Task<(short Prefijo, long Numero)> ObtenerProximoNumeroAsync(
         long puntoFacturacionId,
         long tipoComprobanteId,
         CancellationToken ct = default)

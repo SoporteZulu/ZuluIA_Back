@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Extras.DTOs;
+using ZuluIA_Back.Application.Features.Extras.Commands;
 
 namespace ZuluIA_Back.Api.Controllers;
 
@@ -100,28 +101,20 @@ public class TransportistasController(
         [FromBody] CreateTransportistaRequest request,
         CancellationToken ct)
     {
-        var existe = await db.Transportistas
-            .AnyAsync(x => x.TerceroId == request.TerceroId, ct);
-
-        if (existe)
-            return Conflict(new
-            {
-                error = $"Ya existe un transportista para el tercero ID {request.TerceroId}."
-            });
-
-        var t = Domain.Entities.Extras.Transportista.Crear(
+        var command = new CreateTransportistaCommand(
             request.TerceroId,
             request.NroCuitTransportista,
             request.DomicilioPartida,
             request.Patente,
             request.MarcaVehiculo);
 
-        await db.Transportistas.AddAsync(t, ct);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(command, ct);
+        if (!result.IsSuccess)
+            return Conflict(new { error = result.Error });
 
         return CreatedAtRoute("GetTransportistaById",
-            new { id = t.Id },
-            new { id = t.Id });
+            new { id = result.Value },
+            new { id = result.Value });
     }
 
     /// <summary>
@@ -135,21 +128,47 @@ public class TransportistasController(
         [FromBody] UpdateTransportistaRequest request,
         CancellationToken ct)
     {
-        var t = await db.Transportistas
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
-
-        if (t is null)
-            return NotFound(new { error = $"No se encontró el transportista con ID {id}." });
-
-        t.Actualizar(
+        var command = new UpdateTransportistaCommand(
+            id,
             request.DomicilioPartida,
             request.Patente,
             request.MarcaVehiculo);
 
-        db.Transportistas.Update(t);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(command, ct);
+        if (!result.IsSuccess)
+            return NotFound(new { error = result.Error });
 
         return Ok(new { mensaje = "Transportista actualizado correctamente." });
+    }
+
+    /// <summary>
+    /// Desactiva un transportista.
+    /// </summary>
+    [HttpPatch("{id:long}/desactivar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Desactivar(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new DeactivateTransportistaCommand(id), ct);
+        if (!result.IsSuccess)
+            return NotFound(new { error = result.Error });
+
+        return Ok(new { mensaje = "Transportista desactivado correctamente." });
+    }
+
+    /// <summary>
+    /// Reactiva un transportista desactivado.
+    /// </summary>
+    [HttpPatch("{id:long}/activar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Activar(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new ActivateTransportistaCommand(id), ct);
+        if (!result.IsSuccess)
+            return NotFound(new { error = result.Error });
+
+        return Ok(new { mensaje = "Transportista activado correctamente." });
     }
 }
 

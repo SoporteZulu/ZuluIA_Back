@@ -25,12 +25,12 @@ public class GetTerceroByLegajoQueryHandler(
         CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Legajo))
-            return (Result<TerceroDto>)Result<TerceroDto>.Failure("El legajo no puede estar vacío.");
+            return Result.Failure<TerceroDto>("El legajo no puede estar vacío.");
 
         var tercero = await repo.GetByLegajoAsync(request.Legajo, ct);
 
         if (tercero is null)
-            return (Result<TerceroDto>)Result<TerceroDto>.Failure(
+            return Result.Failure<TerceroDto>(
                 $"No se encontró ningún tercero con el legajo '{request.Legajo.ToUpperInvariant()}'.");
 
         // Reutiliza la misma lógica de enriquecimiento que GetTerceroByIdQuery.

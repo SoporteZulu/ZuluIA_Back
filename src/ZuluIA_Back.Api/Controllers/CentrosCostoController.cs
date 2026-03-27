@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Contabilidad.Commands;
 
 namespace ZuluIA_Back.Api.Controllers;
 
@@ -50,20 +51,16 @@ public class CentrosCostoController(
         [FromBody] CreateCentroCostoRequest request,
         CancellationToken ct)
     {
-        var existe = await db.CentrosCosto
-            .AnyAsync(x => x.Codigo == request.Codigo.Trim().ToUpperInvariant(), ct);
+        var result = await Mediator.Send(
+            new CreateCentroCostoCommand(request.Codigo, request.Descripcion),
+            ct);
 
-        if (existe)
-            return Conflict(new { error = $"Ya existe un centro de costo con código '{request.Codigo}'." });
+        if (result.IsFailure)
+            return result.Error?.Contains("Ya existe", StringComparison.OrdinalIgnoreCase) == true
+                ? Conflict(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
-        var cc = Domain.Entities.Contabilidad.CentroCosto.Crear(
-            request.Codigo,
-            request.Descripcion);
-
-        await db.CentrosCosto.AddAsync(cc, ct);
-        await db.SaveChangesAsync(ct);
-
-        return Ok(new { id = cc.Id });
+        return Ok(new { id = result.Value });
     }
 
     /// <summary>
@@ -77,15 +74,12 @@ public class CentrosCostoController(
         [FromBody] UpdateCentroCostoRequest request,
         CancellationToken ct)
     {
-        var cc = await db.CentrosCosto
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
+        var result = await Mediator.Send(new UpdateCentroCostoCommand(id, request.Descripcion), ct);
 
-        if (cc is null)
-            return NotFound(new { error = $"No se encontró el centro de costo con ID {id}." });
-
-        cc.Actualizar(request.Descripcion);
-        db.CentrosCosto.Update(cc);
-        await db.SaveChangesAsync(ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("No se encontro", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Centro de costo actualizado correctamente." });
     }
@@ -99,27 +93,34 @@ public class CentrosCostoController(
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(long id, CancellationToken ct)
     {
-        var cc = await db.CentrosCosto
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
+        var result = await Mediator.Send(new DeleteCentroCostoCommand(id), ct);
 
-        if (cc is null)
-            return NotFound(new { error = $"No se encontró el centro de costo con ID {id}." });
-
-        // Verificar que no tenga líneas de asiento asociadas
-        var tieneLineas = await db.AsientosLineas
-            .AnyAsync(x => x.CentroCostoId == id, ct);
-
-        if (tieneLineas)
-            return Conflict(new
-            {
-                error = "No se puede desactivar un centro de costo con asientos registrados."
-            });
-
-        cc.Desactivar();
-        db.CentrosCosto.Update(cc);
-        await db.SaveChangesAsync(ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("No se puede desactivar", StringComparison.OrdinalIgnoreCase) == true
+                ? Conflict(new { error = result.Error })
+                : result.Error?.Contains("No se encontro", StringComparison.OrdinalIgnoreCase) == true
+                    ? NotFound(new { error = result.Error })
+                    : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Centro de costo desactivado correctamente." });
+    }
+
+    /// <summary>
+    /// Reactiva un centro de costo desactivado.
+    /// </summary>
+    [HttpPatch("{id:long}/activar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Activar(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new ActivateCentroCostoCommand(id), ct);
+
+        if (result.IsFailure)
+            return result.Error?.Contains("No se encontro", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
+
+        return Ok(new { mensaje = "Centro de costo activado correctamente." });
     }
 }
 
