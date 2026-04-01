@@ -4,6 +4,7 @@ using Xunit;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Items.Queries;
 using ZuluIA_Back.Application.Features.Items.Services;
+using ZuluIA_Back.Domain.Entities.Comercial;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Items;
 using ZuluIA_Back.Domain.Entities.Referencia;
@@ -27,10 +28,19 @@ public class GetItemsVendiblesQueryHandlerTests
         SetId(producto, 1L);
         SetId(servicio, 2L);
         SetId(noVendible, 3L);
+        SetPrivateProperty(producto, nameof(Item.CodigoAlternativo), "ALT-P001");
+        SetPrivateProperty(producto, nameof(Item.CategoriaId), 11L);
+        SetPrivateProperty(producto, nameof(Item.MarcaId), 12L);
         noVendible.ActualizarConfiguracionVentas(false, true, null, false, null);
 
         var unidad = UnidadMedida.Crear("UN", "Unidad");
         SetId(unidad, 10L);
+
+        var categoria = CategoriaItem.Crear(null, "CAT", "Categoría ventas", 1, null, null);
+        SetId(categoria, 11L);
+
+        var marca = MarcaComercial.Crear("MAR", "Marca ventas", null);
+        SetId(marca, 12L);
 
         var stock = StockItem.Crear(1L, 1L, 8m);
         var tipoComprobante = CreateTipoComprobante(1L, esVenta: true, afectaStock: false);
@@ -40,6 +50,8 @@ public class GetItemsVendiblesQueryHandlerTests
 
         db.Items.Returns(MockDbSetHelper.CreateMockDbSet<Item>([producto, servicio, noVendible]));
         db.UnidadesMedida.Returns(MockDbSetHelper.CreateMockDbSet<UnidadMedida>([unidad]));
+        db.CategoriasItems.Returns(MockDbSetHelper.CreateMockDbSet<CategoriaItem>([categoria]));
+        db.MarcasComerciales.Returns(MockDbSetHelper.CreateMockDbSet<MarcaComercial>([marca]));
         db.Stock.Returns(MockDbSetHelper.CreateMockDbSet<StockItem>([stock]));
         db.ComprobantesItems.Returns(MockDbSetHelper.CreateMockDbSet<ComprobanteItem>([itemReservado]));
         db.Comprobantes.Returns(MockDbSetHelper.CreateMockDbSet<Comprobante>([comprobanteReservado]));
@@ -52,7 +64,13 @@ public class GetItemsVendiblesQueryHandlerTests
         result.Should().HaveCount(2);
         result.Select(x => x.Codigo).Should().Contain(["P001", "S001"]);
         result.Should().OnlyContain(x => x.EsVendible);
-        result.Single(x => x.Codigo == "P001").StockDisponible.Should().Be(5m);
+        var productoResult = result.Single(x => x.Codigo == "P001");
+        productoResult.StockDisponible.Should().Be(5m);
+        productoResult.CodigoAlternativo.Should().Be("ALT-P001");
+        productoResult.CategoriaId.Should().Be(11L);
+        productoResult.CategoriaDescripcion.Should().Be("Categoría ventas");
+        productoResult.MarcaId.Should().Be(12L);
+        productoResult.MarcaDescripcion.Should().Be("Marca ventas");
         result.Single(x => x.Codigo == "S001").ManejaStock.Should().BeFalse();
     }
 
@@ -71,6 +89,8 @@ public class GetItemsVendiblesQueryHandlerTests
 
         db.Items.Returns(MockDbSetHelper.CreateMockDbSet<Item>([productoSinStock, servicio]));
         db.UnidadesMedida.Returns(MockDbSetHelper.CreateMockDbSet<UnidadMedida>([unidad]));
+        db.CategoriasItems.Returns(MockDbSetHelper.CreateMockDbSet<CategoriaItem>());
+        db.MarcasComerciales.Returns(MockDbSetHelper.CreateMockDbSet<MarcaComercial>());
         db.Stock.Returns(MockDbSetHelper.CreateMockDbSet<StockItem>());
         db.ComprobantesItems.Returns(MockDbSetHelper.CreateMockDbSet<ComprobanteItem>());
         db.Comprobantes.Returns(MockDbSetHelper.CreateMockDbSet<Comprobante>());
@@ -88,6 +108,12 @@ public class GetItemsVendiblesQueryHandlerTests
         where T : class
     {
         entity.GetType().GetProperty("Id")!.SetValue(entity, id);
+    }
+
+    private static void SetPrivateProperty<T>(T entity, string propertyName, object? value)
+        where T : class
+    {
+        entity.GetType().GetProperty(propertyName)!.SetValue(entity, value);
     }
 
     private static TipoComprobante CreateTipoComprobante(long id, bool esVenta, bool afectaStock)

@@ -89,6 +89,40 @@ public class TercerosController(IMediator mediator) : BaseController(mediator)
     }
 
     /// <summary>
+    /// Busca un tercero por su número de documento (CUIT/DNI).
+    /// Equivalente a la búsqueda rápida por documento en el VB6.
+    /// GET /api/terceros/documento/20111111112
+    /// </summary>
+    [HttpGet("documento/{nroDocumento}", Name = "GetTerceroByNroDocumento")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetByNroDocumento(string nroDocumento, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new GetTerceroByNroDocumentoQuery(nroDocumento), ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Selector optimizado de clientes para módulos de ventas.
+    /// Retorna lista acotada con validaciones de cliente vendible.
+    /// Equivalente al autocomplete/combo de cliente en Pedidos/Remitos/Facturas del VB6.
+    /// GET /api/terceros/clientes/selector-ventas?search=garcia&sucursalId=1
+    /// </summary>
+    [HttpGet("clientes/selector-ventas")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetClientesSelectorVentas(
+        [FromQuery] string? search = null,
+        [FromQuery] long? sucursalId = null,
+        [FromQuery] int maxResults = 50,
+        CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(
+            new GetClientesSelectorVentasQuery(search, sucursalId, maxResults),
+            ct);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Retorna el perfil comercial ampliado del tercero.
     /// Equivalente al bloque comercial ampliado del ABM histórico.
     /// GET /api/terceros/42/perfil-comercial

@@ -68,12 +68,30 @@ public class GetItemsVendiblesQueryHandler(
 
         var itemIds = items.Select(x => x.Id).ToList();
         var unidadIds = items.Select(x => x.UnidadMedidaId).Distinct().ToList();
+        var categoriaIds = items.Where(x => x.CategoriaId.HasValue).Select(x => x.CategoriaId!.Value).Distinct().ToList();
+        var marcaIds = items.Where(x => x.MarcaId.HasValue).Select(x => x.MarcaId!.Value).Distinct().ToList();
 
         var unidades = await db.UnidadesMedida
             .AsNoTracking()
             .Where(x => unidadIds.Contains(x.Id))
             .Select(x => new KeyValuePair<long, string>(x.Id, x.Descripcion))
             .ToDictionaryAsync(x => x.Key, x => x.Value, ct);
+
+        var categorias = categoriaIds.Count > 0
+            ? await db.CategoriasItems
+                .AsNoTracking()
+                .Where(x => categoriaIds.Contains(x.Id))
+                .Select(x => new KeyValuePair<long, string>(x.Id, x.Descripcion))
+                .ToDictionaryAsync(x => x.Key, x => x.Value, ct)
+            : new Dictionary<long, string>();
+
+        var marcas = marcaIds.Count > 0
+            ? await db.MarcasComerciales
+                .AsNoTracking()
+                .Where(x => marcaIds.Contains(x.Id) && x.DeletedAt == null)
+                .Select(x => new KeyValuePair<long, string>(x.Id, x.Descripcion))
+                .ToDictionaryAsync(x => x.Key, x => x.Value, ct)
+            : new Dictionary<long, string>();
 
         var stockSnapshots = await itemCommercialStockService.GetSnapshotsAsync(itemIds, ct);
 
@@ -86,8 +104,13 @@ public class GetItemsVendiblesQueryHandler(
                 {
                     Id = item.Id,
                     Codigo = item.Codigo,
+                    CodigoAlternativo = item.CodigoAlternativo,
                     CodigoBarras = item.CodigoBarras,
                     Descripcion = item.Descripcion,
+                    CategoriaId = item.CategoriaId,
+                    CategoriaDescripcion = item.CategoriaId.HasValue ? categorias.GetValueOrDefault(item.CategoriaId.Value) : null,
+                    MarcaId = item.MarcaId,
+                    MarcaDescripcion = item.MarcaId.HasValue ? marcas.GetValueOrDefault(item.MarcaId.Value) : null,
                     UnidadMedidaId = item.UnidadMedidaId,
                     UnidadMedidaDescripcion = unidades.GetValueOrDefault(item.UnidadMedidaId),
                     AlicuotaIvaId = item.AlicuotaIvaId,

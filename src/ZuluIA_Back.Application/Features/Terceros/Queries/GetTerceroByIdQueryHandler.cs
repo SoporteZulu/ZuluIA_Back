@@ -250,6 +250,8 @@ public class GetTerceroByIdQueryHandler(
             .ToListAsync(ct);
 
         dto.SucursalesEntrega = mapper.Map<IReadOnlyList<TerceroSucursalEntregaDto>>(sucursalesEntrega);
+        dto.SucursalEntregaPrincipal = dto.SucursalesEntrega.FirstOrDefault();
+        dto.RequiereDefinirEntrega = tercero.EsCliente && dto.SucursalEntregaPrincipal is null;
 
         var transportes = await db.TercerosTransportes
             .AsNoTracking()

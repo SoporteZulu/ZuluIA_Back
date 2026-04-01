@@ -9,6 +9,7 @@ using ZuluIA_Back.Application.Features.Comprobantes.Commands;
 using ZuluIA_Back.Application.Features.Comprobantes.DTOs;
 using ZuluIA_Back.Application.Features.Comprobantes.Queries;
 using ZuluIA_Back.Application.Features.Comprobantes.Services;
+using ZuluIA_Back.Application.Features.Items.Services;
 using ZuluIA_Back.Application.Features.Terceros.Services;
 using ZuluIA_Back.Application.Features.Facturacion.DTOs;
 using ZuluIA_Back.Domain.Common;
@@ -168,7 +169,7 @@ public class EmitirComprobanteCommandHandlerTests
     private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
 
     private EmitirComprobanteCommandHandler Sut() =>
-        new(_comprobanteRepo, _periodoRepo, _stockService, _afipCae, _uow, _user, _db, new TerceroOperacionValidationService(_db));
+        new(_comprobanteRepo, _periodoRepo, _stockService, _afipCae, _uow, _user, _db, new TerceroOperacionValidationService(_db), new ItemCommercialStockService(_db));
 
     private static EmitirComprobanteCommand CmdValido() => new(
         null, 1, null, 1,

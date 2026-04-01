@@ -126,6 +126,26 @@ public class GetTercerosPagedQueryHandler(
                     ct)
             : [];
 
+        var sucursalesEntrega = tercerosIds.Count > 0
+            ? await db.TercerosSucursalesEntrega
+                .Where(x => tercerosIds.Contains(x.TerceroId) && x.DeletedAt == null)
+                .OrderByDescending(x => x.Principal)
+                .ThenBy(x => x.Orden)
+                .ThenBy(x => x.Descripcion)
+                .Select(x => new { x.TerceroId, x.Descripcion, x.Principal })
+                .ToListAsync(ct)
+            : [];
+
+        var sucursalesEntregaPorTercero = sucursalesEntrega
+            .GroupBy(x => x.TerceroId)
+            .ToDictionary(
+                x => x.Key,
+                x => new
+                {
+                    TieneSucursales = x.Any(),
+                    PrincipalDescripcion = x.Select(v => v.Descripcion).FirstOrDefault()
+                });
+
         var usuarioIds = paged.Items
             .Where(x => x.UsuarioId.HasValue)
             .Select(x => x.UsuarioId!.Value)
@@ -386,6 +406,14 @@ public class GetTercerosPagedQueryHandler(
                 dto.GeografiaCompleta,
                 dto.CodigoPostal);
 
+            if (sucursalesEntregaPorTercero.TryGetValue(tercero.Id, out var sucursalEntrega))
+            {
+                dto.TieneSucursalesEntrega = sucursalEntrega.TieneSucursales;
+                dto.SucursalEntregaPrincipalDescripcion = sucursalEntrega.PrincipalDescripcion;
+            }
+
+            dto.RequiereDefinirEntrega = tercero.EsCliente && !dto.TieneSucursalesEntrega;
+
             if (tercero.CategoriaClienteId.HasValue &&
                 categoriasClientes.TryGetValue(tercero.CategoriaClienteId.Value, out var categoriaCliente))
                 dto.CategoriaClienteDescripcion = categoriaCliente;
@@ -443,6 +471,18 @@ public class GetTercerosPagedQueryHandler(
             dto.EstadoOperativoBloquea = estadoOperativo.Bloquea;
             dto.EstadoVisibleDescripcion = estadoOperativo.Descripcion;
             dto.EstadoVisibleBloquea = estadoOperativo.Bloquea;
+
+            // Validar si puede vender
+            dto.PuedeVender = ValidarPuedeVender(tercero, estadoClienteActivo, estadoClienteBloquea, estadoPersonaActivo);
+            dto.MotivoBloqueoVentas = !dto.PuedeVender
+                ? ResolverMotivoBloqueoVentas(tercero, estadoClienteDescripcion, estadoClienteActivo, estadoClienteBloquea, estadoPersonaDescripcionActual, estadoPersonaActivo)
+                : null;
+
+            // Validar si puede comprar
+            dto.PuedeComprar = ValidarPuedeComprar(tercero, estadoProveedorActivo, estadoProveedorBloquea, estadoPersonaActivo);
+            dto.MotivoBloqueoCompras = !dto.PuedeComprar
+                ? ResolverMotivoBloqueoCompras(tercero, estadoProveedorDescripcion, estadoProveedorActivo, estadoProveedorBloquea, estadoPersonaDescripcionActual, estadoPersonaActivo)
+                : null;
         }
 
         return new PagedResult<TerceroListDto>(itemsList, page, pageSize, paged.TotalCount);
@@ -465,5 +505,105 @@ public class GetTercerosPagedQueryHandler(
             return $"Desde {desde:yyyy-MM-dd}";
 
         return $"Hasta {hasta:yyyy-MM-dd}";
+    }
+
+    private static bool ValidarPuedeVender(
+        Domain.Entities.Terceros.Tercero tercero,
+        bool? estadoClienteActivo,
+        bool? estadoClienteBloquea,
+        bool? estadoPersonaActivo)
+    {
+        if (!tercero.EsCliente || !tercero.Activo)
+            return false;
+
+        if (estadoPersonaActivo.HasValue && !estadoPersonaActivo.Value)
+            return false;
+
+        if (estadoClienteActivo.HasValue && !estadoClienteActivo.Value)
+            return false;
+
+        if (estadoClienteBloquea.HasValue && estadoClienteBloquea.Value)
+            return false;
+
+        if (!tercero.Facturable)
+            return false;
+
+        return true;
+    }
+
+    private static string ResolverMotivoBloqueoVentas(
+        Domain.Entities.Terceros.Tercero tercero,
+        string? estadoClienteDescripcion,
+        bool? estadoClienteActivo,
+        bool? estadoClienteBloquea,
+        string? estadoPersonaDescripcion,
+        bool? estadoPersonaActivo)
+    {
+        if (!tercero.EsCliente)
+            return "No es cliente";
+
+        if (!tercero.Activo)
+            return "Cliente inactivo";
+
+        if (estadoPersonaActivo.HasValue && !estadoPersonaActivo.Value && !string.IsNullOrWhiteSpace(estadoPersonaDescripcion))
+            return $"Estado de persona: {estadoPersonaDescripcion}";
+
+        if (estadoClienteActivo.HasValue && !estadoClienteActivo.Value && !string.IsNullOrWhiteSpace(estadoClienteDescripcion))
+            return $"Estado de cliente inactivo: {estadoClienteDescripcion}";
+
+        if (estadoClienteBloquea.HasValue && estadoClienteBloquea.Value && !string.IsNullOrWhiteSpace(estadoClienteDescripcion))
+            return $"Cliente bloqueado: {estadoClienteDescripcion}";
+
+        if (!tercero.Facturable)
+            return "Cliente no facturable";
+
+        return "Cliente no operativo";
+    }
+
+    private static bool ValidarPuedeComprar(
+        Domain.Entities.Terceros.Tercero tercero,
+        bool? estadoProveedorActivo,
+        bool? estadoProveedorBloquea,
+        bool? estadoPersonaActivo)
+    {
+        if (!tercero.EsProveedor || !tercero.Activo)
+            return false;
+
+        if (estadoPersonaActivo.HasValue && !estadoPersonaActivo.Value)
+            return false;
+
+        if (estadoProveedorActivo.HasValue && !estadoProveedorActivo.Value)
+            return false;
+
+        if (estadoProveedorBloquea.HasValue && estadoProveedorBloquea.Value)
+            return false;
+
+        return true;
+    }
+
+    private static string ResolverMotivoBloqueoCompras(
+        Domain.Entities.Terceros.Tercero tercero,
+        string? estadoProveedorDescripcion,
+        bool? estadoProveedorActivo,
+        bool? estadoProveedorBloquea,
+        string? estadoPersonaDescripcion,
+        bool? estadoPersonaActivo)
+    {
+        if (!tercero.EsProveedor)
+            return "No es proveedor";
+
+        if (!tercero.Activo)
+            return "Proveedor inactivo";
+
+        if (estadoPersonaActivo.HasValue && !estadoPersonaActivo.Value && !string.IsNullOrWhiteSpace(estadoPersonaDescripcion))
+            return $"Estado de persona: {estadoPersonaDescripcion}";
+
+        if (estadoProveedorActivo.HasValue && !estadoProveedorActivo.Value && !string.IsNullOrWhiteSpace(estadoProveedorDescripcion))
+            return $"Estado de proveedor inactivo: {estadoProveedorDescripcion}";
+
+        if (estadoProveedorBloquea.HasValue && estadoProveedorBloquea.Value && !string.IsNullOrWhiteSpace(estadoProveedorDescripcion))
+            return $"Proveedor bloqueado: {estadoProveedorDescripcion}";
+
+        return "Proveedor no operativo";
     }
 }

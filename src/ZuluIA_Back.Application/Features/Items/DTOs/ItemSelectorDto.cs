@@ -7,8 +7,13 @@ public class ItemSelectorDto
 {
     public long Id { get; set; }
     public string Codigo { get; set; } = string.Empty;
+    public string? CodigoAlternativo { get; set; }
     public string? CodigoBarras { get; set; }
     public string Descripcion { get; set; } = string.Empty;
+    public long? CategoriaId { get; set; }
+    public string? CategoriaDescripcion { get; set; }
+    public long? MarcaId { get; set; }
+    public string? MarcaDescripcion { get; set; }
     public long UnidadMedidaId { get; set; }
     public string? UnidadMedidaDescripcion { get; set; }
     public long AlicuotaIvaId { get; set; }

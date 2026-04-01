@@ -139,6 +139,67 @@ public class GetTerceroByIdQueryHandlerTests
         result.Value.UsuarioCliente!.TienePasswordConfigurada.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task Handle_CuandoTieneSucursalesEntrega_RetornaSucursalEntregaPrincipal()
+    {
+        var mapper = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
+        await using var db = CreateDbContext();
+
+        var tipoDocumento = CreateTipoDocumento(1, 80, "CUIT");
+        var condicionIva = CreateCondicionIva(1, 1, "Responsable Inscripto");
+        db.TiposDocumento.Add(tipoDocumento);
+        db.CondicionesIva.Add(condicionIva);
+
+        var tercero = Tercero.Crear("CLI002", "Cliente Dos", tipoDocumento.Id, "30712345679", condicionIva.Id, true, false, false, null, null);
+        db.Terceros.Add(tercero);
+        await db.SaveChangesAsync();
+
+        db.TercerosSucursalesEntrega.AddRange(
+            TerceroSucursalEntrega.Crear(tercero.Id, "Depósito Secundario", "Calle 2", "Localidad B", null, null, null, false, 1, null),
+            TerceroSucursalEntrega.Crear(tercero.Id, "Casa Central", "Calle 1", "Localidad A", null, null, null, true, 0, null));
+        await db.SaveChangesAsync();
+
+        var repo = Substitute.For<ITerceroRepository>();
+        repo.GetByIdAsync(tercero.Id, Arg.Any<CancellationToken>()).Returns(tercero);
+
+        var handler = new GetTerceroByIdQueryHandler(repo, db, mapper, NullLogger<GetTerceroByIdQueryHandler>.Instance);
+
+        var result = await handler.Handle(new GetTerceroByIdQuery(tercero.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.SucursalesEntrega.Should().HaveCount(2);
+        result.Value.SucursalEntregaPrincipal.Should().NotBeNull();
+        result.Value.SucursalEntregaPrincipal!.Descripcion.Should().Be("Casa Central");
+        result.Value.SucursalEntregaPrincipal.Principal.Should().BeTrue();
+        result.Value.RequiereDefinirEntrega.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_CuandoNoTieneSucursalesEntrega_MarcaEntregaPendiente()
+    {
+        var mapper = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>()).CreateMapper();
+        await using var db = CreateDbContext();
+
+        var tipoDocumento = CreateTipoDocumento(1, 80, "CUIT");
+        var condicionIva = CreateCondicionIva(1, 1, "Responsable Inscripto");
+        db.TiposDocumento.Add(tipoDocumento);
+        db.CondicionesIva.Add(condicionIva);
+
+        var tercero = Tercero.Crear("CLI003", "Cliente Sin Entrega", tipoDocumento.Id, "30712345670", condicionIva.Id, true, false, false, null, null);
+        db.Terceros.Add(tercero);
+        await db.SaveChangesAsync();
+
+        var repo = Substitute.For<ITerceroRepository>();
+        repo.GetByIdAsync(tercero.Id, Arg.Any<CancellationToken>()).Returns(tercero);
+
+        var handler = new GetTerceroByIdQueryHandler(repo, db, mapper, NullLogger<GetTerceroByIdQueryHandler>.Instance);
+
+        var result = await handler.Handle(new GetTerceroByIdQuery(tercero.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.SucursalEntregaPrincipal.Should().BeNull();
+        result.Value.RequiereDefinirEntrega.Should().BeTrue();
+    }
     private static AppDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()

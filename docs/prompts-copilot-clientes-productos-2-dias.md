@@ -32,6 +32,18 @@ No mandes en paralelo dos requests que intenten editar los mismos archivos.
 ### Ola 3 - Cierre
 - build, validación, residual y checklist
 
+## Regla extra por historial no compartido
+Como las distintas requests no comparten historial entre sí, antes de mandar `C4` o `P4` hay que pegar un **resumen consolidado manual** con lo que devolvieron las 3 requests de análisis.
+
+Ese resumen tiene que incluir solo:
+- hallazgos confirmados
+- gaps prioritarios
+- tests críticos a cubrir
+- archivos probables a tocar
+- decisiones de scope
+
+No hay que pegar toda la conversación anterior. Solo una síntesis corta y estructurada.
+
 ---
 
 ## 2. Qué máquina usa cada prompt
@@ -51,6 +63,87 @@ Usá estos prompts tal cual o con mínimos ajustes. Todos ya vienen orientados a
 - validar contra PostgreSQL local si hace falta (`localhost:5432`)
 - no abrir scope administrativo innecesario
 - terminar `OK ventas`, no `paridad total`
+
+## Plantilla de resumen consolidado para pegar antes de `C4` o `P4`
+
+Usá esta plantilla como bloque previo en un chat nuevo antes del prompt integrador.
+
+```text
+Resumen consolidado de análisis previos:
+
+1. Ya cubierto
+- ...
+- ...
+
+2. Gaps confirmados
+- ...
+- ...
+
+3. Prioridad de esta ventana
+- ...
+- ...
+
+4. Tests críticos a cubrir
+- ...
+- ...
+
+5. Archivos candidatos a tocar
+- ...
+- ...
+
+6. Scope explícito
+- Cerrar solo OK ventas
+- No tocar frontend
+- No abrir scope administrativo
+
+Tomá este resumen como fuente de verdad para implementar.
+```
+
+## Plantilla corta para `C4`
+
+```text
+Resumen consolidado de C1/C2/C3:
+
+Ya cubierto:
+- ...
+
+Gaps confirmados:
+- ...
+
+Tests críticos:
+- ...
+
+Archivos a tocar:
+- ...
+
+Scope:
+- cerrar solo clientes OK ventas
+- no tocar frontend
+- cambios mínimos
+```
+
+## Plantilla corta para `P4`
+
+```text
+Resumen consolidado de P1/P2/P3:
+
+Ya cubierto:
+- ...
+
+Gaps confirmados:
+- ...
+
+Tests críticos:
+- ...
+
+Archivos a tocar:
+- ...
+
+Scope:
+- cerrar solo productos OK ventas
+- no tocar frontend
+- cambios mínimos
+```
 
 ---
 
@@ -169,6 +262,8 @@ No implementes. Solo comparación concreta y accionable.
 
 ## C4 - Request integrador de clientes
 **Cuándo mandarlo:** después de leer respuestas de `C1`, `C2` y `C3`.
+
+**Importante:** mandarlo en un **chat nuevo** y pegar antes el `Resumen consolidado de C1/C2/C3`.
 
 ```text
 Ahora quiero que implementes los cambios mínimos necesarios para dejar clientes OK ventas en este backend.
@@ -355,6 +450,8 @@ No implementes. Solo comparación concreta y accionable.
 ## P4 - Request integrador de productos
 **Cuándo mandarlo:** después de leer respuestas de `P1`, `P2` y `P3`.
 
+**Importante:** mandarlo en un **chat nuevo** y pegar antes el `Resumen consolidado de P1/P2/P3`.
+
 ```text
 Ahora quiero que implementes los cambios mínimos necesarios para dejar productos OK ventas en este backend.
 
@@ -429,6 +526,7 @@ La salida debe ser corta y ejecutiva:
 - `C3`
 
 ### Cuando respondan esos 3
+- armar `Resumen consolidado de C1/C2/C3`
 - revisar coincidencias
 - mandar `C4`
 
@@ -444,6 +542,7 @@ La salida debe ser corta y ejecutiva:
 - `P3`
 
 ### Cuando respondan esos 3
+- armar `Resumen consolidado de P1/P2/P3`
 - revisar coincidencias
 - mandar `P4`
 
@@ -458,14 +557,14 @@ La salida debe ser corta y ejecutiva:
 - Ventana A → `C1`
 - Ventana B → `C2`
 - Ventana C → `C3`
-- Ventana D → `C4`
+- Ventana D → `Resumen consolidado C1/C2/C3` + `C4`
 - Ventana E → `C5`
 
 ## Máquina 2
 - Ventana A → `P1`
 - Ventana B → `P2`
 - Ventana C → `P3`
-- Ventana D → `P4`
+- Ventana D → `Resumen consolidado P1/P2/P3` + `P4`
 - Ventana E → `P5`
 
 **Importante:** `D` y `E` no se mandan junto con `A/B/C`; se mandan después.

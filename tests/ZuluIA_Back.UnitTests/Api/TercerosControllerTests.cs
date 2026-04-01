@@ -96,6 +96,70 @@ public class TercerosControllerTests
     }
 
     [Fact]
+    public async Task GetByNroDocumento_CuandoExiste_DevuelveOk()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<GetTerceroByNroDocumentoQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success(new TerceroDto
+            {
+                Id = 8,
+                Legajo = "CLI002",
+                RazonSocial = "Cliente Dos",
+                NroDocumento = "30-11111111-1"
+            }));
+        var controller = CreateController(mediator);
+
+        var result = await controller.GetByNroDocumento("30-11111111-1", CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var dto = ok.Value.Should().BeOfType<TerceroDto>().Subject;
+        dto.Id.Should().Be(8);
+        dto.NroDocumento.Should().Be("30-11111111-1");
+    }
+
+    [Fact]
+    public async Task GetByNroDocumento_CuandoNoExiste_DevuelveBadRequest()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<GetTerceroByNroDocumentoQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Failure<TerceroDto>("Documento no encontrado."));
+        var controller = CreateController(mediator);
+
+        var result = await controller.GetByNroDocumento("99-99999999-9", CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>()
+            .Which.Value!.ToString().Should().Contain("Documento no encontrado");
+    }
+
+    [Fact]
+    public async Task GetClientesSelectorVentas_CuandoHayDatos_DevuelveOk()
+    {
+        var mediator = Substitute.For<IMediator>();
+        IReadOnlyList<ClienteSelectorVentasDto> clientes = new List<ClienteSelectorVentasDto>
+        {
+            new() { Id = 1, Legajo = "CLI001", RazonSocial = "Cliente Uno", PuedeVender = true },
+            new() { Id = 2, Legajo = "CLI002", RazonSocial = "Cliente Dos", PuedeVender = true }
+        };
+        mediator.Send(Arg.Any<GetClientesSelectorVentasQuery>(), Arg.Any<CancellationToken>())
+            .Returns(clientes);
+        var controller = CreateController(mediator);
+
+        var result = await controller.GetClientesSelectorVentas("garcia", 1, 50, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var payload = ok.Value.Should().BeAssignableTo<IReadOnlyList<ClienteSelectorVentasDto>>().Subject;
+        payload.Should().HaveCount(2);
+        payload[0].Legajo.Should().Be("CLI001");
+        payload[0].PuedeVender.Should().BeTrue();
+        await mediator.Received(1).Send(
+            Arg.Is<GetClientesSelectorVentasQuery>(q =>
+                q.Search == "garcia" &&
+                q.SucursalId == 1 &&
+                q.MaxResults == 50),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task GetClientesActivos_CuandoHayDatos_DevuelveOk()
     {
         var mediator = Substitute.For<IMediator>();

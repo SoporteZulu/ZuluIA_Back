@@ -122,6 +122,8 @@ public class TerceroDto
     public IReadOnlyList<TerceroDomicilioDto> Domicilios { get; set; } = [];
     public IReadOnlyList<TerceroContactoDto> Contactos { get; set; } = [];
     public IReadOnlyList<TerceroSucursalEntregaDto> SucursalesEntrega { get; set; } = [];
+    public TerceroSucursalEntregaDto? SucursalEntregaPrincipal { get; set; }
+    public bool RequiereDefinirEntrega { get; set; }
     public IReadOnlyList<TerceroTransporteDto> Transportes { get; set; } = [];
     public IReadOnlyList<TerceroVentanaCobranzaDto> VentanasCobranza { get; set; } = [];
 

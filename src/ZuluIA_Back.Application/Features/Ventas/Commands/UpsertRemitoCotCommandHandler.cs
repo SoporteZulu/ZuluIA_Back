@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Comprobantes.DTOs;
+using ZuluIA_Back.Application.Features.Ventas.Common;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Interfaces;
@@ -20,6 +21,15 @@ public class UpsertRemitoCotCommandHandler(
 
         if (comprobante is null)
             return Result.Failure<ComprobanteCotDto>($"No se encontró el remito con ID {request.ComprobanteId}.");
+
+        var tipo = await db.TiposComprobante
+            .AsNoTracking()
+            .Where(x => x.Id == comprobante.TipoComprobanteId)
+            .Select(x => new { x.Codigo, x.Descripcion, x.AfectaStock })
+            .FirstOrDefaultAsync(ct);
+
+        if (tipo is null || !PedidoWorkflowRules.EsRemito(tipo.Codigo, tipo.Descripcion, tipo.AfectaStock))
+            return Result.Failure<ComprobanteCotDto>("El comprobante indicado no es un remito.");
 
         ComprobanteCot cot;
         try

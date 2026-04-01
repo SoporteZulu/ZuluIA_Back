@@ -56,6 +56,9 @@ public class TerceroListDto
     public string? BarrioDescripcion { get; set; }
     public string GeografiaCompleta { get; set; } = string.Empty;
     public string UbicacionCompleta { get; set; } = string.Empty;
+    public bool TieneSucursalesEntrega { get; set; }
+    public string? SucursalEntregaPrincipalDescripcion { get; set; }
+    public bool RequiereDefinirEntrega { get; set; }
     public string? NroIngresosBrutos { get; set; }
     public string? NroMunicipal { get; set; }
 
@@ -117,4 +120,10 @@ public class TerceroListDto
     public bool EstadoOperativoBloquea { get; set; }
     public string RolDisplay { get; set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; set; }
+
+    // ─── Validación comercial para ventas ────────────────────────────────────
+    public bool PuedeVender { get; set; }
+    public bool PuedeComprar { get; set; }
+    public string? MotivoBloqueoVentas { get; set; }
+    public string? MotivoBloqueoCompras { get; set; }
 }

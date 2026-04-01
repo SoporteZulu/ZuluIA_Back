@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Items.Services;
 using ZuluIA_Back.Application.Features.Terceros.Services;
 using ZuluIA_Back.Application.Features.Ventas.Common;
 using ZuluIA_Back.Application.Features.Ventas.Services;
@@ -15,12 +16,13 @@ internal class RegistrarDevolucionVentaInternaCommandHandler(
     IUnitOfWork uow,
     ICurrentUserService currentUser,
     CircuitoVentasService circuitoVentas,
-    TerceroOperacionValidationService terceroOperacionValidationService)
+    TerceroOperacionValidationService terceroOperacionValidationService,
+    ItemCommercialStockService itemCommercialStockService)
     : IRequestHandler<RegistrarDevolucionVentaInternaCommand, Result<long>>
 {
     public async Task<Result<long>> Handle(RegistrarDevolucionVentaInternaCommand request, CancellationToken ct)
     {
-        var createHandler = new CrearBorradorVentaCommandHandler(comprobanteRepo, db, uow, currentUser, terceroOperacionValidationService);
+        var createHandler = new CrearBorradorVentaCommandHandler(comprobanteRepo, db, uow, currentUser, terceroOperacionValidationService, itemCommercialStockService);
         var createResult = await createHandler.Handle(
             new CrearBorradorVentaCommand(
                 request.SucursalId,
