@@ -20,9 +20,76 @@ public class ComprobanteDetalleDto
     public string TerceroRazonSocial { get; set; } = string.Empty;
     public string TerceroCuit { get; set; } = string.Empty;
     public string TerceroCondicionIva { get; set; } = string.Empty;
+    public string? TerceroLegajo { get; set; }
+    public string? TerceroDomicilioSnapshot { get; set; }
     public long MonedaId { get; set; }
     public string MonedaSimbolo { get; set; } = string.Empty;
     public decimal Cotizacion { get; set; }
+    
+    // Datos comerciales
+    public long? VendedorId { get; set; }
+    public string? VendedorNombre { get; set; }
+    public string? VendedorLegajo { get; set; }
+    public long? CobradorId { get; set; }
+    public string? CobradorNombre { get; set; }
+    public string? CobradorLegajo { get; set; }
+    public long? ZonaComercialId { get; set; }
+    public string? ZonaComercialDescripcion { get; set; }
+    public long? ListaPreciosId { get; set; }
+    public string? ListaPreciosDescripcion { get; set; }
+    public long? CondicionPagoId { get; set; }
+    public string? CondicionPagoDescripcion { get; set; }
+    public int? PlazoDias { get; set; }
+    public long? CanalVentaId { get; set; }
+    public string? CanalVentaDescripcion { get; set; }
+    public decimal? PorcentajeComisionVendedor { get; set; }
+    public decimal? PorcentajeComisionCobrador { get; set; }
+    public decimal? ImporteComisionVendedor { get; set; }
+    public decimal? ImporteComisionCobrador { get; set; }
+    public long? MotivoDebitoId { get; set; }
+    public string? MotivoDebitoDescripcion { get; set; }
+    public string? MotivoDebitoObservacion { get; set; }
+    public bool? MotivoDebitoEsFiscal { get; set; }
+    
+    // Datos logísticos
+    public long? TransporteId { get; set; }
+    public string? TransporteRazonSocial { get; set; }
+    public string? ChoferNombre { get; set; }
+    public string? ChoferDni { get; set; }
+    public string? PatVehiculo { get; set; }
+    public string? PatAcoplado { get; set; }
+    public string? RutaLogistica { get; set; }
+    public string? DomicilioEntrega { get; set; }
+    public string? ObservacionesLogisticas { get; set; }
+    public DateOnly? FechaEstimadaEntrega { get; set; }
+    public DateOnly? FechaRealEntrega { get; set; }
+    public string? FirmaConformidad { get; set; }
+    public string? NombreQuienRecibe { get; set; }
+    public string? DniQuienRecibe { get; set; }
+    public EstadoLogisticoRemito? EstadoLogistico { get; set; }
+    public bool EsValorizado { get; set; }
+    public long? DepositoOrigenId { get; set; }
+    public string? DepositoOrigenDescripcion { get; set; }
+    public string? CotNumero { get; set; }
+    public DateOnly? CotFechaVigencia { get; set; }
+    public string? CotDescripcion { get; set; }
+    public ComprobanteCotDto? Cot { get; set; }
+    public decimal? PesoTotal { get; set; }
+    public decimal? VolumenTotal { get; set; }
+    public int? Bultos { get; set; }
+    public string? TipoEmbalaje { get; set; }
+    public bool? SeguroTransporte { get; set; }
+    public decimal? ValorDeclarado { get; set; }
+    
+    // Observaciones extendidas
+    public string? ObservacionInterna { get; set; }
+    public string? ObservacionFiscal { get; set; }
+    
+    // Recargo y descuento global
+    public decimal? RecargoPorcentaje { get; set; }
+    public decimal? RecargoImporte { get; set; }
+    public decimal? DescuentoPorcentaje { get; set; }
+    
     public decimal Subtotal { get; set; }
     public decimal DescuentoImporte { get; set; }
     public decimal NetoGravado { get; set; }
@@ -56,6 +123,43 @@ public class ComprobanteDetalleDto
     public string? Observacion { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+    
+    // Auditoría de usuarios
+    public long? CreatedBy { get; set; }
+    public string? CreatedByUsuario { get; set; }
+    public long? UpdatedBy { get; set; }
+    public string? UpdatedByUsuario { get; set; }
+    public DateTimeOffset? FechaAnulacion { get; set; }
+    public long? UsuarioAnulacionId { get; set; }
+    public string? UsuarioAnulacionNombre { get; set; }
+    public string? MotivoAnulacion { get; set; }
+    
+    // Comprobante origen con detalle
+    public long? ComprobanteOrigenId { get; set; }
+    public string? ComprobanteOrigenNumero { get; set; }
+    public string? ComprobanteOrigenTipo { get; set; }
+    public DateOnly? ComprobanteOrigenFecha { get; set; }
+    
+    // Metadatos de devolución (para notas de crédito/débito de devolución)
+    public MotivoDevolucion? MotivoDevolucion { get; set; }
+    public string? MotivoDevolucionDescripcion { get; set; }
+    public TipoDevolucion? TipoDevolucion { get; set; }
+    public string? TipoDevolucionDescripcion { get; set; }
+    public long? AutorizadorDevolucionId { get; set; }
+    public string? AutorizadorDevolucionNombre { get; set; }
+    public DateTimeOffset? FechaAutorizacionDevolucion { get; set; }
+    public string? ObservacionDevolucion { get; set; }
+    public bool ReingresaStock { get; set; }
+    public bool AcreditaCuentaCorriente { get; set; }
+    
+    // Metadatos de pedido (para notas de pedido)
+    public EstadoPedido? EstadoPedido { get; set; }
+    public string? EstadoPedidoDescripcion { get; set; }
+    public DateOnly? FechaEntregaCompromiso { get; set; }
+    public bool TienePedidosAtrasados { get; set; }
+    public decimal PorcentajeCumplimiento { get; set; }
+    public IReadOnlyList<ComprobanteAtributoDto> AtributosRemito { get; set; } = [];
+    
     public IReadOnlyList<ComprobanteItemDto> Items { get; set; } = [];
     public IReadOnlyList<ImputacionDto> Imputaciones { get; set; } = [];
 }

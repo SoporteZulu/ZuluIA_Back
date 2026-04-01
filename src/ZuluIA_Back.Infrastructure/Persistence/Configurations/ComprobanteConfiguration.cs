@@ -52,143 +52,174 @@ public class ComprobanteConfiguration : IEntityTypeConfiguration<Comprobante>
                .HasPrecision(18, 6)
                .HasDefaultValue(1m);
 
-        builder.Property(x => x.Subtotal)
-               .HasColumnName("subtotal")
-               .HasPrecision(18, 4)
-               .HasDefaultValue(0m);
+        // Datos comerciales
+        builder.Property(x => x.VendedorId)
+               .HasColumnName("vendedor_id");
 
-        builder.Property(x => x.DescuentoImporte)
-               .HasColumnName("descuento_importe")
-               .HasPrecision(18, 4)
-               .HasDefaultValue(0m);
+        builder.Property(x => x.CobradorId)
+               .HasColumnName("cobrador_id");
 
-        builder.Property(x => x.NetoGravado)
-               .HasColumnName("neto_gravado")
-               .HasPrecision(18, 4)
-               .HasDefaultValue(0m);
+        builder.Property(x => x.ZonaComercialId)
+               .HasColumnName("zona_comercial_id");
 
-        builder.Property(x => x.NetoNoGravado)
-               .HasColumnName("neto_no_gravado")
-               .HasPrecision(18, 4)
-               .HasDefaultValue(0m);
+        builder.Property(x => x.ListaPreciosId)
+               .HasColumnName("lista_precios_id");
 
-        builder.Property(x => x.IvaRi)
-               .HasColumnName("iva_ri")
-               .HasPrecision(18, 4)
-               .HasDefaultValue(0m);
+        builder.Property(x => x.CondicionPagoId)
+               .HasColumnName("condicion_pago_id");
 
-        builder.Property(x => x.IvaRni)
-               .HasColumnName("iva_rni")
-               .HasPrecision(18, 4)
-               .HasDefaultValue(0m);
+        builder.Property(x => x.PlazoDias)
+               .HasColumnName("plazo_dias");
 
-        builder.Property(x => x.Percepciones)
-               .HasColumnName("percepciones")
-               .HasPrecision(18, 4)
-               .HasDefaultValue(0m);
+        builder.Property(x => x.CanalVentaId)
+               .HasColumnName("canal_venta_id");
 
-        builder.Property(x => x.Retenciones)
-               .HasColumnName("retenciones")
-               .HasPrecision(18, 4)
-               .HasDefaultValue(0m);
+        builder.Property(x => x.PorcentajeComisionVendedor)
+               .HasColumnName("porcentaje_comision_vendedor")
+               .HasPrecision(5, 2);
 
-        builder.Property(x => x.Total)
-               .HasColumnName("total")
-               .HasPrecision(18, 4)
-               .HasDefaultValue(0m);
+        builder.Property(x => x.PorcentajeComisionCobrador)
+               .HasColumnName("porcentaje_comision_cobrador")
+               .HasPrecision(5, 2);
 
-        builder.Property(x => x.Saldo)
-               .HasColumnName("saldo")
-               .HasPrecision(18, 4)
-               .HasDefaultValue(0m);
+        // Datos logísticos
+        builder.Property(x => x.TransporteId)
+               .HasColumnName("transporte_id");
 
-        builder.Property(x => x.TimbradoId)
-               .HasColumnName("timbrado_id");
+        builder.Property(x => x.ChoferNombre)
+               .HasColumnName("chofer_nombre")
+               .HasMaxLength(200);
 
-        builder.Property(x => x.NroTimbrado)
-               .HasColumnName("nro_timbrado")
-               .HasMaxLength(50);
+        builder.Property(x => x.ChoferDni)
+               .HasColumnName("chofer_dni")
+               .HasMaxLength(20);
 
-        builder.Property(x => x.EstadoSifen)
-               .HasColumnName("estado_sifen")
+        builder.Property(x => x.PatVehiculo)
+               .HasColumnName("pat_vehiculo")
+               .HasMaxLength(20);
+
+        builder.Property(x => x.PatAcoplado)
+               .HasColumnName("pat_acoplado")
+               .HasMaxLength(20);
+
+        builder.Property(x => x.DomicilioEntrega)
+               .HasColumnName("domicilio_entrega")
+               .HasMaxLength(500);
+
+        builder.Property(x => x.ObservacionesLogisticas)
+               .HasColumnName("observaciones_logisticas")
+               .HasMaxLength(1000);
+
+        builder.Property(x => x.FechaEstimadaEntrega)
+               .HasColumnName("fecha_estimada_entrega");
+
+        builder.Property(x => x.FechaRealEntrega)
+               .HasColumnName("fecha_real_entrega");
+
+        builder.Property(x => x.FirmaConformidad)
+               .HasColumnName("firma_conformidad")
+               .HasMaxLength(500);
+
+        builder.Property(x => x.NombreQuienRecibe)
+               .HasColumnName("nombre_quien_recibe")
+               .HasMaxLength(200);
+
+        builder.Property(x => x.EstadoLogistico)
+               .HasColumnName("estado_logistico")
                .HasConversion(
                    v => v.HasValue ? v.Value.ToString().ToUpperInvariant() : null,
-                   v => string.IsNullOrWhiteSpace(v) ? null : Enum.Parse<EstadoSifenParaguay>(v, true))
+                   v => string.IsNullOrWhiteSpace(v) ? null : Enum.Parse<EstadoLogisticoRemito>(v, true))
                .HasMaxLength(30);
 
-        builder.Property(x => x.SifenCodigoRespuesta)
-               .HasColumnName("sifen_codigo_respuesta")
-               .HasMaxLength(100);
+        builder.Property(x => x.EsValorizado)
+               .HasColumnName("es_valorizado")
+               .HasDefaultValue(true);
 
-        builder.Property(x => x.SifenMensajeRespuesta)
-               .HasColumnName("sifen_mensaje_respuesta")
-               .HasMaxLength(500);
+        builder.Property(x => x.DepositoOrigenId)
+               .HasColumnName("deposito_origen_id");
 
-        builder.Property(x => x.SifenTrackingId)
-               .HasColumnName("sifen_tracking_id")
-               .HasMaxLength(100);
+        // Datos de pedido
+        builder.Property(x => x.FechaEntregaCompromiso)
+               .HasColumnName("fecha_entrega_compromiso");
 
-        builder.Property(x => x.SifenCdc)
-               .HasColumnName("sifen_cdc")
-               .HasMaxLength(100);
-
-        builder.Property(x => x.SifenNumeroLote)
-               .HasColumnName("sifen_numero_lote")
-               .HasMaxLength(100);
-
-        builder.Property(x => x.SifenFechaRespuesta)
-               .HasColumnName("sifen_fecha_respuesta");
-
-        builder.Property(x => x.Cae)
-               .HasColumnName("cae")
-               .HasMaxLength(50);
-
-        builder.Property(x => x.Caea)
-               .HasColumnName("caea")
-               .HasMaxLength(50);
-
-        builder.Property(x => x.FechaVtoCae)
-               .HasColumnName("fecha_vto_cae");
-
-        builder.Property(x => x.QrData)
-               .HasColumnName("qr_data");
-
-        builder.Property(x => x.EstadoAfip)
-               .HasColumnName("estado_afip")
-               .HasConversion(v => v.ToString().ToUpperInvariant(), v => Enum.Parse<EstadoAfipWsfe>(v, true))
-               .HasMaxLength(30)
-               .IsRequired();
-
-        builder.Property(x => x.UltimoErrorAfip)
-               .HasColumnName("ultimo_error_afip")
-               .HasMaxLength(2000);
-
-        builder.Property(x => x.FechaUltimaConsultaAfip)
-               .HasColumnName("fecha_ultima_consulta_afip");
-
-        builder.Property(x => x.Estado)
-               .HasColumnName("estado")
+        builder.Property(x => x.EstadoPedido)
+               .HasColumnName("estado_pedido")
                .HasConversion(
-                   v => v.ToString().ToUpperInvariant(),
-                   v => Enum.Parse<EstadoComprobante>(v, true))
-               .HasMaxLength(30)
-               .IsRequired();
+                   v => v.HasValue ? (int)v.Value : (int?)null,
+                   v => v.HasValue ? (EstadoPedido)v.Value : null);
 
-        builder.Property(x => x.Observacion)
-               .HasColumnName("observacion")
+        builder.Property(x => x.MotivoCierrePedido)
+               .HasColumnName("motivo_cierre_pedido")
                .HasMaxLength(500);
 
-        builder.Property(x => x.CreatedAt).HasColumnName("created_at");
-        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
-        builder.Property(x => x.DeletedAt).HasColumnName("deleted_at");
-        builder.Property(x => x.CreatedBy).HasColumnName("created_by");
-        builder.Property(x => x.UpdatedBy).HasColumnName("updated_by");
+        builder.Property(x => x.FechaCierrePedido)
+               .HasColumnName("fecha_cierre_pedido");
+
+        // Datos adicionales comerciales/fiscales
+        builder.Property(x => x.ObservacionInterna)
+               .HasColumnName("observacion_interna")
+               .HasMaxLength(1000);
+
+        builder.Property(x => x.ObservacionFiscal)
+               .HasColumnName("observacion_fiscal")
+               .HasMaxLength(1000);
+
+        builder.Property(x => x.RecargoPorcentaje)
+               .HasColumnName("recargo_porcentaje")
+               .HasPrecision(5, 2);
+
+        builder.Property(x => x.RecargoImporte)
+               .HasColumnName("recargo_importe")
+               .HasPrecision(18, 4);
+
+        builder.Property(x => x.DescuentoPorcentaje)
+               .HasColumnName("descuento_porcentaje")
+               .HasPrecision(5, 2);
+
+        builder.Property(x => x.TerceroDomicilioSnapshot)
+               .HasColumnName("tercero_domicilio_snapshot")
+               .HasMaxLength(500);
+
+        // Datos específicos de Notas de Débito
+        builder.Property(x => x.MotivoDebitoId)
+               .HasColumnName("motivo_debito_id");
+
+        builder.Property(x => x.MotivoDebitoObservacion)
+               .HasColumnName("motivo_debito_observacion")
+               .HasMaxLength(1000);
+
+        // Auditoría de anulación
+        builder.Property(x => x.FechaAnulacion)
+               .HasColumnName("fecha_anulacion");
+
+        builder.Property(x => x.UsuarioAnulacionId)
+               .HasColumnName("usuario_anulacion_id");
+
+        builder.Property(x => x.MotivoAnulacion)
+               .HasColumnName("motivo_anulacion")
+               .HasMaxLength(500);
 
         // Navegación a ítems
         builder.HasMany(x => x.Items)
                .WithOne()
                .HasForeignKey(x => x.ComprobanteId)
                .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(x => x.Cot)
+               .WithOne(x => x.Comprobante)
+               .HasForeignKey<ComprobanteCot>(x => x.ComprobanteId)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(x => x.Atributos)
+               .WithOne(x => x.Comprobante)
+               .HasForeignKey(x => x.ComprobanteId)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(x => x.Items)
+               .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.Navigation(x => x.Atributos)
+               .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasIndex(x => new
         {
@@ -198,11 +229,33 @@ public class ComprobanteConfiguration : IEntityTypeConfiguration<Comprobante>
         builder.HasIndex(x => x.TerceroId);
         builder.HasIndex(x => x.Fecha);
         builder.HasIndex(x => x.Estado);
+        builder.HasIndex(x => x.EstadoLogistico);
+        builder.HasIndex(x => x.DepositoOrigenId);
         builder.HasIndex(x => x.EstadoAfip);
         builder.HasIndex(x => x.Cae);
-              builder.HasIndex(x => x.EstadoSifen);
-              builder.HasIndex(x => x.SifenTrackingId);
-                builder.HasIndex(x => x.SifenCdc);
-                       builder.HasIndex(x => x.SifenCodigoRespuesta);
+        builder.HasIndex(x => x.EstadoSifen);
+        builder.HasIndex(x => x.EstadoPedido)
+               .HasFilter("estado_pedido IS NOT NULL");
+        builder.HasIndex(x => x.FechaEntregaCompromiso)
+               .HasFilter("fecha_entrega_compromiso IS NOT NULL");
+        builder.HasIndex(x => new { x.EstadoPedido, x.FechaEntregaCompromiso })
+               .HasFilter("estado_pedido IN (0, 1)");
+        builder.HasIndex(x => x.SifenTrackingId);
+        builder.HasIndex(x => x.SifenCdc);
+        builder.HasIndex(x => x.SifenCodigoRespuesta);
+        builder.HasIndex(x => x.MotivoDevolucion)
+               .HasFilter("motivo_devolucion IS NOT NULL");
+        builder.HasIndex(x => x.TipoDevolucion)
+               .HasFilter("tipo_devolucion IS NOT NULL");
+        builder.HasIndex(x => x.AutorizadorDevolucionId)
+               .HasFilter("autorizador_devolucion_id IS NOT NULL");
+        builder.HasIndex(x => new { x.ComprobanteOrigenId, x.MotivoDevolucion })
+               .HasFilter("motivo_devolucion IS NOT NULL");
+        builder.HasIndex(x => x.MotivoDebitoId)
+               .HasFilter("motivo_debito_id IS NOT NULL");
+        builder.HasIndex(x => x.FechaAnulacion)
+               .HasFilter("fecha_anulacion IS NOT NULL");
+        builder.HasIndex(x => new { x.TipoComprobanteId, x.Estado, x.MotivoDebitoId })
+               .HasFilter("motivo_debito_id IS NOT NULL");
     }
 }

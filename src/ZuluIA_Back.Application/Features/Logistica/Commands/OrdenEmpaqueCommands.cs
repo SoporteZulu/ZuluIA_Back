@@ -76,7 +76,7 @@ public class CreateOrdenEmpaqueCommandHandler(IApplicationDbContext db)
                     det.PorcentajeIva,
                     det.Observacion);
 
-            db.OrdenesEmpaque.Add(entity);
+            db.OrdenesEmpaquesLogistica.Add(entity);
             await db.SaveChangesAsync(ct);
             return Result.Success(entity.Id);
         }
@@ -92,13 +92,13 @@ public class ConfirmOrdenEmpaqueCommandHandler(IApplicationDbContext db)
 {
     public async Task<Result<OrdenEmpaqueEstadoResult>> Handle(ConfirmOrdenEmpaqueCommand request, CancellationToken ct)
     {
-        var entity = await db.OrdenesEmpaque.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
+        var entity = await db.OrdenesEmpaquesLogistica.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
         if (entity is null)
             return Result.Failure<OrdenEmpaqueEstadoResult>($"Orden de empaque {request.Id} no encontrada.");
 
         try
         {
-            entity.Confirmar();
+            entity.Confirmar(null);
             await db.SaveChangesAsync(ct);
             return Result.Success(new OrdenEmpaqueEstadoResult(entity.Id, entity.Estado));
         }
@@ -114,13 +114,13 @@ public class CancelOrdenEmpaqueCommandHandler(IApplicationDbContext db)
 {
     public async Task<Result<OrdenEmpaqueEstadoResult>> Handle(CancelOrdenEmpaqueCommand request, CancellationToken ct)
     {
-        var entity = await db.OrdenesEmpaque.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
+        var entity = await db.OrdenesEmpaquesLogistica.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
         if (entity is null)
             return Result.Failure<OrdenEmpaqueEstadoResult>($"Orden de empaque {request.Id} no encontrada.");
 
         try
         {
-            entity.Anular();
+            entity.Anular(null);
             await db.SaveChangesAsync(ct);
             return Result.Success(new OrdenEmpaqueEstadoResult(entity.Id, entity.Estado));
         }

@@ -239,7 +239,7 @@ public class CajaChequeTests
     {
         var cheque = CrearChequeValido();
 
-        cheque.Entregar(null);
+        cheque.Entregar(null, null, null);
 
         cheque.Estado.Should().Be(EstadoCheque.Entregado);
     }

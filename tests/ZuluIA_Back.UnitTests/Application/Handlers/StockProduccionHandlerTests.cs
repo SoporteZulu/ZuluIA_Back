@@ -227,10 +227,18 @@ public class CrearOrdenTrabajoCommandHandlerTests
 public class CreateFormulaProduccionCommandHandlerTests
 {
     private readonly IFormulaProduccionRepository _repo = Substitute.For<IFormulaProduccionRepository>();
+    private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
 
-    private CreateFormulaProduccionCommandHandler Sut() => new(_repo, _uow, _user);
+    private CreateFormulaProduccionCommandHandler Sut() => new(
+        _repo,
+        new ZuluIA_Back.Application.Features.Produccion.Services.FormulaProduccionHistorialService(
+            _db,
+            Substitute.For<IRepository<FormulaProduccionHistorial>>(),
+            _user),
+        _uow,
+        _user);
 
     private static CreateFormulaProduccionCommand CmdValido() => new(
         Codigo: "FP001",
@@ -397,7 +405,7 @@ public class FinalizarOrdenTrabajoCommandHandlerTests
         _repo.GetByIdAsync(Arg.Any<long>(), Arg.Any<CancellationToken>())
             .Returns(ot);
         _produccionService
-            .EjecutarProduccionAsync(Arg.Any<OrdenTrabajo>(), Arg.Any<long?>(), Arg.Any<CancellationToken>())
+            .EjecutarProduccionAsync(Arg.Any<OrdenTrabajo>(), Arg.Any<decimal?>(), Arg.Any<IReadOnlyDictionary<long, decimal>?>(), Arg.Any<long?>(), Arg.Any<CancellationToken>())
             .Returns(Task.CompletedTask);
 
         var result = await Sut().Handle(

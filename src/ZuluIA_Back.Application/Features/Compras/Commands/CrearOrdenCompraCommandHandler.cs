@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Terceros.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Interfaces;
@@ -12,12 +13,13 @@ public class CrearOrdenCompraCommandHandler(
     IRepository<OrdenCompraMeta> ordenCompraRepo,
     IApplicationDbContext db,
     IUnitOfWork uow,
-    ICurrentUserService currentUser)
+    ICurrentUserService currentUser,
+    TerceroOperacionValidationService terceroOperacionValidationService)
     : IRequestHandler<CrearOrdenCompraCommand, Result<long>>
 {
     public async Task<Result<long>> Handle(CrearOrdenCompraCommand request, CancellationToken ct)
     {
-        var createHandler = new CrearBorradorCompraCommandHandler(comprobanteRepo, db, uow, currentUser);
+        var createHandler = new CrearBorradorCompraCommandHandler(comprobanteRepo, db, uow, currentUser, terceroOperacionValidationService);
         var createResult = await createHandler.Handle(
             new CrearBorradorCompraCommand(
                 request.SucursalId,

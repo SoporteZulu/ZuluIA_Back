@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Reflection;
 using System.Text.Json;
 
 namespace ZuluIA_Back.Api.Middleware;
@@ -13,12 +14,18 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         }
         catch (Exception ex)
         {
+            var effectiveException = Unwrap(ex);
             var correlationId = context.Items.TryGetValue(CorrelationIdMiddleware.ItemKey, out var corr) ? corr?.ToString() : null;
             var userId = context.Items.TryGetValue("CurrentUserId", out var user) ? user?.ToString() : null;
-            logger.LogError(ex, "Error no manejado: {Message} CorrelationId={CorrelationId} UserId={UserId}", ex.Message, correlationId, userId);
-            await HandleExceptionAsync(context, ex);
+            logger.LogError(effectiveException, "Error no manejado: {Message} CorrelationId={CorrelationId} UserId={UserId}", effectiveException.Message, correlationId, userId);
+            await HandleExceptionAsync(context, effectiveException);
         }
     }
+
+    private static Exception Unwrap(Exception exception)
+        => exception is TargetInvocationException { InnerException: not null } targetInvocationException
+            ? targetInvocationException.InnerException!
+            : exception;
 
     private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {

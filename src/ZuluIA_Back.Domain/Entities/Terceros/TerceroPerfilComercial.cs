@@ -14,6 +14,8 @@ public class TerceroPerfilComercial : AuditableEntity
     public RiesgoCrediticioComercial RiesgoCrediticio { get; private set; }
     public decimal? SaldoMaximoVigente { get; private set; }
     public string? VigenciaSaldo { get; private set; }
+    public DateOnly? VigenciaSaldoDesde { get; private set; }
+    public DateOnly? VigenciaSaldoHasta { get; private set; }
     public string? CondicionVenta { get; private set; }
     public string? PlazoCobro { get; private set; }
     public string? FacturadorPorDefecto { get; private set; }
@@ -46,6 +48,8 @@ public class TerceroPerfilComercial : AuditableEntity
         RiesgoCrediticioComercial riesgoCrediticio,
         decimal? saldoMaximoVigente,
         string? vigenciaSaldo,
+        DateOnly? vigenciaSaldoDesde,
+        DateOnly? vigenciaSaldoHasta,
         string? condicionVenta,
         string? plazoCobro,
         string? facturadorPorDefecto,
@@ -59,6 +63,9 @@ public class TerceroPerfilComercial : AuditableEntity
         if (minimoFacturaMipymes.HasValue && minimoFacturaMipymes.Value < 0)
             throw new ArgumentException("El mínimo de facturas MiPyMES no puede ser negativo.", nameof(minimoFacturaMipymes));
 
+        if (vigenciaSaldoDesde.HasValue && vigenciaSaldoHasta.HasValue && vigenciaSaldoDesde.Value > vigenciaSaldoHasta.Value)
+            throw new ArgumentException("La vigencia desde del saldo no puede ser mayor que la vigencia hasta.", nameof(vigenciaSaldoDesde));
+
         ZonaComercialId = zonaComercialId;
         Rubro = Normalize(rubro);
         Subrubro = Normalize(subrubro);
@@ -67,11 +74,31 @@ public class TerceroPerfilComercial : AuditableEntity
         RiesgoCrediticio = riesgoCrediticio;
         SaldoMaximoVigente = saldoMaximoVigente;
         VigenciaSaldo = Normalize(vigenciaSaldo);
+        VigenciaSaldoDesde = vigenciaSaldoDesde;
+        VigenciaSaldoHasta = vigenciaSaldoHasta;
         CondicionVenta = Normalize(condicionVenta);
         PlazoCobro = Normalize(plazoCobro);
         FacturadorPorDefecto = Normalize(facturadorPorDefecto);
         MinimoFacturaMipymes = minimoFacturaMipymes;
         ObservacionComercial = Normalize(observacionComercial);
+        SetUpdated(userId);
+    }
+
+    public void ActualizarCuentaCorriente(
+        decimal? limiteSaldo,
+        DateOnly? vigenciaLimiteSaldoDesde,
+        DateOnly? vigenciaLimiteSaldoHasta,
+        long? userId)
+    {
+        if (limiteSaldo.HasValue && limiteSaldo.Value < 0)
+            throw new ArgumentException("El límite de saldo no puede ser negativo.", nameof(limiteSaldo));
+
+        if (vigenciaLimiteSaldoDesde.HasValue && vigenciaLimiteSaldoHasta.HasValue && vigenciaLimiteSaldoDesde.Value > vigenciaLimiteSaldoHasta.Value)
+            throw new ArgumentException("La vigencia desde del saldo no puede ser mayor que la vigencia hasta.", nameof(vigenciaLimiteSaldoDesde));
+
+        SaldoMaximoVigente = limiteSaldo;
+        VigenciaSaldoDesde = vigenciaLimiteSaldoDesde;
+        VigenciaSaldoHasta = vigenciaLimiteSaldoHasta;
         SetUpdated(userId);
     }
 

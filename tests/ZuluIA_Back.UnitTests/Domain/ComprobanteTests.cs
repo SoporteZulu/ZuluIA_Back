@@ -218,4 +218,55 @@ public class ComprobanteTests
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*origen comercial distinto*");
     }
+
+    [Fact]
+    public void ConfigurarRemito_DebeAsignarCamposLogisticosPropios()
+    {
+        var comp = CrearComprobante();
+
+        comp.ConfigurarRemito(12, false, EstadoLogisticoRemito.EnPreparacion, null);
+
+        comp.DepositoOrigenId.Should().Be(12);
+        comp.EsValorizado.Should().BeFalse();
+        comp.EstadoLogistico.Should().Be(EstadoLogisticoRemito.EnPreparacion);
+    }
+
+    [Fact]
+    public void AgregarAtributo_ConClaveDuplicada_DebeLanzarExcepcion()
+    {
+        var comp = CrearComprobante();
+        comp.AgregarAtributo(ComprobanteAtributo.Crear(1, "ruta", "A1", "texto", null), null);
+
+        var act = () => comp.AgregarAtributo(ComprobanteAtributo.Crear(1, "RUTA", "A2", "texto", null), null);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*clave*");
+    }
+
+    [Fact]
+    public void AsignarCot_CuandoElComprobanteNoEstaPersistido_DebeAsignarlo()
+    {
+        var comp = CrearComprobante();
+        var cot = ComprobanteCot.Crear(1, "123456", new DateOnly(2026, 3, 31), new DateOnly(2026, 3, 31), "COT prueba", null);
+
+        comp.AsignarCot(cot, null);
+
+        comp.Cot.Should().BeSameAs(cot);
+    }
+
+    [Fact]
+    public void AsignarDatosComerciales_ConDatosValidos_DebePersistirlosEnElComprobante()
+    {
+        var comp = CrearComprobante();
+
+        comp.AsignarDatosComerciales(10L, null, 20L, 30L, 40L, 15, 50L, 5m, null, null);
+
+        comp.VendedorId.Should().Be(10L);
+        comp.ZonaComercialId.Should().Be(20L);
+        comp.ListaPreciosId.Should().Be(30L);
+        comp.CondicionPagoId.Should().Be(40L);
+        comp.PlazoDias.Should().Be(15);
+        comp.CanalVentaId.Should().Be(50L);
+        comp.PorcentajeComisionVendedor.Should().Be(5m);
+    }
 }

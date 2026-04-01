@@ -13,7 +13,7 @@ public class RequisicionCompraRepository(AppDbContext context)
         long? sucursalId, long? solicitanteId, string? estado,
         CancellationToken ct = default)
     {
-        var query = DbSet.AsNoTracking();
+        var query = DbSet.AsNoTracking().Where(x => x.DeletedAt == null);
         if (sucursalId.HasValue)  query = query.Where(x => x.SucursalId    == sucursalId.Value);
         if (solicitanteId.HasValue) query = query.Where(x => x.SolicitanteId == solicitanteId.Value);
         if (!string.IsNullOrEmpty(estado))
@@ -30,7 +30,7 @@ public class RequisicionCompraRepository(AppDbContext context)
     }
 
     public async Task<RequisicionCompra?> GetByIdConItemsAsync(long id, CancellationToken ct = default) =>
-        await DbSet.Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id, ct);
+        await DbSet.Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct);
 }
 
 public class CotizacionCompraRepository(AppDbContext context)

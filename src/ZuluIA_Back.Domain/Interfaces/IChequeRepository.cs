@@ -12,8 +12,12 @@ public interface IChequeRepository : IRepository<Cheque>
         long? cajaId,
         long? terceroId,
         EstadoCheque? estado,
+        TipoCheque? tipo,
+        bool? esALaOrden,
+        bool? esCruzado,
         string? banco,
         string? nroCheque,
+        string? titular,
         DateOnly? desde,
         DateOnly? hasta,
         CancellationToken ct = default);

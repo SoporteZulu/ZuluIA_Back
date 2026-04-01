@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Comprobantes.Commands;
 using ZuluIA_Back.Application.Features.Compras.Services;
+using ZuluIA_Back.Application.Features.Terceros.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Interfaces;
 
@@ -13,12 +14,13 @@ internal class RegistrarDevolucionCompraInternaCommandHandler(
     IApplicationDbContext db,
     IUnitOfWork uow,
     ICurrentUserService currentUser,
-    CircuitoComprasService circuitoCompras)
+    CircuitoComprasService circuitoCompras,
+    TerceroOperacionValidationService terceroOperacionValidationService)
     : IRequestHandler<RegistrarDevolucionCompraInternaCommand, Result<long>>
 {
     public async Task<Result<long>> Handle(RegistrarDevolucionCompraInternaCommand request, CancellationToken ct)
     {
-        var createHandler = new CrearBorradorCompraCommandHandler(comprobanteRepo, db, uow, currentUser);
+        var createHandler = new CrearBorradorCompraCommandHandler(comprobanteRepo, db, uow, currentUser, terceroOperacionValidationService);
         var createResult = await createHandler.Handle(
             new CrearBorradorCompraCommand(
                 request.SucursalId,

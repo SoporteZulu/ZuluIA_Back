@@ -29,7 +29,7 @@ public class ImputacionesControllerTests
             BuildImputacion(1, 10, 20, 150m, fecha),
             BuildImputacion(2, 10, 21, 75m, fecha)
         };
-        repo.GetByComprobanteOrigenAsync(10, Arg.Any<CancellationToken>()).Returns(imputaciones);
+        repo.GetByComprobanteOrigenAsync(10, false, Arg.Any<CancellationToken>()).Returns(imputaciones);
         var comprobantes = MockDbSetHelper.CreateMockDbSet(new[]
         {
             BuildComprobante(10, 1, 100),
@@ -60,7 +60,7 @@ public class ImputacionesControllerTests
         {
             BuildImputacion(1, 10, 20, 150m, new DateOnly(2026, 3, 21))
         };
-        repo.GetByComprobanteOrigenAsync(10, Arg.Any<CancellationToken>()).Returns(imputaciones);
+        repo.GetByComprobanteOrigenAsync(10, false, Arg.Any<CancellationToken>()).Returns(imputaciones);
         var comprobantes = MockDbSetHelper.CreateMockDbSet(new[]
         {
             BuildComprobante(10, 1, 100)
@@ -87,7 +87,7 @@ public class ImputacionesControllerTests
         {
             BuildImputacion(1, 10, 20, 150m, new DateOnly(2026, 3, 21))
         };
-        repo.GetByComprobanteDestinoAsync(20, Arg.Any<CancellationToken>()).Returns(imputaciones);
+        repo.GetByComprobanteDestinoAsync(20, false, Arg.Any<CancellationToken>()).Returns(imputaciones);
         var comprobantes = MockDbSetHelper.CreateMockDbSet(new[]
         {
             BuildComprobante(20, 2, 200)

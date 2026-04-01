@@ -40,6 +40,10 @@ public class UpsertTerceroPerfilComercialCommandValidator : AbstractValidator<Up
             .MaximumLength(100)
             .When(x => !string.IsNullOrWhiteSpace(x.VigenciaSaldo));
 
+        RuleFor(x => x)
+            .Must(x => !x.VigenciaSaldoDesde.HasValue || !x.VigenciaSaldoHasta.HasValue || x.VigenciaSaldoDesde.Value <= x.VigenciaSaldoHasta.Value)
+            .WithMessage("La vigencia desde del saldo no puede ser mayor que la vigencia hasta.");
+
         RuleFor(x => x.CondicionVenta)
             .MaximumLength(150)
             .When(x => !string.IsNullOrWhiteSpace(x.CondicionVenta));

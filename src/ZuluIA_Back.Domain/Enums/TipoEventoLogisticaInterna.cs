@@ -9,6 +9,7 @@ public enum TipoEventoLogisticaInterna
     DespachoInternoOrdenPreparacion,
     AnulacionOrdenPreparacion,
     CreacionTransferenciaDeposito,
+    DespachoTransferenciaDeposito,
     ConfirmacionTransferenciaDeposito,
     AnulacionTransferenciaDeposito
 }

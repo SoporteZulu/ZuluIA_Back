@@ -43,7 +43,7 @@ public class ReciboConfiguration : IEntityTypeConfiguration<Recibo>
 
         builder.HasIndex(x => x.SucursalId);
         builder.HasIndex(x => x.TerceroId);
-        builder.HasIndex(new[] { "sucursal_id", "serie", "numero" }).IsUnique();
+        builder.HasIndex(x => new { x.SucursalId, x.Serie, x.Numero }).IsUnique();
     }
 }
 

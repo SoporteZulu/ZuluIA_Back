@@ -1,7 +1,8 @@
-﻿using MediatR;
+﻿using AutoMapper;
+using MediatR;
+using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Terceros.DTOs;
 using ZuluIA_Back.Domain.Interfaces;
-using AutoMapper;
 
 namespace ZuluIA_Back.Application.Features.Terceros.Queries;
 
@@ -14,6 +15,7 @@ public record GetProveedoresActivosQuery(long? SucursalId = null)
 
 public class GetProveedoresActivosQueryHandler(
     ITerceroRepository repo,
+    IApplicationDbContext db,
     IMapper mapper)
     : IRequestHandler<GetProveedoresActivosQuery, IReadOnlyList<TerceroSelectorDto>>
 {
@@ -22,6 +24,8 @@ public class GetProveedoresActivosQueryHandler(
         CancellationToken ct)
     {
         var proveedores = await repo.GetProveedoresActivosAsync(request.SucursalId, ct);
-        return mapper.Map<IReadOnlyList<TerceroSelectorDto>>(proveedores);
+        var dtos = mapper.Map<List<TerceroSelectorDto>>(proveedores);
+        await TerceroSelectorReadModelLoader.LoadUbicacionAsync(db, proveedores, dtos, ct);
+        return dtos;
     }
 }

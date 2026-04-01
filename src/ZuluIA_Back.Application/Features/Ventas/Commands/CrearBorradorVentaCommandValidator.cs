@@ -12,6 +12,12 @@ public class CrearBorradorVentaCommandValidator : AbstractValidator<CrearBorrado
         RuleFor(x => x.MonedaId).GreaterThan(0);
         RuleFor(x => x.Cotizacion).GreaterThan(0);
 
+        RuleFor(x => x.ListaPreciosId).GreaterThan(0).When(x => x.ListaPreciosId.HasValue);
+        RuleFor(x => x.VendedorId).GreaterThan(0).When(x => x.VendedorId.HasValue);
+        RuleFor(x => x.CanalVentaId).GreaterThan(0).When(x => x.CanalVentaId.HasValue);
+        RuleFor(x => x.CondicionPagoId).GreaterThan(0).When(x => x.CondicionPagoId.HasValue);
+        RuleFor(x => x.PlazoDias).GreaterThanOrEqualTo(0).When(x => x.PlazoDias.HasValue);
+
         RuleFor(x => x.Items)
             .NotEmpty()
             .WithMessage("El documento debe contener al menos un ítem.");

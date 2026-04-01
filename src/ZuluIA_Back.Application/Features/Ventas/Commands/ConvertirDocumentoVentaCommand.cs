@@ -10,6 +10,7 @@ public record ConvertirDocumentoVentaCommand(
     long? PuntoFacturacionId,
     DateOnly Fecha,
     DateOnly? FechaVencimiento,
+    DateOnly? FechaEntregaCompromiso,
     string? Observacion,
     OperacionStockVenta OperacionStock,
     OperacionCuentaCorrienteVenta OperacionCuentaCorriente

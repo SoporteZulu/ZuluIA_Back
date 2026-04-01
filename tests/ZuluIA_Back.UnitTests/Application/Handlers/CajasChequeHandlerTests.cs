@@ -8,10 +8,15 @@ using ZuluIA_Back.Application.Features.Cajas.Commands;
 using ZuluIA_Back.Application.Features.Cajas.DTOs;
 using ZuluIA_Back.Application.Features.Cajas.Queries;
 using ZuluIA_Back.Application.Features.Cheques.Commands;
+using ZuluIA_Back.Application.Features.Cheques.Services;
 using ZuluIA_Back.Application.Features.Cheques.DTOs;
 using ZuluIA_Back.Application.Features.Cheques.Queries;
+using ZuluIA_Back.Application.Features.Tesoreria.Services;
 using ZuluIA_Back.Domain.Common;
+using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Finanzas;
+using ZuluIA_Back.Domain.Entities.Referencia;
+using ZuluIA_Back.Domain.Entities.Terceros;
 using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Interfaces;
 using ZuluIA_Back.UnitTests.Helpers;
@@ -122,7 +127,12 @@ public class RegistrarTransferenciaCommandHandlerTests
 {
     private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
-    private RegistrarTransferenciaCommandHandler Sut() => new(_db, _uow);
+    private readonly TesoreriaService _tesoreriaService = new(
+        Substitute.For<IApplicationDbContext>(),
+        Substitute.For<IRepository<TesoreriaMovimiento>>(),
+        Substitute.For<IRepository<TesoreriaCierre>>(),
+        Substitute.For<ICurrentUserService>());
+    private RegistrarTransferenciaCommandHandler Sut() => new(_db, _tesoreriaService, _uow);
 
     [Fact]
     public async Task Handle_CajaOrigenNoExiste_RetornaFailure()
@@ -223,7 +233,8 @@ public class CreateChequeCommandHandlerTests
     private readonly IChequeRepository _repo = Substitute.For<IChequeRepository>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
-    private CreateChequeCommandHandler Sut() => new(_repo, _uow, _user);
+    private readonly ChequeAuditoriaService _auditoriaService = new(Substitute.For<IRepository<ChequeHistorial>>());
+    private CreateChequeCommandHandler Sut() => new(_repo, _auditoriaService, _uow, _user);
 
     [Fact]
     public async Task Handle_DatosValidos_CreaYRetornaId()
@@ -231,7 +242,7 @@ public class CreateChequeCommandHandlerTests
         _user.UserId.Returns((long?)1L);
 
         var hoy = DateOnly.FromDateTime(DateTime.Today);
-        var cmd = new CreateChequeCommand(1, null, "00001", "BancoPrueba", hoy, hoy.AddDays(30), 1000m, 1, null);
+        var cmd = new CreateChequeCommand(1, 5, "00001", "BancoPrueba", hoy, hoy.AddDays(30), 1000m, 1, TipoCheque.Tercero, true, false, "Titular Demo", null, null, null, null, null);
 
         var result = await Sut().Handle(cmd, CancellationToken.None);
 
@@ -248,7 +259,8 @@ public class CambiarEstadoChequeCommandHandlerTests
     private readonly IChequeRepository _repo = Substitute.For<IChequeRepository>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
-    private CambiarEstadoChequeCommandHandler Sut() => new(_repo, _uow, _user);
+    private readonly ChequeAuditoriaService _auditoriaService = new(Substitute.For<IRepository<ChequeHistorial>>());
+    private CambiarEstadoChequeCommandHandler Sut() => new(_repo, _auditoriaService, _uow, _user);
 
     [Fact]
     public async Task Handle_ChequeNoExiste_RetornaFailure()
@@ -267,7 +279,7 @@ public class CambiarEstadoChequeCommandHandlerTests
     public async Task Handle_DepositarSinFecha_RetornaFailure()
     {
         var hoy = DateOnly.FromDateTime(DateTime.Today);
-        var cheque = Cheque.Crear(1, null, "00001", "BancoPrueba", hoy, hoy.AddDays(30), 1000m, 1, null, null);
+        var cheque = Cheque.Crear(1, 5, "00001", "BancoPrueba", hoy, hoy.AddDays(30), 1000m, 1, TipoCheque.Tercero, true, false, "Titular Demo", null, null, null, null, null, null);
         _repo.GetByIdAsync(Arg.Any<long>(), Arg.Any<CancellationToken>()).Returns(cheque);
 
         var result = await Sut().Handle(
@@ -281,7 +293,7 @@ public class CambiarEstadoChequeCommandHandlerTests
     public async Task Handle_DepositarConFecha_RetornaSuccess()
     {
         var hoy = DateOnly.FromDateTime(DateTime.Today);
-        var cheque = Cheque.Crear(1, null, "00001", "BancoPrueba", hoy, hoy.AddDays(30), 1000m, 1, null, null);
+        var cheque = Cheque.Crear(1, 5, "00001", "BancoPrueba", hoy, hoy.AddDays(30), 1000m, 1, TipoCheque.Tercero, true, false, "Titular Demo", null, null, null, null, null, null);
         _repo.GetByIdAsync(Arg.Any<long>(), Arg.Any<CancellationToken>()).Returns(cheque);
         _user.UserId.Returns((long?)1L);
 
@@ -345,8 +357,11 @@ public class CambiarEstadoChequeCommandValidatorTests
         DateOnly? fecha = accion is AccionCheque.Depositar or AccionCheque.Acreditar
             ? DateOnly.FromDateTime(DateTime.Today)
             : null;
+        var terceroId = (long?)null;
+        var observacion = "obs";
+        var conceptoRechazo = accion == AccionCheque.Rechazar ? "Sin fondos" : null;
 
-        var result = validator.Validate(new CambiarEstadoChequeCommand(1, accion, fecha, null, "obs"));
+        var result = validator.Validate(new CambiarEstadoChequeCommand(1, accion, fecha, null, observacion, terceroId, conceptoRechazo));
 
         result.IsValid.Should().BeTrue();
     }
@@ -358,23 +373,42 @@ public class GetChequesPagedQueryHandlerTests
 {
     private readonly IChequeRepository _repo = Substitute.For<IChequeRepository>();
     private readonly IMapper _mapper = Substitute.For<IMapper>();
-    private GetChequesPagedQueryHandler Sut() => new(_repo, _mapper);
+    private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
+    private GetChequesPagedQueryHandler Sut() => new(_repo, _mapper, _db);
 
     [Fact]
     public async Task Handle_RetornaPagedResult()
     {
         var pagedResult = new PagedResult<Cheque>(new List<Cheque>(), 1, 10, 0);
+        _db.CajasCuentasBancarias.Returns(MockDbSetHelper.CreateMockDbSet<CajaCuentaBancaria>());
+        _db.Terceros.Returns(MockDbSetHelper.CreateMockDbSet<Tercero>());
+        _db.Monedas.Returns(MockDbSetHelper.CreateMockDbSet<Moneda>());
+        _db.Chequeras.Returns(MockDbSetHelper.CreateMockDbSet<Chequera>());
+        _db.Comprobantes.Returns(MockDbSetHelper.CreateMockDbSet<Comprobante>());
         _repo.GetPagedAsync(
             Arg.Any<int>(), Arg.Any<int>(),
             Arg.Any<long?>(), Arg.Any<long?>(),
-            Arg.Any<EstadoCheque?>(), Arg.Any<DateOnly?>(), Arg.Any<DateOnly?>(),
+            Arg.Any<EstadoCheque?>(), Arg.Any<TipoCheque?>(), Arg.Any<bool?>(), Arg.Any<bool?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<string?>(), Arg.Any<DateOnly?>(), Arg.Any<DateOnly?>(),
             Arg.Any<CancellationToken>())
             .Returns(pagedResult);
-        _mapper.Map<IReadOnlyList<ChequeDto>>(Arg.Any<IReadOnlyList<Cheque>>())
-               .Returns(new List<ChequeDto>().AsReadOnly());
+        _mapper.Map<List<ChequeDto>>(Arg.Any<IReadOnlyList<Cheque>>())
+               .Returns(new List<ChequeDto>());
 
         var result = await Sut().Handle(
-            new GetChequesPagedQuery(1, 10, null, null, null, null, null),
+            new GetChequesPagedQuery(
+                Page: 1,
+                PageSize: 10,
+                CajaId: null,
+                TerceroId: null,
+                Estado: null,
+                Tipo: null,
+                EsALaOrden: null,
+                EsCruzado: null,
+                Banco: null,
+                NroCheque: null,
+                Titular: null,
+                Desde: null,
+                Hasta: null),
             CancellationToken.None);
 
         result.Items.Should().BeEmpty();

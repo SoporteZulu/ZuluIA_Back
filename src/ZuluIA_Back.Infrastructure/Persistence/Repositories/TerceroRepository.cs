@@ -36,28 +36,23 @@ public class TerceroRepository(AppDbContext context)
         bool? soloActivos,
         long? condicionIvaId,
         long? categoriaId,
+        long? estadoPersonaId,
+        long? categoriaClienteId,
+        long? estadoClienteId,
+        long? categoriaProveedorId,
+        long? estadoProveedorId,
         long? sucursalId,
         CancellationToken ct = default)
     {
-        // Base: excluye los eliminados de forma permanente (deleted_at no nulo)
-        // soloActivos null → muestra activos e inactivos (útil para administración)
-        // soloActivos true → solo activos
-        // soloActivos false → solo inactivos/dados de baja
+        // soloActivos true → solo activos visibles
+        // soloActivos false/null → todos
         var query = DbSet.AsNoTracking();
 
-        // Filtro de baja lógica
-        if (soloActivos is null || soloActivos == true)
-            query = query.Where(x => x.DeletedAt == null);
-
-        if (soloActivos == false)
-            query = query.Where(x => x.DeletedAt != null);
-
-        // Filtro por estado activo/inactivo dentro de los no eliminados
         if (soloActivos == true)
+        {
+            query = query.Where(x => x.DeletedAt == null);
             query = query.Where(x => x.Activo);
-
-        if (soloActivos == false)
-            query = query.Where(x => !x.Activo);
+        }
 
         // Filtros de rol (combinables: un tercero puede ser cliente Y proveedor)
         if (soloClientes == true)
@@ -75,6 +70,21 @@ public class TerceroRepository(AppDbContext context)
 
         if (categoriaId.HasValue)
             query = query.Where(x => x.CategoriaId == categoriaId.Value);
+
+        if (estadoPersonaId.HasValue)
+            query = query.Where(x => x.EstadoPersonaId == estadoPersonaId.Value);
+
+        if (categoriaClienteId.HasValue)
+            query = query.Where(x => x.CategoriaClienteId == categoriaClienteId.Value);
+
+        if (estadoClienteId.HasValue)
+            query = query.Where(x => x.EstadoClienteId == estadoClienteId.Value);
+
+        if (categoriaProveedorId.HasValue)
+            query = query.Where(x => x.CategoriaProveedorId == categoriaProveedorId.Value);
+
+        if (estadoProveedorId.HasValue)
+            query = query.Where(x => x.EstadoProveedorId == estadoProveedorId.Value);
 
         if (sucursalId.HasValue)
             query = query.Where(x => x.SucursalId == sucursalId.Value);
@@ -217,7 +227,9 @@ public class TerceroRepository(AppDbContext context)
     {
         var query = DbSet
             .AsNoTracking()
-            .Where(x => x.EsCliente && x.Activo && !x.IsDeleted);
+            .Where(x => x.EsCliente && x.Activo && x.DeletedAt == null)
+            .Where(x => !x.EstadoClienteId.HasValue || Context.EstadosClientes
+                .Any(e => e.Id == x.EstadoClienteId.Value && e.Activo && e.DeletedAt == null && !e.Bloquea));
 
         if (sucursalId.HasValue)
             query = query.Where(x => x.SucursalId == sucursalId.Value
@@ -238,7 +250,9 @@ public class TerceroRepository(AppDbContext context)
     {
         var query = DbSet
             .AsNoTracking()
-            .Where(x => x.EsProveedor && x.Activo && !x.IsDeleted);
+            .Where(x => x.EsProveedor && x.Activo && x.DeletedAt == null)
+            .Where(x => !x.EstadoProveedorId.HasValue || Context.EstadosProveedores
+                .Any(e => e.Id == x.EstadoProveedorId.Value && e.Activo && e.DeletedAt == null && !e.Bloquea));
 
         if (sucursalId.HasValue)
             query = query.Where(x => x.SucursalId == sucursalId.Value

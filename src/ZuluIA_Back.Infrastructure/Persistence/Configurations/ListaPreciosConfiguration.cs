@@ -31,6 +31,21 @@ public class ListaPreciosConfiguration : IEntityTypeConfiguration<ListaPrecios>
                .HasColumnName("activa")
                .HasDefaultValue(true);
 
+        builder.Property(x => x.EsPorDefecto)
+               .HasColumnName("es_por_defecto")
+               .HasDefaultValue(false);
+
+        builder.Property(x => x.ListaPadreId)
+               .HasColumnName("lista_padre_id");
+
+        builder.Property(x => x.Prioridad)
+               .HasColumnName("prioridad")
+               .HasDefaultValue(0);
+
+        builder.Property(x => x.Observaciones)
+               .HasColumnName("observaciones")
+               .HasMaxLength(500);
+
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         builder.Property(x => x.DeletedAt).HasColumnName("deleted_at");
@@ -42,8 +57,16 @@ public class ListaPreciosConfiguration : IEntityTypeConfiguration<ListaPrecios>
                .HasForeignKey(x => x.ListaId)
                .OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasOne(x => x.ListaPadre)
+               .WithMany()
+               .HasForeignKey(x => x.ListaPadreId)
+               .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(x => x.Activa);
+        builder.HasIndex(x => x.EsPorDefecto);
         builder.HasIndex(x => x.MonedaId);
+        builder.HasIndex(x => x.ListaPadreId);
         builder.HasIndex(x => new { x.VigenciaDesde, x.VigenciaHasta });
+        builder.HasIndex(x => x.Prioridad);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using ZuluIA_Back.Application.Features.Terceros.DTOs;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Common;
@@ -12,9 +13,12 @@ namespace ZuluIA_Back.Application.Features.Terceros.Queries;
 public class GetTerceroByIdQueryHandler(
     ITerceroRepository repo,
     IApplicationDbContext db,
-    IMapper mapper)
+    IMapper mapper,
+    ILogger<GetTerceroByIdQueryHandler> logger)
     : IRequestHandler<GetTerceroByIdQuery, Result<TerceroDto>>
 {
+    private sealed record CuentaContableInfo(long Id, string Codigo, string Descripcion);
+
     public async Task<Result<TerceroDto>> Handle(
         GetTerceroByIdQuery request,
         CancellationToken ct)
@@ -28,6 +32,7 @@ public class GetTerceroByIdQueryHandler(
 
         // ── 2. Mapeo base (campos escalares + Domicilio VO) ───────────────────
         var dto = mapper.Map<TerceroDto>(tercero);
+        dto.FechaAlta = DateOnly.FromDateTime(tercero.CreatedAt.UtcDateTime);
 
         // ── 3. Resolver descripciones de catálogos ────────────────────────────
 
@@ -49,6 +54,62 @@ public class GetTerceroByIdQueryHandler(
             dto.CategoriaDescripcion = categoria?.Descripcion ?? string.Empty;
         }
 
+        if (tercero.CategoriaClienteId.HasValue)
+        {
+            var categoriaCliente = await db.CategoriasClientes
+                .FindAsync(new object[] { tercero.CategoriaClienteId.Value }, ct);
+            dto.CategoriaClienteDescripcion = categoriaCliente?.Descripcion ?? string.Empty;
+        }
+
+        Domain.Entities.Terceros.EstadoCliente? estadoClienteEntity = null;
+        if (tercero.EstadoClienteId.HasValue)
+        {
+            estadoClienteEntity = await db.EstadosClientes
+                .FindAsync(new object[] { tercero.EstadoClienteId.Value }, ct);
+            dto.EstadoClienteDescripcion = estadoClienteEntity?.Descripcion ?? string.Empty;
+            dto.EstadoClienteBloquea = estadoClienteEntity?.Bloquea;
+        }
+
+        if (tercero.CategoriaProveedorId.HasValue)
+        {
+            var categoriaProveedor = await db.CategoriasProveedores
+                .FindAsync(new object[] { tercero.CategoriaProveedorId.Value }, ct);
+            dto.CategoriaProveedorDescripcion = categoriaProveedor?.Descripcion ?? string.Empty;
+        }
+
+        Domain.Entities.Terceros.EstadoProveedor? estadoProveedorEntity = null;
+        if (tercero.EstadoProveedorId.HasValue)
+        {
+            estadoProveedorEntity = await db.EstadosProveedores
+                .FindAsync(new object[] { tercero.EstadoProveedorId.Value }, ct);
+            dto.EstadoProveedorDescripcion = estadoProveedorEntity?.Descripcion ?? string.Empty;
+            dto.EstadoProveedorBloquea = estadoProveedorEntity?.Bloquea;
+        }
+
+        if (tercero.PaisId.HasValue)
+        {
+            var pais = await db.Paises
+                .FindAsync(new object[] { tercero.PaisId.Value }, ct);
+            dto.PaisDescripcion = pais?.Descripcion;
+        }
+
+        if (tercero.EstadoCivilId.HasValue)
+        {
+            var estadoCivil = await db.EstadosCiviles
+                .FindAsync(new object[] { tercero.EstadoCivilId.Value }, ct);
+            dto.EstadoCivilDescripcion = estadoCivil?.Descripcion ?? dto.EstadoCivil;
+            dto.EstadoCivil = dto.EstadoCivilDescripcion;
+        }
+
+        if (tercero.EstadoPersonaId.HasValue)
+        {
+            dto.EstadoPersonaDescripcion = await db.EstadosPersonas
+                .AsNoTracking()
+                .Where(x => x.Id == tercero.EstadoPersonaId.Value)
+                .Select(x => x.Descripcion)
+                .FirstOrDefaultAsync(ct);
+        }
+
         // Moneda (opcional)
         if (tercero.MonedaId.HasValue)
         {
@@ -62,13 +123,38 @@ public class GetTerceroByIdQueryHandler(
         {
             var cobrador = await db.Usuarios
                 .FindAsync(new object[] { tercero.CobradorId.Value }, ct);
+            dto.CobradorUserName = cobrador?.UserName;
             dto.CobradorNombre = cobrador?.NombreCompleto ?? string.Empty;
         }
         if (tercero.VendedorId.HasValue)
         {
             var vendedor = await db.Usuarios
                 .FindAsync(new object[] { tercero.VendedorId.Value }, ct);
+            dto.VendedorUserName = vendedor?.UserName;
             dto.VendedorNombre = vendedor?.NombreCompleto ?? string.Empty;
+        }
+
+        dto.UsuarioCliente = await TerceroUsuarioClienteReadModelLoader.LoadAsync(db, tercero.UsuarioId, ct);
+        dto.AccesoUsuarioCliente = dto.UsuarioCliente is not null;
+        dto.UsuarioClienteUserName = dto.UsuarioCliente?.UserName;
+        dto.UsuarioClienteGrupoUserName = dto.UsuarioCliente?.UsuarioGrupoUserName;
+        dto.TieneUsuarioCliente = tercero.UsuarioId.HasValue;
+        dto.UsuarioClienteActivo = dto.UsuarioCliente?.Activo ?? false;
+        dto.MediosContacto = await TerceroMedioContactoReadModelLoader.LoadAsync(db, tercero.Id, logger, ct);
+
+        string? estadoPersonaDescripcion = null;
+        bool? estadoPersonaActivo = null;
+        if (tercero.EstadoPersonaId.HasValue)
+        {
+            var estadoPersona = await db.EstadosPersonas
+                .AsNoTracking()
+                .Where(x => x.Id == tercero.EstadoPersonaId.Value && !x.IsDeleted)
+                .Select(x => new { x.Descripcion, x.Activo })
+                .FirstOrDefaultAsync(ct);
+
+            estadoPersonaDescripcion = estadoPersona?.Descripcion;
+            estadoPersonaActivo = estadoPersona?.Activo;
+            dto.EstadoPersonaDescripcion = estadoPersonaDescripcion;
         }
 
         // Sucursal (opcional)
@@ -78,6 +164,30 @@ public class GetTerceroByIdQueryHandler(
                 .FindAsync(new object[] { tercero.SucursalId.Value }, ct);
             dto.SucursalDescripcion = sucursal?.RazonSocial ?? string.Empty;
         }
+
+        var cuentaContable = await ResolveCuentaContableAsync(db, tercero, ct);
+        dto.CuentaContableId = cuentaContable?.Id;
+        dto.CuentaContableCodigo = cuentaContable?.Codigo;
+        dto.CuentaContableDescripcion = cuentaContable?.Descripcion;
+
+        var estadoOperativo = TerceroEstadoOperativoResolver.Resolve(
+            tercero.Activo,
+            estadoPersonaDescripcion,
+            estadoPersonaActivo,
+            tercero.EsCliente,
+            estadoClienteEntity?.Descripcion,
+            estadoClienteEntity?.Activo,
+            estadoClienteEntity?.Bloquea,
+            tercero.EsProveedor,
+            estadoProveedorEntity?.Descripcion,
+            estadoProveedorEntity?.Activo,
+            estadoProveedorEntity?.Bloquea);
+
+        dto.EstadoOperativo = estadoOperativo.Codigo;
+        dto.EstadoOperativoDescripcion = estadoOperativo.Descripcion;
+        dto.EstadoOperativoBloquea = estadoOperativo.Bloquea;
+        dto.EstadoVisibleDescripcion = estadoOperativo.Descripcion;
+        dto.EstadoVisibleBloquea = estadoOperativo.Bloquea;
 
         var perfil = await db.TercerosPerfilesComerciales
             .AsNoTracking()
@@ -95,6 +205,8 @@ public class GetTerceroByIdQueryHandler(
                     .Select(x => x.Descripcion)
                     .FirstOrDefaultAsync(ct);
             }
+
+            dto.CuentaCorriente = TerceroCuentaCorrienteReadModelLoader.Load(tercero, perfil);
         }
         else
         {
@@ -103,7 +215,21 @@ public class GetTerceroByIdQueryHandler(
                 TerceroId = tercero.Id,
                 RiesgoCrediticio = RiesgoCrediticioComercial.Normal.ToString().ToUpperInvariant()
             };
+
+            dto.CuentaCorriente = TerceroCuentaCorrienteReadModelLoader.Load(tercero, null);
         }
+
+        var domicilios = await db.PersonasDomicilios
+            .AsNoTracking()
+            .Where(x => x.PersonaId == tercero.Id)
+            .OrderByDescending(x => x.EsDefecto)
+            .ThenBy(x => x.Orden)
+            .ThenBy(x => x.Calle)
+            .ToListAsync(ct);
+
+        var domiciliosDto = mapper.Map<List<TerceroDomicilioDto>>(domicilios);
+        await TerceroDomicilioReadModelLoader.LoadDescripcionesAsync(db, domiciliosDto, ct);
+        dto.Domicilios = domiciliosDto;
 
         var contactos = await db.TercerosContactos
             .AsNoTracking()
@@ -170,11 +296,34 @@ public class GetTerceroByIdQueryHandler(
 
 
         // ── 4. Resolver descripciones del Domicilio ───────────────────────────
+        if (tercero.Domicilio.ProvinciaId.HasValue)
+        {
+            var provincia = await db.Provincias
+                .FindAsync(new object[] { tercero.Domicilio.ProvinciaId.Value }, ct);
+            dto.Domicilio.ProvinciaDescripcion = provincia?.Descripcion;
+            dto.ProvinciaId = tercero.Domicilio.ProvinciaId;
+            dto.ProvinciaDescripcion = dto.Domicilio.ProvinciaDescripcion;
+        }
+
         if (tercero.Domicilio.LocalidadId.HasValue)
         {
             var localidad = await db.Localidades
-                .FindAsync(new object[] { tercero.Domicilio.LocalidadId.Value }, ct);
+                .AsNoTracking()
+                .Where(x => x.Id == tercero.Domicilio.LocalidadId.Value)
+                .Select(x => new { x.Descripcion, x.ProvinciaId })
+                .FirstOrDefaultAsync(ct);
             dto.Domicilio.LocalidadDescripcion = localidad?.Descripcion;
+
+            if (!dto.Domicilio.ProvinciaId.HasValue && localidad is not null)
+            {
+                dto.Domicilio.ProvinciaId = localidad.ProvinciaId;
+                dto.ProvinciaId = localidad.ProvinciaId;
+
+                var provincia = await db.Provincias
+                    .FindAsync(new object[] { localidad.ProvinciaId }, ct);
+                dto.Domicilio.ProvinciaDescripcion = provincia?.Descripcion;
+                dto.ProvinciaDescripcion = dto.Domicilio.ProvinciaDescripcion;
+            }
         }
 
         if (tercero.Domicilio.BarrioId.HasValue)
@@ -193,7 +342,66 @@ public class GetTerceroByIdQueryHandler(
             dto.Domicilio.LocalidadDescripcion,
             tercero.Domicilio.CodigoPostal);
 
+        dto.Domicilio.GeografiaCompleta = TerceroUbicacionFormatter.BuildGeografiaCompleta(
+            dto.Domicilio.ProvinciaDescripcion,
+            dto.Domicilio.LocalidadDescripcion,
+            dto.Domicilio.BarrioDescripcion);
+
+        dto.Domicilio.UbicacionCompleta = TerceroUbicacionFormatter.BuildUbicacionCompleta(
+            dto.Domicilio.Completo,
+            dto.Domicilio.GeografiaCompleta,
+            dto.Domicilio.CodigoPostal);
+
+        dto.ProvinciaId ??= dto.Domicilio.ProvinciaId;
+        dto.ProvinciaDescripcion ??= dto.Domicilio.ProvinciaDescripcion;
+        dto.GeografiaCompleta = dto.Domicilio.GeografiaCompleta;
+        dto.UbicacionCompleta = dto.Domicilio.UbicacionCompleta;
+
         return Result<TerceroDto>.Success(dto);
+    }
+
+    private static async Task<CuentaContableInfo?> ResolveCuentaContableAsync(
+        IApplicationDbContext db,
+        Domain.Entities.Terceros.Tercero tercero,
+        CancellationToken ct)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var cuentasActivas =
+            from parametro in db.PlanCuentasParametros.AsNoTracking()
+            join cuenta in db.PlanCuentas.AsNoTracking() on parametro.CuentaId equals cuenta.Id
+            join ejercicio in db.Ejercicios.AsNoTracking() on parametro.EjercicioId equals ejercicio.Id
+            where parametro.IdRegistro == tercero.Id
+                && parametro.Tabla == "personas"
+                && ejercicio.FechaInicio <= today
+                && ejercicio.FechaFin >= today
+            select new
+            {
+                CuentaId = cuenta.Id,
+                cuenta.CodigoCuenta,
+                cuenta.Denominacion,
+                parametro.EjercicioId
+            };
+
+        if (tercero.SucursalId.HasValue)
+        {
+            var cuentaPorSucursal = await (
+                from cuenta in cuentasActivas
+                join ejercicioSucursal in db.EjercicioSucursales.AsNoTracking() on cuenta.EjercicioId equals ejercicioSucursal.EjercicioId
+                where ejercicioSucursal.SucursalId == tercero.SucursalId.Value
+                    && ejercicioSucursal.UsaContabilidad
+                orderby cuenta.CodigoCuenta
+                select new CuentaContableInfo(cuenta.CuentaId, cuenta.CodigoCuenta, cuenta.Denominacion))
+                .FirstOrDefaultAsync(ct);
+
+            if (cuentaPorSucursal is not null)
+                return cuentaPorSucursal;
+        }
+
+        return await cuentasActivas
+            .OrderBy(x => x.CodigoCuenta)
+            .Select(x => new CuentaContableInfo(x.CuentaId, x.CodigoCuenta, x.Denominacion))
+            .FirstOrDefaultAsync(ct);
     }
 
     // ─── Helper: construir dirección formateada ───────────────────────────────

@@ -49,6 +49,14 @@ public class Usuario : AuditableEntity
         SetUpdated(userId);
     }
 
+    public void SetUserName(string userName, long? userId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userName);
+
+        UserName = userName.Trim().ToLowerInvariant();
+        SetUpdated(userId);
+    }
+
     public void EstablecerPasswordHash(string passwordHash, long? userId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);

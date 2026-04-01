@@ -2,12 +2,13 @@
 
 ## Archivos
 - `scripts\smoke\Invoke-ZuluIAApiSmoke.ps1`
-- `database\zuluia_back_full_compatible.sql`
+- `database\zuluia_back_full_compatible.md`
+- `database\zuluia_back_local_smoke_schema_fixes.md`
 
 ## Qué hace
 La smoke suite:
 - opcionalmente aplica el bootstrap SQL sobre una base PostgreSQL vacía
-- opcionalmente aplica `database\zuluia_back_smoke_dataset.sql` para ampliar datos de prueba
+- opcionalmente aplica `database\zuluia_back_smoke_dataset.md` para ampliar datos de prueba
 - genera un JWT HS256 para `admin.local` usando `sub = 1`
 - verifica `/health`, `/health/detailed` y `swagger`
 - ejecuta un barrido ampliado de `GET` discoverables desde OpenAPI, incluyendo rutas con `path params` y `query params` resueltos automáticamente
@@ -93,7 +94,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\smoke\Invoke-ZuluIAApiSmoke.p
 5. Si algo falla, corregir el bootstrap o el endpoint y volver a correr.
 
 ## Dataset complementario
-El archivo `database\zuluia_back_smoke_dataset.sql` agrega datos para módulos menos cubiertos por el bootstrap base, por ejemplo:
+El archivo `database\zuluia_back_smoke_dataset.md` agrega datos para módulos menos cubiertos por el bootstrap base, por ejemplo:
 - geografía
 - diagnósticos
 - contratos
@@ -105,6 +106,19 @@ El archivo `database\zuluia_back_smoke_dataset.sql` agrega datos para módulos m
 - integraciones
 
 Conviene usarlo casi siempre en pruebas integrales.
+
+## Alias histórico de fixes locales
+El archivo `database\zuluia_back_local_smoke_schema_fixes.md` se mantiene por compatibilidad de path histórico.
+
+No es un bootstrap autónomo sobre base vacía.
+
+Debe ejecutarse después de `database\zuluia_back_full_compatible.md`.
+
+Cuando se usa ese path histórico desde la smoke suite o desde `tools\ZuluIA_SmokeDbRunner`, el flujo resuelve y ejecuta en este orden:
+1. `database\zuluia_back_terceros_runtime_detected_fixes.md`
+2. `database\zuluia_back_terceros_full_upgrade.md`
+
+Esto evita duplicar SQL en el archivo deprecated y conserva compatibilidad con scripts previos.
 
 ## Qué revisar en el reporte
 - `StatusCode`

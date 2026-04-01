@@ -15,6 +15,25 @@ public class Recibo : AuditableEntity
     public EstadoRecibo Estado { get; private set; }
     public long? CobroId { get; private set; }
 
+    // Datos comerciales
+    public long? VendedorId { get; private set; }
+    public long? CobradorId { get; private set; }
+    public long? ZonaComercialId { get; private set; }
+    public long? UsuarioCajeroId { get; private set; }
+
+    // Snapshot de datos del tercero
+    public string? TerceroCuit { get; private set; }
+    public string? TerceroCondicionIva { get; private set; }
+    public string? TerceroDomicilio { get; private set; }
+
+    // Leyendas y observaciones
+    public string? LeyendaFiscal { get; private set; }
+
+    // Metadatos de impresión
+    public string? FormatoImpresion { get; private set; }
+    public int? CopiasImpresas { get; private set; }
+    public DateTimeOffset? FechaImpresion { get; private set; }
+
     private readonly List<ReciboItem> _items = [];
     public IReadOnlyCollection<ReciboItem> Items => _items.AsReadOnly();
 
@@ -28,23 +47,68 @@ public class Recibo : AuditableEntity
         int numero,
         string? observacion,
         long? cobroId,
+        long? vendedorId,
+        long? cobradorId,
+        long? zonaComercialId,
+        long? usuarioCajeroId,
+        string? terceroCuit,
+        string? terceroCondicionIva,
+        string? terceroDomicilio,
+        string? leyendaFiscal,
         long? userId)
     {
         var recibo = new Recibo
         {
-            SucursalId  = sucursalId,
-            TerceroId   = terceroId,
-            Fecha       = fecha,
-            Serie       = serie.Trim().ToUpperInvariant(),
-            Numero      = numero,
-            Estado      = EstadoRecibo.Emitido,
-            Observacion = observacion?.Trim(),
-            CobroId     = cobroId,
-            Total       = 0
+            SucursalId              = sucursalId,
+            TerceroId               = terceroId,
+            Fecha                   = fecha,
+            Serie                   = serie.Trim().ToUpperInvariant(),
+            Numero                  = numero,
+            Estado                  = EstadoRecibo.Emitido,
+            Observacion             = observacion?.Trim(),
+            CobroId                 = cobroId,
+            VendedorId              = vendedorId,
+            CobradorId              = cobradorId,
+            ZonaComercialId         = zonaComercialId,
+            UsuarioCajeroId         = usuarioCajeroId,
+            TerceroCuit             = terceroCuit?.Trim(),
+            TerceroCondicionIva     = terceroCondicionIva?.Trim(),
+            TerceroDomicilio        = terceroDomicilio?.Trim(),
+            LeyendaFiscal           = leyendaFiscal?.Trim(),
+            Total                   = 0
         };
 
         recibo.SetCreated(userId);
         return recibo;
+    }
+
+    public static Recibo Crear(
+        long sucursalId,
+        long terceroId,
+        DateOnly fecha,
+        string serie,
+        int numero,
+        string? observacion,
+        long? cobroId,
+        long? userId)
+    {
+        return Crear(
+            sucursalId,
+            terceroId,
+            fecha,
+            serie,
+            numero,
+            observacion,
+            cobroId,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            userId);
     }
 
     public void AgregarItem(ReciboItem item)
@@ -66,6 +130,14 @@ public class Recibo : AuditableEntity
 
         Estado = EstadoRecibo.Anulado;
         SetDeleted();
+        SetUpdated(userId);
+    }
+
+    public void RegistrarImpresion(string formatoImpresion, int copias, long? userId)
+    {
+        FormatoImpresion = formatoImpresion;
+        CopiasImpresas = (CopiasImpresas ?? 0) + copias;
+        FechaImpresion = DateTimeOffset.UtcNow;
         SetUpdated(userId);
     }
 }

@@ -27,6 +27,10 @@ public class ChequesController(IMediator mediator, IApplicationDbContext db)
         [FromQuery] string? nroCheque = null,
         [FromQuery] DateOnly? desde = null,
         [FromQuery] DateOnly? hasta = null,
+        [FromQuery] string? tipo = null,
+        [FromQuery] bool? esALaOrden = null,
+        [FromQuery] bool? esCruzado = null,
+        [FromQuery] string? titular = null,
         CancellationToken ct = default)
     {
         EstadoCheque? estadoEnum = null;
@@ -34,10 +38,60 @@ public class ChequesController(IMediator mediator, IApplicationDbContext db)
             Enum.TryParse<EstadoCheque>(estado, true, out var parsedEstado))
             estadoEnum = parsedEstado;
 
+        TipoCheque? tipoEnum = null;
+        if (!string.IsNullOrWhiteSpace(tipo) &&
+            Enum.TryParse<TipoCheque>(tipo, true, out var parsedTipo))
+            tipoEnum = parsedTipo;
+
         var result = await Mediator.Send(
-            new GetChequesPagedQuery(page, pageSize, cajaId, terceroId,
-                                    estadoEnum, banco, nroCheque, desde, hasta), ct);
+            new GetChequesPagedQuery(
+                page,
+                pageSize,
+                cajaId,
+                terceroId,
+                estadoEnum,
+                tipoEnum,
+                esALaOrden,
+                esCruzado,
+                banco,
+                nroCheque,
+                titular,
+                desde,
+                hasta),
+            ct);
+
         return Ok(result);
+    }
+
+    [NonAction]
+    public Task<IActionResult> GetAll(
+        int page,
+        int pageSize,
+        long? cajaId,
+        long? terceroId,
+        string? estado,
+        string? tipo,
+        bool? esALaOrden,
+        bool? esCruzado,
+        string? banco,
+        string? nroCheque,
+        DateOnly? desde,
+        DateOnly? hasta,
+        CancellationToken ct)
+    {
+        return GetAll(page, pageSize, cajaId, terceroId, estado, banco, nroCheque, desde, hasta, tipo, esALaOrden, esCruzado, null, ct);
+    }
+
+    /// <summary>
+    /// Retorna el detalle completo de un cheque con historial.
+    /// </summary>
+    [HttpGet("{id:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(long id, CancellationToken ct)
+    {
+        var detalle = await Mediator.Send(new GetChequeDetalleQuery(id), ct);
+        return detalle is not null ? Ok(detalle) : NotFound();
     }
 
     /// <summary>
@@ -49,24 +103,69 @@ public class ChequesController(IMediator mediator, IApplicationDbContext db)
     {
         var cheques = await db.Cheques
             .AsNoTracking()
-            .Where(x => x.CajaId == cajaId &&
-                        x.Estado == EstadoCheque.Cartera)
+            .Where(x => x.CajaId == cajaId && x.Estado == EstadoCheque.Cartera)
             .OrderBy(x => x.FechaVencimiento)
             .Select(x => new
             {
                 x.Id,
                 x.NroCheque,
                 x.Banco,
+                x.Titular,
                 x.Importe,
                 x.MonedaId,
                 x.FechaEmision,
                 x.FechaVencimiento,
                 x.TerceroId,
-                Estado = x.Estado.ToString()
+                x.EsALaOrden,
+                x.EsCruzado,
+                Estado = x.Estado.ToString(),
+                Tipo = x.Tipo.ToString()
             })
             .ToListAsync(ct);
 
         return Ok(cheques);
+    }
+
+    /// <summary>
+    /// Retorna cheques pendientes de depósito.
+    /// </summary>
+    [HttpGet("pendientes")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPendientes(
+        [FromQuery] long? cajaId,
+        [FromQuery] DateOnly? hastaFechaVencimiento,
+        [FromQuery] bool soloVencidos = false,
+        CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(new GetChequesPendientesQuery(cajaId, hastaFechaVencimiento, soloVencidos), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Retorna cheques depositados no acreditados.
+    /// </summary>
+    [HttpGet("depositados")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetDepositados(
+        [FromQuery] long? cajaId,
+        [FromQuery] DateOnly? desde,
+        [FromQuery] DateOnly? hasta,
+        CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(new GetChequesDepositadosQuery(cajaId, desde, hasta), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Retorna el historial completo de un cheque.
+    /// </summary>
+    [HttpGet("{id:long}/historial")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetHistorial(long id, CancellationToken ct)
+    {
+        var historial = await Mediator.Send(new GetChequeHistorialQuery(id), ct);
+        return Ok(historial);
     }
 
     /// <summary>
@@ -98,12 +197,7 @@ public class ChequesController(IMediator mediator, IApplicationDbContext db)
         CancellationToken ct)
     {
         var result = await Mediator.Send(
-            new CambiarEstadoChequeCommand(
-                id,
-                AccionCheque.Depositar,
-                request.FechaDeposito,
-                request.FechaAcreditacion,
-                null),
+            new CambiarEstadoChequeCommand(id, AccionCheque.Depositar, request.FechaDeposito, request.FechaAcreditacion, null),
             ct);
         return FromResult(result);
     }
@@ -121,12 +215,7 @@ public class ChequesController(IMediator mediator, IApplicationDbContext db)
         CancellationToken ct)
     {
         var result = await Mediator.Send(
-            new CambiarEstadoChequeCommand(
-                id,
-                AccionCheque.Acreditar,
-                request.FechaAcreditacion,
-                null,
-                null),
+            new CambiarEstadoChequeCommand(id, AccionCheque.Acreditar, request.FechaAcreditacion, null, null),
             ct);
         return FromResult(result);
     }
@@ -150,7 +239,8 @@ public class ChequesController(IMediator mediator, IApplicationDbContext db)
                 request.Fecha,
                 null,
                 request.Observacion,
-                request.TerceroId),
+                request.TerceroId,
+                request.ConceptoRechazo),
             ct);
         return FromResult(result);
     }
@@ -162,7 +252,10 @@ public class ChequesController(IMediator mediator, IApplicationDbContext db)
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Entregar(long id, [FromBody] EntregarChequeRequest request, CancellationToken ct)
+    public async Task<IActionResult> Entregar(
+        long id,
+        [FromBody] EntregarChequeRequest request,
+        CancellationToken ct)
     {
         var result = await Mediator.Send(
             new CambiarEstadoChequeCommand(id, AccionCheque.Entregar, request.FechaEntrega, null, request.Observacion, request.TerceroId),
@@ -170,116 +263,94 @@ public class ChequesController(IMediator mediator, IApplicationDbContext db)
         return FromResult(result);
     }
 
-    [HttpGet("{id:long}/historial")]
+    /// <summary>
+    /// Endosa un cheque a otro tercero.
+    /// </summary>
+    [HttpPost("{id:long}/endosar")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetHistorial(long id, CancellationToken ct)
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Endosar(
+        long id,
+        [FromBody] EndosarChequeRequest request,
+        CancellationToken ct)
     {
-        var historial = await db.ChequesHistorial
-            .AsNoTracking()
-            .Where(x => x.ChequeId == id)
-            .OrderByDescending(x => x.FechaOperacion)
-            .ThenByDescending(x => x.Id)
-            .ToListAsync(ct);
-
-        var cajaIds = historial.Select(x => x.CajaId).Distinct().ToList();
-        var terceroIds = historial.Where(x => x.TerceroId.HasValue).Select(x => x.TerceroId!.Value).Distinct().ToList();
-
-        var cajas = await db.CajasCuentasBancarias.AsNoTracking()
-            .Where(x => cajaIds.Contains(x.Id))
-            .Select(x => new { x.Id, x.Descripcion })
-            .ToDictionaryAsync(x => x.Id, ct);
-
-        var terceros = await db.Terceros.AsNoTracking()
-            .Where(x => terceroIds.Contains(x.Id))
-            .Select(x => new { x.Id, x.RazonSocial })
-            .ToDictionaryAsync(x => x.Id, ct);
-
-        var dtos = historial.Select(x => new ChequeHistorialDto
-        {
-            Id = x.Id,
-            ChequeId = x.ChequeId,
-            CajaId = x.CajaId,
-            CajaDescripcion = cajas.GetValueOrDefault(x.CajaId)?.Descripcion ?? "—",
-            TerceroId = x.TerceroId,
-            TerceroRazonSocial = x.TerceroId.HasValue ? terceros.GetValueOrDefault(x.TerceroId.Value)?.RazonSocial : null,
-            Operacion = x.Operacion.ToString().ToUpperInvariant(),
-            EstadoAnterior = x.EstadoAnterior?.ToString().ToUpperInvariant(),
-            EstadoNuevo = x.EstadoNuevo.ToString().ToUpperInvariant(),
-            FechaOperacion = x.FechaOperacion,
-            FechaAcreditacion = x.FechaAcreditacion,
-            Observacion = x.Observacion,
-            CreatedAt = x.CreatedAt,
-            CreatedBy = x.CreatedBy
-        });
-
-        return Ok(dtos);
+        var result = await Mediator.Send(
+            new CambiarEstadoChequeCommand(id, AccionCheque.Endosar, request.Fecha, null, request.Observacion, request.NuevoTerceroId),
+            ct);
+        return FromResult(result);
     }
 
-    [HttpGet("auditoria")]
+    /// <summary>
+    /// Anula un cheque propio.
+    /// </summary>
+    [HttpPost("{id:long}/anular")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAuditoria(
-        [FromQuery] long? cajaId = null,
-        [FromQuery] long? terceroId = null,
-        [FromQuery] string? operacion = null,
-        [FromQuery] string? estado = null,
-        [FromQuery] DateOnly? desde = null,
-        [FromQuery] DateOnly? hasta = null,
-        CancellationToken ct = default)
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Anular(
+        long id,
+        [FromBody] AnularChequeRequest request,
+        CancellationToken ct)
     {
-        TipoOperacionCheque? operacionEnum = null;
-        if (!string.IsNullOrWhiteSpace(operacion) && Enum.TryParse<TipoOperacionCheque>(operacion, true, out var parsedOperacion))
-            operacionEnum = parsedOperacion;
+        var result = await Mediator.Send(
+            new CambiarEstadoChequeCommand(id, AccionCheque.Anular, request.Fecha, null, request.Motivo),
+            ct);
+        return FromResult(result);
+    }
 
-        EstadoCheque? estadoEnum = null;
-        if (!string.IsNullOrWhiteSpace(estado) && Enum.TryParse<EstadoCheque>(estado, true, out var parsedEstado))
-            estadoEnum = parsedEstado;
-
-        var query = db.ChequesHistorial.AsNoTracking();
-
-        if (cajaId.HasValue)
-            query = query.Where(x => x.CajaId == cajaId.Value);
-        if (terceroId.HasValue)
-            query = query.Where(x => x.TerceroId == terceroId.Value);
-        if (operacionEnum.HasValue)
-            query = query.Where(x => x.Operacion == operacionEnum.Value);
-        if (estadoEnum.HasValue)
-            query = query.Where(x => x.EstadoNuevo == estadoEnum.Value);
-        if (desde.HasValue)
-            query = query.Where(x => x.FechaOperacion >= desde.Value);
-        if (hasta.HasValue)
-            query = query.Where(x => x.FechaOperacion <= hasta.Value);
-
-        var historial = await query.OrderByDescending(x => x.FechaOperacion).ThenByDescending(x => x.Id).ToListAsync(ct);
-        var chequeIds = historial.Select(x => x.ChequeId).Distinct().ToList();
-        var cheques = await db.Cheques.AsNoTracking()
-            .Where(x => chequeIds.Contains(x.Id))
-            .Select(x => new { x.Id, x.NroCheque, x.Banco, x.Importe, x.Estado })
-            .ToDictionaryAsync(x => x.Id, ct);
-
-        return Ok(historial.Select(x => new
-        {
-            x.Id,
-            x.ChequeId,
-            NroCheque = cheques.GetValueOrDefault(x.ChequeId)?.NroCheque ?? "—",
-            Banco = cheques.GetValueOrDefault(x.ChequeId)?.Banco ?? "—",
-            Importe = cheques.GetValueOrDefault(x.ChequeId)?.Importe ?? 0m,
-            EstadoActual = cheques.GetValueOrDefault(x.ChequeId)?.Estado.ToString().ToUpperInvariant() ?? "—",
-            Operacion = x.Operacion.ToString().ToUpperInvariant(),
-            EstadoAnterior = x.EstadoAnterior?.ToString().ToUpperInvariant(),
-            EstadoNuevo = x.EstadoNuevo.ToString().ToUpperInvariant(),
-            x.FechaOperacion,
-            x.FechaAcreditacion,
-            x.CajaId,
-            x.TerceroId,
-            x.Observacion,
-            x.CreatedAt,
-            x.CreatedBy
-        }));
+    /// <summary>
+    /// Actualiza datos de un cheque en cartera.
+    /// </summary>
+    [HttpPatch("{id:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Actualizar(
+        long id,
+        [FromBody] ActualizarChequeRequest request,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new ActualizarChequeCommand(
+                id,
+                request.Titular,
+                request.FechaEmision,
+                request.FechaVencimiento,
+                request.CodigoSucursalBancaria,
+                request.CodigoPostal),
+            ct);
+        return FromResult(result);
     }
 }
 
-// ── Request bodies ───────────────────────────────────────────────────────────
 public record DepositarChequeRequest(DateOnly FechaDeposito, DateOnly? FechaAcreditacion);
 public record AcreditarChequeRequest(DateOnly FechaAcreditacion);
-public record RechazarChequeRequest(DateOnly? Fecha, string? Observacion, long? TerceroId = null);
+public record RechazarChequeRequest(DateOnly? Fecha, string? ConceptoRechazo, string? Observacion, long? TerceroId)
+{
+    public RechazarChequeRequest(DateOnly? fecha, string? observacion, long? terceroId)
+        : this(fecha, null, observacion, terceroId)
+    {
+    }
+}
 public record EntregarChequeRequest(DateOnly? FechaEntrega, long? TerceroId, string? Observacion);
+public record EndosarChequeRequest(DateOnly? Fecha, long NuevoTerceroId, string? Observacion)
+{
+    public EndosarChequeRequest(long nuevoTerceroId, string? observacion)
+        : this(null, nuevoTerceroId, observacion)
+    {
+    }
+}
+public record AnularChequeRequest(DateOnly? Fecha, string Motivo)
+{
+    public AnularChequeRequest(string motivo)
+        : this(null, motivo)
+    {
+    }
+}
+public record ActualizarChequeRequest(
+    string? Titular,
+    DateOnly? FechaEmision,
+    DateOnly? FechaVencimiento,
+    string? CodigoSucursalBancaria,
+    string? CodigoPostal);

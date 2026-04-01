@@ -5,7 +5,7 @@ using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Infrastructure.Persistence.Configurations;
 
-public class ContratoConfiguration : IEntityTypeConfiguration<Contrato>
+public class ContratoNegocioConfiguration : IEntityTypeConfiguration<Contrato>
 {
     public void Configure(EntityTypeBuilder<Contrato> builder)
     {

@@ -34,6 +34,6 @@ public class CaeaConfiguration : IEntityTypeConfiguration<Caea>
         builder.Property(x => x.UpdatedBy).HasColumnName("updated_by");
 
         builder.HasIndex(x => x.PuntoFacturacionId);
-        builder.HasIndex(new[] { "nro_caea", "punto_facturacion_id" }).IsUnique();
+        builder.HasIndex(x => new { x.NroCaea, x.PuntoFacturacionId }).IsUnique();
     }
 }

@@ -6,5 +6,7 @@ public enum TipoOperacionCheque
     Deposito,
     Acreditacion,
     Rechazo,
-    Entrega
+    Entrega,
+    Endoso,
+    Anulacion
 }

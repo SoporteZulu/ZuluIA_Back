@@ -16,11 +16,13 @@ using ZuluIA_Back.Application.Features.Impresion.Interfaces;
 using ZuluIA_Back.Application.Features.Impresion.Services;
 using ZuluIA_Back.Application.Features.Integraciones.Services;
 using ZuluIA_Back.Application.Features.Logistica.Services;
+using ZuluIA_Back.Application.Features.ListasPrecios.Services;
 using ZuluIA_Back.Application.Features.PuntoVenta.Services;
 using ZuluIA_Back.Application.Features.Produccion.Services;
 using ZuluIA_Back.Application.Features.Reportes.Services;
 using ZuluIA_Back.Application.Features.RRHH.Services;
 using ZuluIA_Back.Application.Features.Tesoreria.Services;
+using ZuluIA_Back.Application.Features.Terceros.Services;
 using ZuluIA_Back.Application.Features.Ventas.Services;
 
 namespace ZuluIA_Back.Application;
@@ -73,6 +75,7 @@ public static class DependencyInjection
         services.AddScoped<IntegracionProcesoService>();
         services.AddScoped<LegacyExportacionService>();
         services.AddScoped<LogisticaInternaService>();
+        services.AddScoped<PrecioListaResolutionService>();
         services.AddScoped<FormulaProduccionHistorialService>();
         services.AddScoped<PuntoVentaFiscalService>();
         services.AddScoped<ReporteExportacionService>();
@@ -80,7 +83,10 @@ public static class DependencyInjection
         services.AddScoped<RrhhService>();
         services.AddScoped<PagoWorkflowService>();
         services.AddScoped<TesoreriaService>();
+        services.AddScoped<TerceroOperacionValidationService>();
         services.AddScoped<CircuitoVentasService>();
+        services.AddScoped<NotaCreditoValidationService>();
+        services.AddScoped<NotaDebitoValidationService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
         return services;

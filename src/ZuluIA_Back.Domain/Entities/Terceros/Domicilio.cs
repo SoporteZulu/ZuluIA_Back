@@ -9,6 +9,8 @@ namespace ZuluIA_Back.Domain.Entities.Terceros;
 /// </summary>
 public class PersonaDomicilio : BaseEntity
 {
+    public const int MaxCantidadPorPersona = 3;
+
     public long  PersonaId        { get; private set; }  // per_id
     public long? TipoDomicilioId  { get; private set; }  // tdom_id
     public long? ProvinciaId      { get; private set; }  // prov_id

@@ -9,6 +9,7 @@ using ZuluIA_Back.Domain.Entities.RRHH;
 using ZuluIA_Back.Domain.Entities.Stock;
 using ZuluIA_Back.Domain.Entities.Sucursales;
 using ZuluIA_Back.Domain.Enums;
+using LogisticaOrdenEmpaque = ZuluIA_Back.Domain.Entities.Logistica.OrdenEmpaque;
 
 namespace ZuluIA_Back.UnitTests.Domain;
 
@@ -283,10 +284,10 @@ public class InventarioConteoTests
 // OrdenCompraMeta
 // ─────────────────────────────────────────────────────────────────────────────
 
-public class OrdenCompraMetaTests
+public class OrdenCompraMetaBusinessLogicTests
 {
     private static OrdenCompraMeta OrdenValida() =>
-        OrdenCompraMeta.Crear(1, 1, null, null);
+        OrdenCompraMeta.Crear(1, 1, null, null, 10m);
 
     [Fact]
     public void Crear_EstadoInicialPendiente()
@@ -575,12 +576,12 @@ public class PerfilTests
 // OrdenEmpaque
 // ─────────────────────────────────────────────────────────────────────────────
 
-public class OrdenEmpaqueTests
+public class OrdenEmpaqueBusinessLogicTests
 {
-    private static OrdenEmpaque OrdenValida() =>
-        OrdenEmpaque.Crear(1, null, null, null, null, null, null, null, null,
-                           1m, new DateOnly(2025, 3, 1), null, null,
-                           null, null, 5000m, null);
+    private static LogisticaOrdenEmpaque OrdenValida() =>
+        LogisticaOrdenEmpaque.Crear(1, null, null, null, null, null, null, null, null,
+                                    1m, new DateOnly(2025, 3, 1), null, null,
+                                    null, null, 5000m, null);
 
     [Fact]
     public void Crear_EstadoInicialPendiente()
@@ -593,18 +594,18 @@ public class OrdenEmpaqueTests
     [Fact]
     public void Crear_TerceroIdCero_LanzaExcepcion()
     {
-        var act = () => OrdenEmpaque.Crear(0, null, null, null, null, null, null, null, null,
-                                           1m, new DateOnly(2025, 3, 1), null, null,
-                                           null, null, 0m, null);
+        var act = () => LogisticaOrdenEmpaque.Crear(0, null, null, null, null, null, null, null, null,
+                                                    1m, new DateOnly(2025, 3, 1), null, null,
+                                                    null, null, 0m, null);
         act.Should().Throw<ArgumentException>();
     }
 
     [Fact]
     public void Crear_CotizacionCero_DefaultsToUno()
     {
-        var o = OrdenEmpaque.Crear(1, null, null, null, null, null, null, null, null,
-                                   0m, new DateOnly(2025, 3, 1), null, null,
-                                   null, null, 0m, null);
+        var o = LogisticaOrdenEmpaque.Crear(1, null, null, null, null, null, null, null, null,
+                                            0m, new DateOnly(2025, 3, 1), null, null,
+                                            null, null, 0m, null);
         o.Cotizacion.Should().Be(1m);
     }
 

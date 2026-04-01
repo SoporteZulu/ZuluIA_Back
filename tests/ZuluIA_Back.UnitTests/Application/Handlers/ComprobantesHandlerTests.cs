@@ -1,5 +1,6 @@
 using AutoMapper;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -8,6 +9,7 @@ using ZuluIA_Back.Application.Features.Comprobantes.Commands;
 using ZuluIA_Back.Application.Features.Comprobantes.DTOs;
 using ZuluIA_Back.Application.Features.Comprobantes.Queries;
 using ZuluIA_Back.Application.Features.Comprobantes.Services;
+using ZuluIA_Back.Application.Features.Terceros.Services;
 using ZuluIA_Back.Application.Features.Facturacion.DTOs;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Auditoria;
@@ -22,6 +24,7 @@ using ZuluIA_Back.Domain.Entities.Terceros;
 using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Interfaces;
 using ZuluIA_Back.Domain.Services;
+using ZuluIA_Back.Domain.ValueObjects;
 using ZuluIA_Back.UnitTests.Helpers;
 
 namespace ZuluIA_Back.UnitTests.Application.Handlers;
@@ -35,7 +38,7 @@ public class CreateComprobanteCommandHandlerTests
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
     private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
 
-    private CreateComprobanteCommandHandler Sut() => new(_repo, _uow, _user, _db);
+    private CreateComprobanteCommandHandler Sut() => new(_repo, _uow, _user, _db, new TerceroOperacionValidationService(_db));
 
     private static CreateComprobanteCommand CmdValido() => new(
         1, null, 1, 1, 1,
@@ -62,7 +65,11 @@ public class CreateComprobanteCommandHandlerTests
         _user.UserId.Returns((long?)1L);
         _repo.GetByNumeroAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<short>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
             .Returns((Comprobante?)null);
-        var impuestos = MockDbSetHelper.CreateMockDbSet<ComprobanteImpuesto>();
+        var tipos = MockDbSetHelper.CreateMockDbSet(new[] { BuildTipoComprobante(1, true, 1) });
+        var terceros = MockDbSetHelper.CreateMockDbSet(new[] { BuildCliente(1, null) });
+        var impuestos = Substitute.For<DbSet<ComprobanteImpuesto>>();
+        _db.TiposComprobante.Returns(tipos);
+        _db.Terceros.Returns(terceros);
         _db.ComprobantesImpuestos.Returns(impuestos);
 
         var result = await Sut().Handle(CmdValido(), CancellationToken.None);
@@ -71,6 +78,78 @@ public class CreateComprobanteCommandHandlerTests
         await _repo.Received(1).AddAsync(Arg.Any<Comprobante>(), Arg.Any<CancellationToken>());
         impuestos.Received(1).Add(Arg.Is<ComprobanteImpuesto>(x => x.BaseImponible == 1000m && x.ImporteIva == 210m));
         await _uow.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_DescuentoSuperaTopeCliente_RetornaFailure()
+    {
+        _repo.GetByNumeroAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<short>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns((Comprobante?)null);
+
+        var tipo = BuildTipoComprobante(1, true, 1);
+        var tipos = MockDbSetHelper.CreateMockDbSet(new[] { tipo });
+        var terceros = MockDbSetHelper.CreateMockDbSet(new[] { BuildCliente(1, 5m) });
+
+        _db.TiposComprobante.Returns(tipos);
+        _db.Terceros.Returns(terceros);
+
+        var cmd = CmdValido() with
+        {
+            Items = [new CreateComprobanteItemDto(1, "Prod", 1m, 1000, 10, 1, 21, null, 1)]
+        };
+
+        var result = await Sut().Handle(cmd, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("porcentaje máximo permitido");
+        await _repo.DidNotReceive().AddAsync(Arg.Any<Comprobante>(), Arg.Any<CancellationToken>());
+    }
+
+    private static TipoComprobante BuildTipoComprobante(long id, bool esVenta, short tipoAfip)
+    {
+        var tipo = (TipoComprobante)Activator.CreateInstance(typeof(TipoComprobante), nonPublic: true)!;
+        SetProperty(tipo, nameof(TipoComprobante.Id), id);
+        SetProperty(tipo, nameof(TipoComprobante.EsVenta), esVenta);
+        SetProperty(tipo, nameof(TipoComprobante.TipoAfip), (short?)tipoAfip);
+        return tipo;
+    }
+
+    private static Tercero BuildCliente(long id, decimal? porcentajeMaximoDescuento)
+    {
+        var tercero = Tercero.Crear("CLI0001", "Cliente Test", 1, "20123456789", 1, true, false, false, null, null);
+        SetProperty(tercero, nameof(Tercero.Id), id);
+        tercero.Actualizar(
+            "Cliente Test",
+            "Cliente Test",
+            1,
+            null,
+            null,
+            null,
+            null,
+            Domicilio.Vacio(),
+            null,
+            null,
+            null,
+            porcentajeMaximoDescuento,
+            null,
+            null,
+            true,
+            null,
+            false,
+            0m,
+            null,
+            false,
+            0m,
+            null,
+            null);
+        return tercero;
+    }
+
+    private static void SetProperty(object target, string propertyName, object? value)
+    {
+        var property = target.GetType().GetProperty(propertyName);
+        property.Should().NotBeNull();
+        property!.SetValue(target, value);
     }
 }
 
@@ -89,7 +168,7 @@ public class EmitirComprobanteCommandHandlerTests
     private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
 
     private EmitirComprobanteCommandHandler Sut() =>
-        new(_comprobanteRepo, _periodoRepo, _stockService, _afipCae, _uow, _user, _db);
+        new(_comprobanteRepo, _periodoRepo, _stockService, _afipCae, _uow, _user, _db, new TerceroOperacionValidationService(_db));
 
     private static EmitirComprobanteCommand CmdValido() => new(
         null, 1, null, 1,
@@ -150,12 +229,13 @@ public class EmitirComprobanteCommandHandlerTests
         var tipo = BuildTipoComprobante(1, true, 1);
         SetProperty(tipo, nameof(TipoComprobante.AfectaStock), false);
         var tipos = MockDbSetHelper.CreateMockDbSet(new[] { tipo });
+        var terceros = MockDbSetHelper.CreateMockDbSet(new[] { BuildCliente(1, null) });
         var alicuotas = MockDbSetHelper.CreateMockDbSet(new[] { BuildAlicuota(1, 5, 21) });
         var items = MockDbSetHelper.CreateMockDbSet(new[] { BuildItem(1, "Prod") });
         var puntos = MockDbSetHelper.CreateMockDbSet(new[] { BuildPuntoFacturacion(1, 1, 1) });
         var configuraciones = MockDbSetHelper.CreateMockDbSet(new[] { BuildConfiguracionFiscal(1, 1, true) });
-        var impuestos = MockDbSetHelper.CreateMockDbSet<ComprobanteImpuesto>();
-        var tributos = MockDbSetHelper.CreateMockDbSet<ComprobanteTributo>();
+        var impuestos = Substitute.For<DbSet<ComprobanteImpuesto>>();
+        var tributos = Substitute.For<DbSet<ComprobanteTributo>>();
         var impuestosConfigurados = MockDbSetHelper.CreateMockDbSet(new[] { BuildImpuesto(10, "99", "Percepciones", 3.5m, "percepcion") });
         var asignaciones = MockDbSetHelper.CreateMockDbSet(new[] { BuildImpuestoPorTipoComprobante(10, 1, 1) });
         var sucursales = MockDbSetHelper.CreateMockDbSet<Sucursal>();
@@ -163,6 +243,7 @@ public class EmitirComprobanteCommandHandlerTests
         var timbrados = MockDbSetHelper.CreateMockDbSet<Timbrado>();
 
         _db.TiposComprobante.Returns(tipos);
+        _db.Terceros.Returns(terceros);
         _db.AlicuotasIva.Returns(alicuotas);
         _db.Items.Returns(items);
         _db.PuntosFacturacion.Returns(puntos);
@@ -198,12 +279,13 @@ public class EmitirComprobanteCommandHandlerTests
         var tipo = BuildTipoComprobante(1, true, 1);
         SetProperty(tipo, nameof(TipoComprobante.AfectaStock), false);
         var tipos = MockDbSetHelper.CreateMockDbSet(new[] { tipo });
+        var terceros = MockDbSetHelper.CreateMockDbSet(new[] { BuildCliente(1, null) });
         var alicuotas = MockDbSetHelper.CreateMockDbSet(new[] { BuildAlicuota(1, 5, 21) });
         var items = MockDbSetHelper.CreateMockDbSet(new[] { BuildItem(1, "Prod") });
         var puntos = MockDbSetHelper.CreateMockDbSet(new[] { BuildPuntoFacturacion(1, 1, 1) });
         var configuraciones = MockDbSetHelper.CreateMockDbSet(new[] { BuildConfiguracionFiscal(1, 1, true) });
-        var impuestos = MockDbSetHelper.CreateMockDbSet<ComprobanteImpuesto>();
-        var tributos = MockDbSetHelper.CreateMockDbSet<ComprobanteTributo>();
+        var impuestos = Substitute.For<DbSet<ComprobanteImpuesto>>();
+        var tributos = Substitute.For<DbSet<ComprobanteTributo>>();
         var impuestosConfigurados = MockDbSetHelper.CreateMockDbSet(new[] { BuildImpuesto(10, "99", "Percepciones", 3.5m, "percepcion") });
         var asignaciones = MockDbSetHelper.CreateMockDbSet(new[] { BuildImpuestoPorTipoComprobante(10, 1, 1) });
         var sucursales = MockDbSetHelper.CreateMockDbSet<Sucursal>();
@@ -211,6 +293,7 @@ public class EmitirComprobanteCommandHandlerTests
         var timbrados = MockDbSetHelper.CreateMockDbSet<Timbrado>();
 
         _db.TiposComprobante.Returns(tipos);
+        _db.Terceros.Returns(terceros);
         _db.AlicuotasIva.Returns(alicuotas);
         _db.Items.Returns(items);
         _db.PuntosFacturacion.Returns(puntos);
@@ -243,6 +326,7 @@ public class EmitirComprobanteCommandHandlerTests
         var tipo = BuildTipoComprobante(1, true, 1);
         SetProperty(tipo, nameof(TipoComprobante.AfectaStock), false);
         var tipos = MockDbSetHelper.CreateMockDbSet(new[] { tipo });
+        var terceros = MockDbSetHelper.CreateMockDbSet(new[] { BuildCliente(1, null) });
         var alicuotas = MockDbSetHelper.CreateMockDbSet(new[] { BuildAlicuota(1, 5, 21) });
         var items = MockDbSetHelper.CreateMockDbSet(new[] { BuildItem(1, "Prod") });
         var puntos = MockDbSetHelper.CreateMockDbSet(new[] { BuildPuntoFacturacion(1, 1, 1) });
@@ -251,6 +335,7 @@ public class EmitirComprobanteCommandHandlerTests
         var timbrados = MockDbSetHelper.CreateMockDbSet<Timbrado>();
 
         _db.TiposComprobante.Returns(tipos);
+        _db.Terceros.Returns(terceros);
         _db.AlicuotasIva.Returns(alicuotas);
         _db.Items.Returns(items);
         _db.PuntosFacturacion.Returns(puntos);
@@ -278,6 +363,7 @@ public class EmitirComprobanteCommandHandlerTests
         var tipo = BuildTipoComprobante(1, true, 1);
         SetProperty(tipo, nameof(TipoComprobante.AfectaStock), false);
         var tipos = MockDbSetHelper.CreateMockDbSet(new[] { tipo });
+        var terceros = MockDbSetHelper.CreateMockDbSet(new[] { BuildCliente(1, null) });
         var alicuotas = MockDbSetHelper.CreateMockDbSet(new[] { BuildAlicuota(1, 5, 21) });
         var items = MockDbSetHelper.CreateMockDbSet(new[] { BuildItem(1, "Prod") });
         var puntos = MockDbSetHelper.CreateMockDbSet(new[] { BuildPuntoFacturacion(1, 1, 1) });
@@ -292,6 +378,7 @@ public class EmitirComprobanteCommandHandlerTests
         var configuraciones = MockDbSetHelper.CreateMockDbSet<ConfiguracionFiscal>();
 
         _db.TiposComprobante.Returns(tipos);
+        _db.Terceros.Returns(terceros);
         _db.AlicuotasIva.Returns(alicuotas);
         _db.Items.Returns(items);
         _db.PuntosFacturacion.Returns(puntos);
@@ -305,6 +392,31 @@ public class EmitirComprobanteCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         await _comprobanteRepo.Received(1).AddAsync(Arg.Is<Comprobante>(x => x.TimbradoId == 1 && x.NroTimbrado == "12345678"), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_DescuentoSuperaTopeCliente_RetornaFailure()
+    {
+        _periodoRepo.EstaAbiertoPeriodoAsync(Arg.Any<long>(), Arg.Any<DateOnly>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        var tipo = BuildTipoComprobante(1, true, 1);
+        var tipos = MockDbSetHelper.CreateMockDbSet(new[] { tipo });
+        var terceros = MockDbSetHelper.CreateMockDbSet(new[] { BuildCliente(1, 5m) });
+
+        _db.TiposComprobante.Returns(tipos);
+        _db.Terceros.Returns(terceros);
+
+        var cmd = CmdValido() with
+        {
+            Items = [new ComprobanteItemInput(1, "Prod", 1m, 0, 1000, 10m, 1, null, 1)]
+        };
+
+        var result = await Sut().Handle(cmd, CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("porcentaje máximo permitido");
+        await _comprobanteRepo.DidNotReceive().AddAsync(Arg.Any<Comprobante>(), Arg.Any<CancellationToken>());
     }
 
     private static TipoComprobante BuildTipoComprobante(long id, bool esVenta, short tipoAfip)
@@ -369,6 +481,37 @@ public class EmitirComprobanteCommandHandlerTests
     private static ImpuestoPorTipoComprobante BuildImpuestoPorTipoComprobante(long impuestoId, long tipoComprobanteId, int orden)
     {
         return ImpuestoPorTipoComprobante.Crear(impuestoId, tipoComprobanteId, orden);
+    }
+
+    private static Tercero BuildCliente(long id, decimal? porcentajeMaximoDescuento)
+    {
+        var tercero = Tercero.Crear("CLI0001", "Cliente Test", 1, "20123456789", 1, true, false, false, null, null);
+        SetProperty(tercero, nameof(Tercero.Id), id);
+        tercero.Actualizar(
+            "Cliente Test",
+            "Cliente Test",
+            1,
+            null,
+            null,
+            null,
+            null,
+            Domicilio.Vacio(),
+            null,
+            null,
+            null,
+            porcentajeMaximoDescuento,
+            null,
+            null,
+            true,
+            null,
+            false,
+            0m,
+            null,
+            false,
+            0m,
+            null,
+            null);
+        return tercero;
     }
 
     private static void SetProperty(object target, string propertyName, object? value)
@@ -899,8 +1042,9 @@ public class ImputarComprobanteCommandHandlerTests
         Substitute.For<IImputacionRepository>());
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
+    private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
 
-    private ImputarComprobanteCommandHandler Sut() => new(_comprobanteService, _uow, _user);
+    private ImputarComprobanteCommandHandler Sut() => new(_comprobanteService, _uow, _user, _db);
 
     [Fact]
     public async Task Handle_ImputacionValida_LlamaServicioYRetornaId()
@@ -909,7 +1053,7 @@ public class ImputarComprobanteCommandHandlerTests
         var imputacion = Imputacion.Crear(1, 2, 500m, DateOnly.FromDateTime(DateTime.Today), null);
         _comprobanteService
             .ImputarAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<decimal>(),
-                Arg.Any<DateOnly>(), Arg.Any<long?>(), Arg.Any<CancellationToken>())
+                Arg.Any<DateOnly>(), Arg.Any<long?>(), Arg.Any<long?>(), Arg.Any<long?>(), Arg.Any<CancellationToken>())
             .Returns(imputacion);
 
         var cmd = new ImputarComprobanteCommand(1, 2, 500m, DateOnly.FromDateTime(DateTime.Today));
@@ -929,9 +1073,10 @@ public class ImputarComprobantesMasivosCommandHandlerTests
         Substitute.For<IImputacionRepository>());
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
+    private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
 
     private ImputarComprobantesMasivosCommandHandler Sut() =>
-        new(_comprobanteService, _uow, _user);
+        new(_comprobanteService, _uow, _user, _db);
 
     [Fact]
     public async Task Handle_SinItems_RetornaFailure()
@@ -949,7 +1094,7 @@ public class ImputarComprobantesMasivosCommandHandlerTests
         var imputacion = Imputacion.Crear(1, 2, 500m, DateOnly.FromDateTime(DateTime.Today), null);
         _comprobanteService
             .ImputarAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<decimal>(),
-                Arg.Any<DateOnly>(), Arg.Any<long?>(), Arg.Any<CancellationToken>())
+                Arg.Any<DateOnly>(), Arg.Any<long?>(), Arg.Any<long?>(), Arg.Any<long?>(), Arg.Any<CancellationToken>())
             .Returns(imputacion);
 
         var items = new List<ImputacionMasivaItemDto>
@@ -970,7 +1115,7 @@ public class ImputarComprobantesMasivosCommandHandlerTests
     {
         _comprobanteService
             .ImputarAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<decimal>(),
-                Arg.Any<DateOnly>(), Arg.Any<long?>(), Arg.Any<CancellationToken>())
+                Arg.Any<DateOnly>(), Arg.Any<long?>(), Arg.Any<long?>(), Arg.Any<long?>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new InvalidOperationException("Saldo insuficiente"));
 
         var items = new List<ImputacionMasivaItemDto> { new(1, 2, 9999m) };
@@ -2092,7 +2237,7 @@ public class GetComprobanteDetalleQueryHandlerTests
         _repo.GetByIdConItemsAsync(Arg.Any<long>(), Arg.Any<CancellationToken>())
             .Returns(comp);
 
-        _imputRepo.GetByComprobanteDestinoAsync(Arg.Any<long>(), Arg.Any<CancellationToken>())
+        _imputRepo.GetByComprobanteDestinoAsync(Arg.Any<long>(), false, Arg.Any<CancellationToken>())
             .Returns(new List<Imputacion>().AsReadOnly() as IReadOnlyList<Imputacion>);
 
         var mockTerceros9 = MockDbSetHelper.CreateMockDbSet<Tercero>();
@@ -2144,7 +2289,7 @@ public class ConvertirPresupuestoCommandHandlerTests
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
 
-    private ConvertirPresupuestoCommandHandler Sut() => new(_comprobanteRepo, _db, _uow, _user);
+    private ConvertirPresupuestoCommandHandler Sut() => new(_comprobanteRepo, _db, _uow, _user, new TerceroOperacionValidationService(_db));
 
     [Fact]
     public async Task Handle_PresupuestoNoEncontrado_RetornaFailure()

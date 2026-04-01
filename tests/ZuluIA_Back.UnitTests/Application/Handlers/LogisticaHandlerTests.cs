@@ -4,8 +4,14 @@ using NSubstitute;
 using Xunit;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Logistica.Commands;
+using ZuluIA_Back.Application.Features.Logistica.Services;
+using ZuluIA_Back.Application.Features.OrdenesPreparacion.Commands;
+using ZuluIA_Back.Domain.Enums;
+using ZuluIA_Back.Domain.Interfaces;
+using ZuluIA_Back.Domain.Services;
 using ZuluIA_Back.Domain.Entities.Logistica;
 using ZuluIA_Back.UnitTests.Helpers;
+using LogisticaOrdenEmpaque = ZuluIA_Back.Domain.Entities.Logistica.OrdenEmpaque;
 
 namespace ZuluIA_Back.UnitTests.Application.Handlers;
 
@@ -18,8 +24,8 @@ public class CreateOrdenEmpaqueCommandHandlerTests
     [Fact]
     public async Task Handle_DatosValidos_CreaOrdenYPersiste()
     {
-        var ordenes = MockDbSetHelper.CreateMockDbSet<OrdenEmpaque>();
-        _db.OrdenesEmpaque.Returns(ordenes);
+        var ordenes = MockDbSetHelper.CreateMockDbSet<LogisticaOrdenEmpaque>();
+        _db.OrdenesEmpaquesLogistica.Returns(ordenes);
 
         var command = new CreateOrdenEmpaqueCommand(
             1,
@@ -44,7 +50,7 @@ public class CreateOrdenEmpaqueCommandHandlerTests
         var result = await Sut().Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        _db.OrdenesEmpaque.Received(1).Add(Arg.Any<OrdenEmpaque>());
+        _db.OrdenesEmpaquesLogistica.Received(1).Add(Arg.Any<LogisticaOrdenEmpaque>());
         await _db.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }
@@ -58,8 +64,8 @@ public class ConfirmOrdenEmpaqueCommandHandlerTests
     [Fact]
     public async Task Handle_OrdenNoEncontrada_RetornaFailure()
     {
-        var ordenes = MockDbSetHelper.CreateMockDbSet<OrdenEmpaque>();
-        _db.OrdenesEmpaque.Returns(ordenes);
+        var ordenes = MockDbSetHelper.CreateMockDbSet<LogisticaOrdenEmpaque>();
+        _db.OrdenesEmpaquesLogistica.Returns(ordenes);
 
         var result = await Sut().Handle(new ConfirmOrdenEmpaqueCommand(99), CancellationToken.None);
 
@@ -73,7 +79,7 @@ public class ConfirmOrdenEmpaqueCommandHandlerTests
         var orden = LogisticaHandlerTestHelper.CrearOrdenValida();
         LogisticaHandlerTestHelper.SetId(orden, 10L);
         var ordenes = MockDbSetHelper.CreateMockDbSet(new[] { orden });
-        _db.OrdenesEmpaque.Returns(ordenes);
+        _db.OrdenesEmpaquesLogistica.Returns(ordenes);
 
         var result = await Sut().Handle(new ConfirmOrdenEmpaqueCommand(10), CancellationToken.None);
 
@@ -92,8 +98,8 @@ public class CancelOrdenEmpaqueCommandHandlerTests
     [Fact]
     public async Task Handle_OrdenNoEncontrada_RetornaFailure()
     {
-        var ordenes = MockDbSetHelper.CreateMockDbSet<OrdenEmpaque>();
-        _db.OrdenesEmpaque.Returns(ordenes);
+        var ordenes = MockDbSetHelper.CreateMockDbSet<LogisticaOrdenEmpaque>();
+        _db.OrdenesEmpaquesLogistica.Returns(ordenes);
 
         var result = await Sut().Handle(new CancelOrdenEmpaqueCommand(99), CancellationToken.None);
 
@@ -107,7 +113,7 @@ public class CancelOrdenEmpaqueCommandHandlerTests
         var orden = LogisticaHandlerTestHelper.CrearOrdenValida();
         LogisticaHandlerTestHelper.SetId(orden, 10L);
         var ordenes = MockDbSetHelper.CreateMockDbSet(new[] { orden });
-        _db.OrdenesEmpaque.Returns(ordenes);
+        _db.OrdenesEmpaquesLogistica.Returns(ordenes);
 
         var result = await Sut().Handle(new CancelOrdenEmpaqueCommand(10), CancellationToken.None);
 
@@ -196,8 +202,8 @@ public class OrdenEmpaqueCommandValidatorTests
 
 internal static class LogisticaHandlerTestHelper
 {
-    public static OrdenEmpaque CrearOrdenValida()
-        => OrdenEmpaque.Crear(
+    public static LogisticaOrdenEmpaque CrearOrdenValida()
+        => LogisticaOrdenEmpaque.Crear(
             1, null, null, null, null, null, null, null, null,
             1m, new DateOnly(2026, 3, 20), null, null, null, null,
             100m, null);

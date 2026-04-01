@@ -34,7 +34,7 @@ public class ComprobanteServiceTests
 
         var svc = new ComprobanteService(comprobanteRepo, imputacionRepo);
 
-        var act = async () => await svc.ImputarAsync(1, 2, 100m, _fecha, null);
+        var act = async () => await svc.ImputarAsync(1, 2, 100m, _fecha, null, null, null);
 
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*origen*");
@@ -52,7 +52,7 @@ public class ComprobanteServiceTests
 
         var svc = new ComprobanteService(comprobanteRepo, imputacionRepo);
 
-        var act = async () => await svc.ImputarAsync(1, 2, 100m, _fecha, null);
+        var act = async () => await svc.ImputarAsync(1, 2, 100m, _fecha, null, null, null);
 
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*destino*");
@@ -74,7 +74,7 @@ public class ComprobanteServiceTests
         var svc = new ComprobanteService(comprobanteRepo, imputacionRepo);
 
         // importe 500 > origen.Saldo (0) → lanza
-        var act = async () => await svc.ImputarAsync(1, 2, 500m, _fecha, null);
+        var act = async () => await svc.ImputarAsync(1, 2, 500m, _fecha, null, null, null);
 
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*saldo*");
@@ -98,7 +98,7 @@ public class ComprobanteServiceTests
         var svc = new ComprobanteService(comprobanteRepo, imputacionRepo);
 
         // importe 500 ≤ origen.Saldo(1000) pero > destino.Saldo(0)
-        var act = async () => await svc.ImputarAsync(1, 2, 500m, _fecha, null);
+        var act = async () => await svc.ImputarAsync(1, 2, 500m, _fecha, null, null, null);
 
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*saldo*");
@@ -516,10 +516,11 @@ public class ProduccionServiceTests
             .Returns((FormulaProduccion?)null);
 
         var stockSvc = new StockService(stockRepo, movRepo);
-        var svc      = new ProduccionService(formulaRepo, stockSvc);
+        var consumoRepo = Substitute.For<IRepository<OrdenTrabajoConsumo>>();
+        var svc      = new ProduccionService(formulaRepo, stockSvc, consumoRepo);
 
         var ot  = CrearOrdenTrabajo(1);
-        var act = async () => await svc.EjecutarProduccionAsync(ot, null);
+        var act = async () => await svc.EjecutarProduccionAsync(ot, null, null, null);
 
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*fórmula*");
@@ -541,10 +542,11 @@ public class ProduccionServiceTests
         stockRepo.GetOrCreateAsync(99, 2, Arg.Any<CancellationToken>()).Returns(stockProducto);
 
         var stockSvc = new StockService(stockRepo, movRepo);
-        var svc      = new ProduccionService(formulaRepo, stockSvc);
+        var consumoRepo = Substitute.For<IRepository<OrdenTrabajoConsumo>>();
+        var svc      = new ProduccionService(formulaRepo, stockSvc, consumoRepo);
 
         var ot = CrearOrdenTrabajo(1);  // cantidad = 10, depositoDestino = 2
-        await svc.EjecutarProduccionAsync(ot, null);
+        await svc.EjecutarProduccionAsync(ot, null, null, null);
 
         // OT produce 10 unidades (factor = 10/5 = 2), ingresa producto terminado al deposito 2
         stockProducto.Cantidad.Should().Be(10m);

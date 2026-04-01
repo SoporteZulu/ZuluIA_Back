@@ -169,16 +169,18 @@ public class CreatePlanCuentaCommandHandlerTests
 
 public class RegistrarAsientoCommandHandlerTests
 {
+    private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
     private readonly ContabilidadService _service = Substitute.For<ContabilidadService>(
         Substitute.For<IAsientoRepository>(),
         Substitute.For<IEjercicioRepository>());
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
-    private RegistrarAsientoCommandHandler Sut() => new(_service, _uow, _user);
+    private RegistrarAsientoCommandHandler Sut() => new(_db, _service, _uow, _user);
 
     [Fact]
     public async Task Handle_ServicioRetornaAsiento_RetornaIdExitoso()
     {
+        _db.CierresPeriodoContable.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Fiscal.CierrePeriodoContable>());
         _user.UserId.Returns((long?)1L);
         var asiento = Asiento.Crear(1, 1, DateOnly.FromDateTime(DateTime.Today), 1, "Desc", null, null, null);
         _service.RegistrarAsientoAsync(

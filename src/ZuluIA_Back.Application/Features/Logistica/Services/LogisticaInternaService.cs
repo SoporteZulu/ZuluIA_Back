@@ -130,27 +130,121 @@ public class LogisticaInternaService(
         return transferencia;
     }
 
+    public async Task DespacharTransferenciaAsync(long id, CancellationToken ct)
+    {
+        var transferencia = await db.TransferenciasDeposito.Include(x => x.Detalles).FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct)
+            ?? throw new InvalidOperationException($"No se encontró la transferencia de depósito con ID {id}.");
+
+        var fechaOperacion = DateOnly.FromDateTime(DateTime.Today);
+
+        transferencia.Despachar(fechaOperacion, currentUser.UserId);
+
+        foreach (var detalle in transferencia.Detalles)
+        {
+            await stockService.EgresarAsync(
+                detalle.ItemId,
+                transferencia.DepositoOrigenId,
+                detalle.Cantidad,
+                TipoMovimientoStock.TransferenciaSalida,
+                "transferencias_deposito",
+                transferencia.Id,
+                transferencia.Observacion,
+                currentUser.UserId,
+                false,
+                ct);
+        }
+
+        transferenciaRepo.Update(transferencia);
+        await eventoRepo.AddAsync(LogisticaInternaEvento.Registrar(
+            transferencia.OrdenPreparacionId,
+            transferencia.Id,
+            TipoEventoLogisticaInterna.DespachoTransferenciaDeposito,
+            fechaOperacion,
+            transferencia.OrdenPreparacionId.HasValue
+                ? $"Transferencia #{transferencia.Id} despachada para la orden #{transferencia.OrdenPreparacionId.Value}."
+                : $"Transferencia #{transferencia.Id} despachada y en tránsito.",
+            currentUser.UserId), ct);
+    }
+
     public async Task ConfirmarTransferenciaAsync(long id, CancellationToken ct)
     {
         var transferencia = await db.TransferenciasDeposito.Include(x => x.Detalles).FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct)
             ?? throw new InvalidOperationException($"No se encontró la transferencia de depósito con ID {id}.");
 
-        foreach (var detalle in transferencia.Detalles)
+        var fechaOperacion = DateOnly.FromDateTime(DateTime.Today);
+
+        if (transferencia.Estado == EstadoTransferenciaDeposito.Borrador)
         {
-            await stockService.TransferirAsync(detalle.ItemId, transferencia.DepositoOrigenId, transferencia.DepositoDestinoId, detalle.Cantidad, transferencia.Observacion, currentUser.UserId, ct);
+            transferencia.Despachar(fechaOperacion, currentUser.UserId);
+
+            foreach (var detalle in transferencia.Detalles)
+            {
+                await stockService.EgresarAsync(
+                    detalle.ItemId,
+                    transferencia.DepositoOrigenId,
+                    detalle.Cantidad,
+                    TipoMovimientoStock.TransferenciaSalida,
+                    "transferencias_deposito",
+                    transferencia.Id,
+                    transferencia.Observacion,
+                    currentUser.UserId,
+                    false,
+                    ct);
+            }
+
+            await eventoRepo.AddAsync(LogisticaInternaEvento.Registrar(
+                transferencia.OrdenPreparacionId,
+                transferencia.Id,
+                TipoEventoLogisticaInterna.DespachoTransferenciaDeposito,
+                fechaOperacion,
+                transferencia.OrdenPreparacionId.HasValue
+                    ? $"Transferencia #{transferencia.Id} despachada para la orden #{transferencia.OrdenPreparacionId.Value}."
+                    : $"Transferencia #{transferencia.Id} despachada y en tránsito.",
+                currentUser.UserId), ct);
         }
 
-        transferencia.Confirmar(DateOnly.FromDateTime(DateTime.Today), currentUser.UserId);
+        foreach (var detalle in transferencia.Detalles)
+        {
+            await stockService.IngresarAsync(
+                detalle.ItemId,
+                transferencia.DepositoDestinoId,
+                detalle.Cantidad,
+                TipoMovimientoStock.TransferenciaEntrada,
+                "transferencias_deposito",
+                transferencia.Id,
+                transferencia.Observacion,
+                currentUser.UserId,
+                ct);
+        }
+
+        transferencia.Confirmar(fechaOperacion, currentUser.UserId);
         transferenciaRepo.Update(transferencia);
-        await eventoRepo.AddAsync(LogisticaInternaEvento.Registrar(transferencia.OrdenPreparacionId, transferencia.Id, TipoEventoLogisticaInterna.ConfirmacionTransferenciaDeposito, DateOnly.FromDateTime(DateTime.Today), transferencia.OrdenPreparacionId.HasValue
+        await eventoRepo.AddAsync(LogisticaInternaEvento.Registrar(transferencia.OrdenPreparacionId, transferencia.Id, TipoEventoLogisticaInterna.ConfirmacionTransferenciaDeposito, fechaOperacion, transferencia.OrdenPreparacionId.HasValue
             ? $"Transferencia #{transferencia.Id} confirmada para la orden #{transferencia.OrdenPreparacionId.Value}."
             : $"Transferencia #{transferencia.Id} confirmada.", currentUser.UserId), ct);
     }
 
     public async Task AnularTransferenciaAsync(long id, CancellationToken ct)
     {
-        var transferencia = await db.TransferenciasDeposito.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct)
+        var transferencia = await db.TransferenciasDeposito.Include(x => x.Detalles).FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct)
             ?? throw new InvalidOperationException($"No se encontró la transferencia de depósito con ID {id}.");
+
+        if (transferencia.Estado == EstadoTransferenciaDeposito.EnTransito)
+        {
+            foreach (var detalle in transferencia.Detalles)
+            {
+                await stockService.IngresarAsync(
+                    detalle.ItemId,
+                    transferencia.DepositoOrigenId,
+                    detalle.Cantidad,
+                    TipoMovimientoStock.TransferenciaEntrada,
+                    "transferencias_deposito",
+                    transferencia.Id,
+                    $"Reverso por anulación de transferencia #{transferencia.Id}.",
+                    currentUser.UserId,
+                    ct);
+            }
+        }
 
         transferencia.Anular(currentUser.UserId);
         transferenciaRepo.Update(transferencia);

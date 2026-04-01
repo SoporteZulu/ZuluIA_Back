@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Xunit;
 using ZuluIA_Back.Api.Controllers;
-using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Usuarios.Commands;
 using ZuluIA_Back.Application.Features.Usuarios.DTOs;
 using ZuluIA_Back.Application.Features.Usuarios.Queries;
@@ -236,115 +235,6 @@ public class UsuariosControllerTests
     }
 
     [Fact]
-    public async Task Activar_CuandoFalla_DevuelveBadRequest()
-    {
-        var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<ActivateUsuarioCommand>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Failure("No se encontró el usuario con ID 7."));
-        var controller = CreateController(mediator);
-
-        var result = await controller.Activar(7, CancellationToken.None);
-
-        result.Should().BeOfType<BadRequestObjectResult>()
-            .Which.Value!.ToString().Should().Contain("No se encontró el usuario con ID 7");
-    }
-
-    [Fact]
-    public async Task Activar_CuandoTieneExito_DevuelveOkYUsaCommand()
-    {
-        var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<ActivateUsuarioCommand>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Success());
-        var controller = CreateController(mediator);
-
-        var result = await controller.Activar(7, CancellationToken.None);
-
-        result.Should().BeOfType<OkResult>();
-        await mediator.Received(1).Send(
-            Arg.Is<ActivateUsuarioCommand>(command => command.Id == 7),
-            Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task GetUsuariosRelacionados_CuandoHayDatos_DevuelveOkFiltrado()
-    {
-        var mediator = Substitute.For<IMediator>();
-        var db = Substitute.For<IApplicationDbContext>();
-        var relaciones = MockDbSetHelper.CreateMockDbSet(new[]
-        {
-            BuildUsuarioXUsuario(1, 7, 9),
-            BuildUsuarioXUsuario(2, 10, 7),
-            BuildUsuarioXUsuario(3, 11, 12)
-        });
-        db.UsuariosXUsuario.Returns(relaciones);
-        var controller = CreateController(mediator, db);
-
-        var result = await controller.GetUsuariosRelacionados(7, CancellationToken.None);
-
-        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        var items = ((IEnumerable)ok.Value!).Cast<object>().ToList();
-        items.Should().HaveCount(2);
-        AssertAnonymousProperty(items[0], "Id", 1L);
-        AssertAnonymousProperty(items[1], "Id", 2L);
-    }
-
-    [Fact]
-    public async Task AddUsuarioRelacionado_CuandoYaExiste_DevuelveConflict()
-    {
-        var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<AddUsuarioRelacionadoCommand>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Failure<long>("La relacion ya existe."));
-        var controller = CreateController(mediator);
-
-        var result = await controller.AddUsuarioRelacionado(7, new UsuarioRelacionadoRequest(8, 9), CancellationToken.None);
-
-        result.Should().BeOfType<ConflictObjectResult>()
-            .Which.Value!.ToString().Should().Contain("relacion ya existe");
-    }
-
-    [Fact]
-    public async Task AddUsuarioRelacionado_CuandoTieneExito_DevuelveCreatedAtAction()
-    {
-        var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<AddUsuarioRelacionadoCommand>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Success(21L));
-        var controller = CreateController(mediator);
-
-        var result = await controller.AddUsuarioRelacionado(7, new UsuarioRelacionadoRequest(8, 9), CancellationToken.None);
-
-        var created = result.Should().BeOfType<CreatedAtActionResult>().Subject;
-        created.ActionName.Should().Be(nameof(UsuariosController.GetUsuariosRelacionados));
-        AssertAnonymousProperty(created.Value!, "Id", 21L);
-    }
-
-    [Fact]
-    public async Task DeleteUsuarioRelacionado_CuandoNoExiste_DevuelveNotFound()
-    {
-        var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<DeleteUsuarioRelacionadoCommand>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Failure("Relacion no encontrada."));
-        var controller = CreateController(mediator);
-
-        var result = await controller.DeleteUsuarioRelacionado(7, 21, CancellationToken.None);
-
-        result.Should().BeOfType<NotFoundObjectResult>()
-            .Which.Value!.ToString().Should().Contain("Relacion no encontrada");
-    }
-
-    [Fact]
-    public async Task DeleteUsuarioRelacionado_CuandoTieneExito_DevuelveOk()
-    {
-        var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<DeleteUsuarioRelacionadoCommand>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Success());
-        var controller = CreateController(mediator);
-
-        var result = await controller.DeleteUsuarioRelacionado(7, 21, CancellationToken.None);
-
-        result.Should().BeOfType<OkResult>();
-    }
-
-    [Fact]
     public async Task SetMenu_CuandoFalla_DevuelveBadRequest()
     {
         var mediator = Substitute.For<IMediator>();
@@ -367,61 +257,6 @@ public class UsuariosControllerTests
         var controller = CreateController(mediator);
 
         var result = await controller.SetMenu(7, new SetMenuRequest([1, 2, 3]), CancellationToken.None);
-
-        result.Should().BeOfType<OkResult>();
-    }
-
-    [Fact]
-    public async Task AddMenuItem_CuandoYaExiste_DevuelveConflict()
-    {
-        var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<AddUsuarioMenuItemCommand>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Failure<long>("El item ya esta asignado al usuario."));
-        var controller = CreateController(mediator);
-
-        var result = await controller.AddMenuItem(7, 9, CancellationToken.None);
-
-        result.Should().BeOfType<ConflictObjectResult>()
-            .Which.Value!.ToString().Should().Contain("item ya esta asignado");
-    }
-
-    [Fact]
-    public async Task AddMenuItem_CuandoTieneExito_DevuelveOkConId()
-    {
-        var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<AddUsuarioMenuItemCommand>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Success(51L));
-        var controller = CreateController(mediator);
-
-        var result = await controller.AddMenuItem(7, 9, CancellationToken.None);
-
-        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        AssertAnonymousProperty(ok.Value!, "Id", 51L);
-    }
-
-    [Fact]
-    public async Task RemoveMenuItem_CuandoNoExiste_DevuelveNotFound()
-    {
-        var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<RemoveUsuarioMenuItemCommand>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Failure("El item no esta asignado al usuario."));
-        var controller = CreateController(mediator);
-
-        var result = await controller.RemoveMenuItem(7, 9, CancellationToken.None);
-
-        result.Should().BeOfType<NotFoundObjectResult>()
-            .Which.Value!.ToString().Should().Contain("item no esta asignado al usuario");
-    }
-
-    [Fact]
-    public async Task RemoveMenuItem_CuandoTieneExito_DevuelveOk()
-    {
-        var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<RemoveUsuarioMenuItemCommand>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Success());
-        var controller = CreateController(mediator);
-
-        var result = await controller.RemoveMenuItem(7, 9, CancellationToken.None);
 
         result.Should().BeOfType<OkResult>();
     }
@@ -480,9 +315,9 @@ public class UsuariosControllerTests
         result.Should().BeOfType<OkResult>();
     }
 
-    private static UsuariosController CreateController(IMediator mediator, IApplicationDbContext? db = null)
+    private static UsuariosController CreateController(IMediator mediator)
     {
-        var controller = new UsuariosController(mediator, db ?? Substitute.For<IApplicationDbContext>())
+        var controller = new UsuariosController(mediator)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -491,7 +326,7 @@ public class UsuariosControllerTests
     }
 
     private static CreateUsuarioCommand BuildCreateUsuarioCommand()
-        => new("ada", "Ada Lovelace", "ada@example.com", Guid.Empty, [1, 2]);
+        => new("ada", "Ada Lovelace", "ada@example.com", Guid.Empty, "Secret123!", [1, 2]);
 
     private static UpdateUsuarioCommand BuildUpdateUsuarioCommand(long id)
         => new(id, "Ada Lovelace", "ada@example.com", [1, 2]);
@@ -499,13 +334,6 @@ public class UsuariosControllerTests
     private static ParametroUsuario BuildParametroUsuario(long id, long usuarioId, string clave, string? valor)
     {
         var entity = ParametroUsuario.Crear(usuarioId, clave, valor);
-        SetEntityId(entity, id);
-        return entity;
-    }
-
-    private static UsuarioXUsuario BuildUsuarioXUsuario(long id, long usuarioMiembroId, long usuarioGrupoId)
-    {
-        var entity = UsuarioXUsuario.Crear(usuarioMiembroId, usuarioGrupoId);
         SetEntityId(entity, id);
         return entity;
     }

@@ -24,6 +24,39 @@ public class ListasPreciosController(IMediator mediator, IApplicationDbContext d
     }
 
     /// <summary>
+    /// Retorna las listas de precios paginadas con filtros operativos.
+    /// </summary>
+    [HttpGet("paginado")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPaged(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        [FromQuery] long? monedaId = null,
+        [FromQuery] bool? soloActivas = null,
+        [FromQuery] bool? esPorDefecto = null,
+        [FromQuery] bool? soloVigentes = null,
+        [FromQuery] DateOnly? fecha = null,
+        [FromQuery] long? listaPadreId = null,
+        CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(
+            new GetListasPreciosPagedQuery(
+                page,
+                pageSize,
+                search,
+                monedaId,
+                soloActivas,
+                esPorDefecto,
+                soloVigentes,
+                fecha,
+                listaPadreId),
+            ct);
+
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Retorna el detalle completo de una lista con todos sus ítems y precios.
     /// </summary>
     [HttpGet("{id:long}", Name = "GetListaPreciosById")]
@@ -47,6 +80,37 @@ public class ListasPreciosController(IMediator mediator, IApplicationDbContext d
         CancellationToken ct)
     {
         var result = await Mediator.Send(new GetPrecioItemQuery(id, itemId), ct);
+        return OkOrNotFound(result);
+    }
+
+    /// <summary>
+    /// Resuelve el precio final aplicable para un ítem considerando listas,
+    /// herencia, promociones y precios especiales.
+    /// </summary>
+    [HttpGet("resolver/{itemId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ResolvePrecio(
+        long itemId,
+        [FromQuery] long monedaId,
+        [FromQuery] DateOnly? fecha = null,
+        [FromQuery] long? terceroId = null,
+        [FromQuery] long? listaPreciosId = null,
+        [FromQuery] long? canalVentaId = null,
+        [FromQuery] long? vendedorId = null,
+        CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(
+            new ResolvePrecioListaQuery(
+                itemId,
+                monedaId,
+                fecha ?? DateOnly.FromDateTime(DateTime.Today),
+                terceroId,
+                listaPreciosId,
+                canalVentaId,
+                vendedorId),
+            ct);
+
         return OkOrNotFound(result);
     }
 

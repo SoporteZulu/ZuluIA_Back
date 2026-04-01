@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Terceros.Services;
 using ZuluIA_Back.Application.Features.Comprobantes.Services;
 using ZuluIA_Back.Application.Features.Facturacion.Services;
 using ZuluIA_Back.Domain.Common;
@@ -18,7 +19,8 @@ public class EmitirComprobanteCommandHandler(
     IAfipCaeComprobanteService afipCaeComprobanteService,
     IUnitOfWork uow,
     ICurrentUserService currentUser,
-    IApplicationDbContext db)
+    IApplicationDbContext db,
+    TerceroOperacionValidationService terceroOperacionValidationService)
     : IRequestHandler<EmitirComprobanteCommand, Result<long>>
 {
     public async Task<Result<long>> Handle(
@@ -46,6 +48,29 @@ public class EmitirComprobanteCommandHandler(
         if (tipoComp is null)
             return Result.Failure<long>(
                 $"No se encontró el tipo de comprobante ID {request.TipoComprobanteId}.");
+
+        if (tipoComp.EsVenta)
+        {
+            var validationError = await terceroOperacionValidationService.ValidateClienteAsync(request.TerceroId, ct);
+            if (validationError is not null)
+                return Result.Failure<long>(validationError);
+
+            var descuentoValidationError = await ClienteDescuentoMaximoValidator.ValidateAsync(
+                db,
+                request.TerceroId,
+                request.Items.Select(x => x.DescuentoPct),
+                ct);
+
+            if (descuentoValidationError is not null)
+                return Result.Failure<long>(descuentoValidationError);
+        }
+
+        if (tipoComp.EsCompra)
+        {
+            var validationError = await terceroOperacionValidationService.ValidateProveedorAsync(request.TerceroId, ct);
+            if (validationError is not null)
+                return Result.Failure<long>(validationError);
+        }
 
         // 4. Obtener próximo número
         short prefijo = 1;

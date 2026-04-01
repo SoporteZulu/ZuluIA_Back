@@ -201,6 +201,7 @@ public class UpdateItemCommandValidatorTests
         CodigoBarras: null,
         UnidadMedidaId: 1,
         AlicuotaIvaId: 1,
+        AlicuotaIvaCompraId: null,
         MonedaId: 1,
         EsProducto: true,
         EsServicio: false,
@@ -211,6 +212,10 @@ public class UpdateItemCommandValidatorTests
         PrecioVenta: 150m,
         StockMinimo: 5m,
         StockMaximo: 100m,
+        PuntoReposicion: 8m,
+        StockSeguridad: 3m,
+        Peso: 1.2m,
+        Volumen: 0.6m,
         CodigoAfip: null);
 
     [Fact]
@@ -266,6 +271,34 @@ public class UpdateItemCommandValidatorTests
     {
         var cmd = ComandoValido() with { StockMaximo = null };
         _v.TestValidate(cmd).ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void PorcentajeGananciaNegativo_DebeProducirError()
+    {
+        _v.TestValidate(ComandoValido() with { PorcentajeGanancia = -1m })
+            .ShouldHaveValidationErrorFor(x => x.PorcentajeGanancia);
+    }
+
+    [Fact]
+    public void PorcentajeMaximoDescuentoFueraDeRango_DebeProducirError()
+    {
+        _v.TestValidate(ComandoValido() with { PorcentajeMaximoDescuento = 101m })
+            .ShouldHaveValidationErrorFor(x => x.PorcentajeMaximoDescuento);
+    }
+
+    [Fact]
+    public void DepositoDefaultSinStock_DebeProducirError()
+    {
+        _v.TestValidate(ComandoValido() with { ManejaStock = false, DepositoDefaultId = 7L })
+            .ShouldHaveAnyValidationError();
+    }
+
+    [Fact]
+    public void AlicuotaIvaCompraIdCero_DebeProducirError()
+    {
+        _v.TestValidate(ComandoValido() with { AlicuotaIvaCompraId = 0 })
+            .ShouldHaveValidationErrorFor(x => x.AlicuotaIvaCompraId);
     }
 }
 

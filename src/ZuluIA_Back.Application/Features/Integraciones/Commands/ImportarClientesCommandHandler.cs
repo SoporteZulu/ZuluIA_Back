@@ -38,6 +38,15 @@ public class ImportarClientesCommandHandler(
                         TipoPersoneria: null,
                         Nombre: null,
                         Apellido: null,
+                        Tratamiento: null,
+                        Profesion: null,
+                        EstadoPersonaId: null,
+                        EstadoCivilId: null,
+                        EstadoCivil: null,
+                        Nacionalidad: null,
+                        Sexo: null,
+                        FechaNacimiento: null,
+                        FechaRegistro: null,
                         EsEntidadGubernamental: false,
                         ClaveFiscal: null,
                         ValorClaveFiscal: null,
@@ -52,6 +61,8 @@ public class ImportarClientesCommandHandler(
                         Piso: cliente.Piso,
                         Dpto: cliente.Dpto,
                         CodigoPostal: cliente.CodigoPostal,
+                        PaisId: null,
+                        ProvinciaId: null,
                         LocalidadId: cliente.LocalidadId,
                         BarrioId: cliente.BarrioId,
                         NroIngresosBrutos: cliente.NroIngresosBrutos,
@@ -62,14 +73,29 @@ public class ImportarClientesCommandHandler(
                         Web: cliente.Web,
                         MonedaId: cliente.MonedaId,
                         CategoriaId: cliente.CategoriaId,
+                        CategoriaClienteId: null,
+                        EstadoClienteId: null,
+                        CategoriaProveedorId: null,
+                        EstadoProveedorId: null,
                         LimiteCredito: cliente.LimiteCredito,
+                        PorcentajeMaximoDescuento: null,
+                        VigenciaCreditoDesde: null,
+                        VigenciaCreditoHasta: null,
                         Facturable: cliente.Facturable,
                         CobradorId: cliente.CobradorId,
+                        AplicaComisionCobrador: false,
                         PctComisionCobrador: cliente.PctComisionCobrador,
                         VendedorId: cliente.VendedorId,
+                        AplicaComisionVendedor: false,
                         PctComisionVendedor: cliente.PctComisionVendedor,
                         Observacion: cliente.Observacion,
-                        SucursalId: cliente.SucursalId), ct);
+                        SucursalId: cliente.SucursalId,
+                        PerfilComercial: null,
+                        Domicilios: null,
+                        Contactos: null,
+                        SucursalesEntrega: null,
+                        Transportes: null,
+                        VentanasCobranza: null), ct);
 
                     if (!result.IsSuccess)
                     {
@@ -96,6 +122,13 @@ public class ImportarClientesCommandHandler(
                     Domain.Enums.TipoPersoneriaTercero.Juridica,
                     null,
                     null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
                     false,
                     null,
                     null,
@@ -112,16 +145,26 @@ public class ImportarClientesCommandHandler(
                     cliente.NroIngresosBrutos,
                     cliente.NroMunicipal,
                     cliente.LimiteCredito,
+                    null,
+                    null,
+                    null,
                     cliente.Facturable,
                     cliente.CobradorId,
+                    false,
                     cliente.PctComisionCobrador,
                     cliente.VendedorId,
+                    false,
                     cliente.PctComisionVendedor,
                     cliente.Observacion,
                     null);
                 existente.ActualizarRoles(cliente.EsCliente, cliente.EsProveedor, cliente.EsEmpleado, null);
                 existente.SetMoneda(cliente.MonedaId);
                 existente.SetCategoria(cliente.CategoriaId);
+                existente.SetPais(null);
+                existente.SetCategoriaCliente(null);
+                existente.SetEstadoCliente(null);
+                existente.SetCategoriaProveedor(null);
+                existente.SetEstadoProveedor(null);
                 existente.SetSucursal(cliente.SucursalId);
                 repo.Update(existente);
                 await uow.SaveChangesAsync(ct);

@@ -8,16 +8,24 @@ public class ReciboItem : BaseEntity
     public string Descripcion { get; private set; } = string.Empty;
     public decimal Importe { get; private set; }
 
+    // Vinculación a comprobante imputado
+    public long? ComprobanteImputadoId { get; private set; }
+
     private ReciboItem() { }
 
-    public static ReciboItem Crear(long reciboId, string descripcion, decimal importe)
+    public static ReciboItem Crear(
+        long reciboId,
+        string descripcion,
+        decimal importe,
+        long? comprobanteImputadoId = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(importe);
         return new ReciboItem
         {
-            ReciboId    = reciboId,
-            Descripcion = descripcion.Trim(),
-            Importe     = importe
+            ReciboId                = reciboId,
+            Descripcion             = descripcion.Trim(),
+            Importe                 = importe,
+            ComprobanteImputadoId   = comprobanteImputadoId
         };
     }
 }

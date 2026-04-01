@@ -36,6 +36,16 @@ public class RegistrarCobroCommandHandler(
             request.MonedaId,
             request.Cotizacion,
             request.Observacion,
+            null,
+            null,
+            null,
+            currentUser.UserId,
+            null,
+            TipoCobro.Administrativo,
+            null,
+            null,
+            null,
+            null,
             currentUser.UserId);
 
         // 3. Agregar medios

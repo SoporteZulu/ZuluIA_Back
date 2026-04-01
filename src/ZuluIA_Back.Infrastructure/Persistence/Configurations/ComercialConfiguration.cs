@@ -124,3 +124,22 @@ public class ComprobanteItemAtributoComercialConfiguration : IEntityTypeConfigur
         builder.HasIndex(x => new { x.ComprobanteItemId, x.AtributoComercialId }).IsUnique();
     }
 }
+
+public class ItemAtributoComercialConfiguration : IEntityTypeConfiguration<ItemAtributoComercial>
+{
+    public void Configure(EntityTypeBuilder<ItemAtributoComercial> builder)
+    {
+        builder.ToTable("items_atributos_comerciales");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasColumnName("id").UseIdentityColumn();
+        builder.Property(x => x.ItemId).HasColumnName("item_id").IsRequired();
+        builder.Property(x => x.AtributoComercialId).HasColumnName("atributo_comercial_id").IsRequired();
+        builder.Property(x => x.Valor).HasColumnName("valor").HasMaxLength(300).IsRequired();
+        builder.Property(x => x.CreatedAt).HasColumnName("created_at");
+        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        builder.Property(x => x.DeletedAt).HasColumnName("deleted_at");
+        builder.Property(x => x.CreatedBy).HasColumnName("created_by");
+        builder.Property(x => x.UpdatedBy).HasColumnName("updated_by");
+        builder.HasIndex(x => new { x.ItemId, x.AtributoComercialId }).IsUnique();
+    }
+}

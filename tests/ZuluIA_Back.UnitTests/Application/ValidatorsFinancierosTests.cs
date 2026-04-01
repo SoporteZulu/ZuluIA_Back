@@ -91,6 +91,16 @@ public class CreateChequeCommandValidatorTests
         FechaVencimiento: Hoy.AddDays(30),
         Importe: 5000m,
         MonedaId: 1,
+        Tipo: ZuluIA_Back.Domain.Enums.TipoCheque.Tercero,
+        EsALaOrden: true,
+        EsCruzado: false,
+        Titular: "Titular Demo",
+        Cuit: null,
+        Plaza: null,
+        CodigoSucursalBancaria: null,
+        CodigoPostal: null,
+        ChequeraId: null,
+        ComprobanteOrigenId: null,
         Observacion: null);
 
     [Fact]
@@ -145,6 +155,25 @@ public class CreateChequeCommandValidatorTests
         });
         result.ShouldHaveValidationErrorFor(x => x.FechaVencimiento);
     }
+
+    [Fact]
+    public void ChequeTerceroSinTitular_DebeHaveError()
+    {
+        var result = _validator.TestValidate(ComandoValido() with { Titular = null });
+        result.ShouldHaveValidationErrorFor(x => x.Titular);
+    }
+
+    [Fact]
+    public void ChequePropioSinChequera_DebeHaveError()
+    {
+        var result = _validator.TestValidate(ComandoValido() with
+        {
+            Tipo = ZuluIA_Back.Domain.Enums.TipoCheque.Propio,
+            Titular = null,
+            ChequeraId = null
+        });
+        result.ShouldHaveValidationErrorFor(x => x.ChequeraId);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -197,7 +226,7 @@ public class RegistrarCotizacionCommandValidatorTests
 // ─────────────────────────────────────────────────────────────────────────────
 // ImputarComprobanteCommandValidator
 // ─────────────────────────────────────────────────────────────────────────────
-public class ImputarComprobanteCommandValidatorTests
+public class ImputarComprobanteCommandValidatorRegressionTests
 {
     private readonly ImputarComprobanteCommandValidator _validator = new();
     private static readonly DateOnly Hoy = DateOnly.FromDateTime(DateTime.Today);

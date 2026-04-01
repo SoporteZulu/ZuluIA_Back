@@ -46,7 +46,15 @@ public class ChequesControllerTests
             .Returns(paged);
         var controller = CreateController(mediator: mediator);
 
-        var result = await controller.GetAll(2, 15, 5, 10, "depositado", new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 31), CancellationToken.None);
+        var result = await controller.GetAll(
+            page: 2,
+            pageSize: 15,
+            cajaId: 5,
+            terceroId: 10,
+            estado: "depositado",
+            desde: new DateOnly(2026, 3, 1),
+            hasta: new DateOnly(2026, 3, 31),
+            ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var payload = ok.Value.Should().BeOfType<PagedResult<ChequeDto>>().Subject;
@@ -194,6 +202,47 @@ public class ChequesControllerTests
     }
 
     [Fact]
+    public async Task Endosar_CuandoTieneExito_DevuelveOkYMandaAccionCorrecta()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<CambiarEstadoChequeCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success());
+        var controller = CreateController(mediator: mediator);
+
+        var result = await controller.Endosar(7, new EndosarChequeRequest(new DateOnly(2026, 3, 22), 99, "Endoso"), CancellationToken.None);
+
+        result.Should().BeOfType<OkResult>();
+        await mediator.Received(1).Send(
+            Arg.Is<CambiarEstadoChequeCommand>(c =>
+                c.Id == 7 &&
+                c.Accion == AccionCheque.Endosar &&
+                c.Fecha == new DateOnly(2026, 3, 22) &&
+                c.TerceroId == 99 &&
+                c.Observacion == "Endoso"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Anular_CuandoTieneExito_DevuelveOkYMandaAccionCorrecta()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<CambiarEstadoChequeCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success());
+        var controller = CreateController(mediator: mediator);
+
+        var result = await controller.Anular(7, new AnularChequeRequest(new DateOnly(2026, 3, 22), "Error de emisión"), CancellationToken.None);
+
+        result.Should().BeOfType<OkResult>();
+        await mediator.Received(1).Send(
+            Arg.Is<CambiarEstadoChequeCommand>(c =>
+                c.Id == 7 &&
+                c.Accion == AccionCheque.Anular &&
+                c.Fecha == new DateOnly(2026, 3, 22) &&
+                c.Observacion == "Error de emisión"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Rechazar_CuandoFalla_DevuelveBadRequestYMandaObservacion()
     {
         var mediator = Substitute.For<IMediator>();
@@ -201,7 +250,7 @@ public class ChequesControllerTests
             .Returns(Result.Failure("El cheque ya está rechazado."));
         var controller = CreateController(mediator: mediator);
 
-        var result = await controller.Rechazar(7, new RechazarChequeRequest("firma inválida"), CancellationToken.None);
+        var result = await controller.Rechazar(7, new RechazarChequeRequest(null, "FIRMA_INVALIDA", "firma inválida", null), CancellationToken.None);
 
         result.Should().BeOfType<BadRequestObjectResult>();
         await mediator.Received(1).Send(
@@ -210,7 +259,8 @@ public class ChequesControllerTests
                 c.Accion == AccionCheque.Rechazar &&
                 c.Fecha == null &&
                 c.FechaAcreditacion == null &&
-                c.Observacion == "firma inválida"),
+                c.Observacion == "firma inválida" &&
+                c.ConceptoRechazo == "FIRMA_INVALIDA"),
             Arg.Any<CancellationToken>());
     }
 
@@ -222,7 +272,7 @@ public class ChequesControllerTests
             .Returns(Result.Success());
         var controller = CreateController(mediator: mediator);
 
-        var result = await controller.Rechazar(7, new RechazarChequeRequest("firma inválida"), CancellationToken.None);
+        var result = await controller.Rechazar(7, new RechazarChequeRequest(null, "FIRMA_INVALIDA", "firma inválida", null), CancellationToken.None);
 
         result.Should().BeOfType<OkResult>();
         await mediator.Received(1).Send(
@@ -231,7 +281,8 @@ public class ChequesControllerTests
                 c.Accion == AccionCheque.Rechazar &&
                 c.Fecha == null &&
                 c.FechaAcreditacion == null &&
-                c.Observacion == "firma inválida"),
+                c.Observacion == "firma inválida" &&
+                c.ConceptoRechazo == "FIRMA_INVALIDA"),
             Arg.Any<CancellationToken>());
     }
 
@@ -243,7 +294,7 @@ public class ChequesControllerTests
             .Returns(Result.Success());
         var controller = CreateController(mediator: mediator);
 
-        var result = await controller.Entregar(7, CancellationToken.None);
+        var result = await controller.Entregar(7, new EntregarChequeRequest(null, null, null), CancellationToken.None);
 
         result.Should().BeOfType<OkResult>();
     }
@@ -256,7 +307,7 @@ public class ChequesControllerTests
             .Returns(Result.Failure("El cheque no está en cartera."));
         var controller = CreateController(mediator: mediator);
 
-        var result = await controller.Entregar(7, CancellationToken.None);
+        var result = await controller.Entregar(7, new EntregarChequeRequest(null, null, null), CancellationToken.None);
 
         result.Should().BeOfType<BadRequestObjectResult>();
     }
@@ -291,7 +342,8 @@ public class ChequesControllerTests
         EstadoCheque estado,
         long? terceroId)
     {
-        var entity = Cheque.Crear(cajaId, terceroId, nroCheque, banco, fechaEmision, fechaVencimiento, importe, monedaId, null, 1);
+        var entity = Cheque.Crear(cajaId, terceroId, nroCheque, banco, fechaEmision, fechaVencimiento, importe, monedaId,
+            TipoCheque.Tercero, true, false, "Titular Demo", null, null, null, null, null, 1);
         SetProperty(entity, nameof(Cheque.Id), id);
         SetProperty(entity, nameof(Cheque.Estado), estado);
         return entity;
@@ -300,15 +352,25 @@ public class ChequesControllerTests
     private static CreateChequeCommand BuildCreateChequeCommand()
     {
         return new CreateChequeCommand(
-            5,
-            10,
-            "0001",
-            "Nacion",
-            new DateOnly(2026, 3, 1),
-            new DateOnly(2026, 3, 30),
-            100m,
-            1,
-            "Cheque de prueba");
+            CajaId: 5,
+            TerceroId: 10,
+            NroCheque: "0001",
+            Banco: "Nacion",
+            FechaEmision: new DateOnly(2026, 3, 1),
+            FechaVencimiento: new DateOnly(2026, 3, 30),
+            Importe: 100m,
+            MonedaId: 1,
+            Tipo: TipoCheque.Tercero,
+            EsALaOrden: true,
+            EsCruzado: false,
+            Titular: "Titular Demo",
+            Cuit: null,
+            Plaza: null,
+            CodigoSucursalBancaria: null,
+            CodigoPostal: null,
+            ChequeraId: null,
+            ComprobanteOrigenId: null,
+            Observacion: "Cheque de prueba");
     }
 
     private static void SetProperty(object target, string propertyName, object? value)

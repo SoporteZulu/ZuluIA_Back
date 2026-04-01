@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using MediatR;
+using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Terceros.DTOs;
 using ZuluIA_Back.Domain.Interfaces;
 
@@ -14,6 +15,7 @@ public record GetClientesActivosQuery(long? SucursalId = null)
 
 public class GetClientesActivosQueryHandler(
     ITerceroRepository repo,
+    IApplicationDbContext db,
     IMapper mapper)
     : IRequestHandler<GetClientesActivosQuery, IReadOnlyList<TerceroSelectorDto>>
 {
@@ -22,6 +24,8 @@ public class GetClientesActivosQueryHandler(
         CancellationToken ct)
     {
         var clientes = await repo.GetClientesActivosAsync(request.SucursalId, ct);
-        return mapper.Map<IReadOnlyList<TerceroSelectorDto>>(clientes);
+        var dtos = mapper.Map<List<TerceroSelectorDto>>(clientes);
+        await TerceroSelectorReadModelLoader.LoadUbicacionAsync(db, clientes, dtos, ct);
+        return dtos;
     }
 }

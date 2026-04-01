@@ -19,6 +19,10 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
                .HasMaxLength(50) // Fusión: se amplía a 50
                .IsRequired();
 
+        builder.Property(x => x.CodigoAlternativo)
+               .HasColumnName("codigo_alternativo")
+               .HasMaxLength(50);
+
         builder.Property(x => x.CodigoBarras)
                .HasColumnName("codigo_barras")
                .HasMaxLength(50);
@@ -45,6 +49,12 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
         builder.Property(x => x.AlicuotaIvaId)
                .HasColumnName("alicuota_iva_id")
                .IsRequired();
+
+        builder.Property(x => x.AlicuotaIvaCompraId)
+               .HasColumnName("alicuota_iva_compra_id");
+
+        builder.Property(x => x.ImpuestoInternoId)
+               .HasColumnName("impuesto_interno_id");
 
         builder.Property(x => x.MonedaId)
                .HasColumnName("moneda_id")
@@ -89,6 +99,38 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
                .HasColumnName("stock_maximo")
                .HasPrecision(18, 4);
 
+        builder.Property(x => x.PuntoReposicion)
+               .HasColumnName("punto_reposicion")
+               .HasPrecision(18, 4);
+
+        builder.Property(x => x.StockSeguridad)
+               .HasColumnName("stock_seguridad")
+               .HasPrecision(18, 4);
+
+        builder.Property(x => x.Peso)
+               .HasColumnName("peso")
+               .HasPrecision(18, 4);
+
+        builder.Property(x => x.Volumen)
+               .HasColumnName("volumen")
+               .HasPrecision(18, 4);
+
+        builder.Property(x => x.EsTrazable)
+               .HasColumnName("es_trazable")
+               .HasDefaultValue(false)
+               .IsRequired();
+
+        builder.Property(x => x.PermiteFraccionamiento)
+               .HasColumnName("permite_fraccionamiento")
+               .HasDefaultValue(false)
+               .IsRequired();
+
+        builder.Property(x => x.DiasVencimientoLimite)
+               .HasColumnName("dias_vencimiento_limite");
+
+        builder.Property(x => x.DepositoDefaultId)
+               .HasColumnName("deposito_default_id");
+
         builder.Property(x => x.CodigoAfip)
                .HasColumnName("codigo_afip")
                .HasMaxLength(50);
@@ -101,6 +143,35 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
                .HasDefaultValue(true)
                .IsRequired();
 
+        // ── Fase 1: Campos Esenciales de Ventas ──────────────────────────────
+        builder.Property(x => x.AplicaVentas)
+               .HasColumnName("aplica_ventas")
+               .HasDefaultValue(true)
+               .IsRequired();
+
+        builder.Property(x => x.AplicaCompras)
+               .HasColumnName("aplica_compras")
+               .HasDefaultValue(true)
+               .IsRequired();
+
+        builder.Property(x => x.PorcentajeGanancia)
+               .HasColumnName("porcentaje_ganancia")
+               .HasPrecision(18, 4);
+
+        builder.Property(x => x.PorcentajeMaximoDescuento)
+               .HasColumnName("porcentaje_maximo_descuento")
+               .HasPrecision(18, 4);
+
+        builder.Property(x => x.EsRpt)
+               .HasColumnName("es_rpt")
+               .HasDefaultValue(false)
+               .IsRequired();
+
+        builder.Property(x => x.EsSistema)
+               .HasColumnName("es_sistema")
+               .HasDefaultValue(false)
+               .IsRequired();
+
         // Auditoría
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
@@ -108,13 +179,22 @@ public class ItemConfiguration : IEntityTypeConfiguration<Item>
         builder.Property(x => x.CreatedBy).HasColumnName("created_by");
         builder.Property(x => x.UpdatedBy).HasColumnName("updated_by");
 
-        // Índices
+        // Índices existentes
         builder.HasIndex(x => x.Codigo).IsUnique();
+        builder.HasIndex(x => x.CodigoAlternativo);
         builder.HasIndex(x => x.CodigoBarras);
         builder.HasIndex(x => x.CategoriaId);
         builder.HasIndex(x => x.MarcaId);
         builder.HasIndex(x => x.Activo);
         builder.HasIndex(x => x.EsProducto);
         builder.HasIndex(x => x.EsServicio);
+        
+        // Índices Fase 1
+        builder.HasIndex(x => x.AplicaVentas);
+        builder.HasIndex(x => x.AplicaCompras);
+        builder.HasIndex(x => x.EsRpt);
+        builder.HasIndex(x => x.EsSistema);
+        builder.HasIndex(x => x.EsTrazable);
+        builder.HasIndex(x => x.DepositoDefaultId);
     }
 }

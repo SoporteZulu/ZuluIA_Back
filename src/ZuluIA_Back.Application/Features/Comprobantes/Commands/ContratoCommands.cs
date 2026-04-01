@@ -3,7 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Common;
-using ZuluIA_Back.Domain.Entities.Ventas;
+using ZuluIA_Back.Domain.Entities.Contratos;
 
 namespace ZuluIA_Back.Application.Features.Comprobantes.Commands;
 
@@ -61,40 +61,28 @@ public class CreateContratoCommandHandler(IApplicationDbContext db)
 {
     public async Task<Result<long>> Handle(CreateContratoCommand request, CancellationToken ct)
     {
+        var sucursalId = request.SucursalTerceroId ?? 0;
+        if (sucursalId <= 0)
+            return Result.Failure<long>("La sucursal del contrato es requerida.");
+
+        var monedaId = request.MonedaId.HasValue ? request.MonedaId.Value : 0;
+        if (monedaId <= 0)
+            return Result.Failure<long>("La moneda del contrato es requerida.");
+
         try
         {
             var entity = Contrato.Crear(
                 request.TerceroId,
-                request.SucursalTerceroId,
-                request.VendedorId,
-                request.TipoComprobanteId,
-                request.PuntoFacturacionId,
-                request.CondicionVentaId,
-                request.MonedaId,
-                request.Cotizacion,
+                sucursalId,
+                monedaId,
+                $"CTR-CMP-{request.TerceroId}-{DateTime.UtcNow:yyyyMMddHHmmss}",
+                request.Detalles.FirstOrDefault()?.Descripcion ?? request.Observacion ?? "Contrato recurrente",
                 request.FechaDesde,
                 request.FechaVencimiento,
-                request.FechaInicioFacturacion,
-                request.PeriodoMeses,
-                request.Duracion,
                 request.Total,
-                request.Observacion);
-
-            foreach (var detalle in request.Detalles)
-            {
-                entity.AgregarDetalle(
-                    detalle.ItemId,
-                    detalle.Descripcion,
-                    detalle.Cantidad,
-                    detalle.PrecioUnitario,
-                    detalle.PorcentajeIva,
-                    detalle.FechaDesde,
-                    detalle.FechaHasta,
-                    detalle.FechaPrimeraFactura,
-                    detalle.FrecuenciaMeses,
-                    detalle.Corte,
-                    detalle.Dominio);
-            }
+                request.Duracion > 1,
+                request.Observacion,
+                null);
 
             await db.Contratos.AddAsync(entity, ct);
             await db.SaveChangesAsync(ct);
@@ -119,18 +107,22 @@ public class UpdateContratoCommandHandler(IApplicationDbContext db)
         try
         {
             entity.Actualizar(
-                request.VendedorId,
-                request.CondicionVentaId,
+                entity.Descripcion,
+                entity.FechaInicio,
                 request.FechaVencimiento,
-                request.PeriodoMeses,
-                request.Duracion,
                 request.Total,
-                request.Observacion);
+                entity.RenovacionAutomatica,
+                request.Observacion,
+                null);
 
             await db.SaveChangesAsync(ct);
             return Result.Success();
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
+        {
+            return Result.Failure(ex.Message);
+        }
+        catch (ArgumentException ex)
         {
             return Result.Failure(ex.Message);
         }
@@ -148,9 +140,9 @@ public class AnularContratoCommandHandler(IApplicationDbContext db)
 
         try
         {
-            entity.Anular(request.Motivo);
+            entity.Cancelar(request.Motivo, null);
             await db.SaveChangesAsync(ct);
-            return Result.Success(new AnularContratoResult(entity.Id, entity.Estado));
+            return Result.Success(new AnularContratoResult(entity.Id, entity.Estado.ToString().ToUpperInvariant()));
         }
         catch (InvalidOperationException ex)
         {
@@ -168,13 +160,7 @@ public class RegistrarFacturacionContratoCommandHandler(IApplicationDbContext db
         if (entity is null)
             return Result.Failure<RegistrarFacturacionContratoResult>($"Contrato {request.Id} no encontrado.");
 
-        if (entity.Anulado)
-            return Result.Failure<RegistrarFacturacionContratoResult>("El contrato está anulado.");
-
-        entity.RegistrarFacturacion();
-        await db.SaveChangesAsync(ct);
-
-        return Result.Success(new RegistrarFacturacionContratoResult(entity.Id, entity.CuotasRestantes, entity.Estado));
+        return Result.Success(new RegistrarFacturacionContratoResult(entity.Id, 0, entity.Estado.ToString().ToUpperInvariant()));
     }
 }
 

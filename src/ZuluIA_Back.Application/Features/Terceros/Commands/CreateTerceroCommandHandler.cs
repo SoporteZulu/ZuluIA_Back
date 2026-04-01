@@ -36,6 +36,52 @@ public class CreateTerceroCommandHandler(
         if (fiscalValidation is not null)
             return Result.Failure<long>(fiscalValidation);
 
+        var roleCatalogValidation = await TerceroRoleCatalogValidation.ValidateAsync(
+            db,
+            command.EsCliente,
+            command.EsProveedor,
+            command.CategoriaClienteId,
+            command.EstadoClienteId,
+            command.CategoriaProveedorId,
+            command.EstadoProveedorId,
+            ct);
+
+        if (roleCatalogValidation is not null)
+            return Result.Failure<long>(roleCatalogValidation);
+
+        string? estadoCivilDescripcion = command.EstadoCivil;
+        if (command.EstadoCivilId.HasValue)
+        {
+            estadoCivilDescripcion = await db.EstadosCiviles
+                .AsNoTracking()
+                .Where(x => x.Id == command.EstadoCivilId.Value && x.DeletedAt == null && x.Activo)
+                .Select(x => x.Descripcion)
+                .FirstOrDefaultAsync(ct);
+
+            if (string.IsNullOrWhiteSpace(estadoCivilDescripcion))
+                return Result.Failure<long>("El estado civil indicado no existe o está inactivo.");
+        }
+
+        if (command.EstadoPersonaId.HasValue)
+        {
+            var estadoPersonaActivo = await db.EstadosPersonas
+                .AsNoTracking()
+                .AnyAsync(x => x.Id == command.EstadoPersonaId.Value && x.DeletedAt == null && x.Activo, ct);
+
+            if (!estadoPersonaActivo)
+                return Result.Failure<long>("El estado general indicado no existe o está inactivo.");
+        }
+
+        var provinciaPrincipalResult = await TerceroGeografiaRules.ResolveProvinciaIdAsync(
+            db,
+            command.ProvinciaId,
+            command.LocalidadId,
+            command.BarrioId,
+            ct);
+
+        if (provinciaPrincipalResult.IsFailure)
+            return Result.Failure<long>(provinciaPrincipalResult.Error!);
+
         // ── 1. Validar unicidad de Legajo ──────────────────────────────────────
         if (await repo.ExisteLegajoAsync(legajo, null, ct))
             return Result.Failure<long>($"Ya existe un tercero con el legajo '{legajo.ToUpperInvariant()}'.");
@@ -53,7 +99,9 @@ public class CreateTerceroCommandHandler(
             command.Dpto,
             command.CodigoPostal,
             command.LocalidadId,
-            command.BarrioId);
+            command.BarrioId,
+            provinciaPrincipalResult.Value);
+        var domicilioPrincipal = await TerceroDomicilioPrincipalSync.ResolvePrincipalAsync(db, domicilio, command.Domicilios, ct);
 
         // ── 4. Crear la entidad usando el factory method ───────────────────────
         Tercero tercero;
@@ -87,6 +135,13 @@ public class CreateTerceroCommandHandler(
                 tipoPersoneria,
                 command.Nombre,
                 command.Apellido,
+                command.Tratamiento,
+                command.Profesion,
+                command.EstadoCivilId,
+                estadoCivilDescripcion,
+                command.Nacionalidad,
+                command.Sexo,
+                command.FechaNacimiento,
                 command.EsEntidadGubernamental,
                 command.ClaveFiscal,
                 command.ValorClaveFiscal,
@@ -100,14 +155,19 @@ public class CreateTerceroCommandHandler(
                 command.Celular,
                 command.Email,
                 command.Web,
-                domicilio,
+                domicilioPrincipal,
                 command.NroIngresosBrutos,
                 command.NroMunicipal,
                 command.LimiteCredito,
+                command.PorcentajeMaximoDescuento,
+                command.VigenciaCreditoDesde,
+                command.VigenciaCreditoHasta,
                 command.Facturable,
                 command.CobradorId,
+                command.AplicaComisionCobrador,
                 command.PctComisionCobrador,
                 command.VendedorId,
+                command.AplicaComisionVendedor,
                 command.PctComisionVendedor,
                 command.Observacion,
                 currentUser.UserId);
@@ -119,6 +179,13 @@ public class CreateTerceroCommandHandler(
 
         tercero.SetMoneda(command.MonedaId);
         tercero.SetCategoria(command.CategoriaId);
+        tercero.SetPais(command.PaisId);
+        tercero.SetEstadoPersona(command.EstadoPersonaId);
+        tercero.SetFechaRegistro(command.FechaRegistro ?? DateOnly.FromDateTime(DateTime.Today), currentUser.UserId);
+        tercero.SetCategoriaCliente(command.EsCliente ? command.CategoriaClienteId : null);
+        tercero.SetEstadoCliente(command.EsCliente ? command.EstadoClienteId : null);
+        tercero.SetCategoriaProveedor(command.EsProveedor ? command.CategoriaProveedorId : null);
+        tercero.SetEstadoProveedor(command.EsProveedor ? command.EstadoProveedorId : null);
 
         // ── 6. Roles (si es empleado, asegura el estado correcto) ──────────────
         if (command.EsEmpleado)
@@ -129,8 +196,42 @@ public class CreateTerceroCommandHandler(
                 currentUser.UserId);
 
         // ── 7. Persistir ───────────────────────────────────────────────────────
-        await repo.AddAsync(tercero, ct);
-        await uow.SaveChangesAsync(ct);
+        try
+        {
+            await uow.ExecuteInTransactionAsync(async transactionCt =>
+            {
+                await repo.AddAsync(tercero, transactionCt);
+                await uow.SaveChangesAsync(transactionCt);
+
+                var aggregateError = await TerceroAggregatePersistence.ApplyOptionalSectionsAsync(
+                    db,
+                    tercero.Id,
+                    currentUser.UserId,
+                    command.PerfilComercial,
+                    command.Domicilios,
+                    command.Contactos,
+                    command.SucursalesEntrega,
+                    command.Transportes,
+                    command.VentanasCobranza,
+                    transactionCt);
+
+                if (aggregateError is not null)
+                    throw new InvalidOperationException(aggregateError);
+
+                if (command.Domicilios is null)
+                    await TerceroAggregatePersistence.SyncPrincipalDomicilioAsync(db, tercero.Id, domicilioPrincipal, transactionCt);
+
+                await uow.SaveChangesAsync(transactionCt);
+            }, ct);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Result.Failure<long>(ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            return Result.Failure<long>(ex.Message);
+        }
 
         return Result.Success(tercero.Id);
     }

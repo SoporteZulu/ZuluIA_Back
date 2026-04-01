@@ -514,7 +514,7 @@ public class CreateUsuarioCommandValidatorTests
 
     private static CreateUsuarioCommand ComandoValido() =>
         new(UserName: "juan.perez", NombreCompleto: "Juan Perez",
-            Email: "juan.perez@empresa.com", SupabaseUserId: null,
+            Email: "juan.perez@empresa.com", SupabaseUserId: null, Password: "Secret123!",
             SucursalIds: [1L]);
 
     [Fact]

@@ -27,6 +27,14 @@ public class EmitirReciboCommandHandler(
             numero,
             request.Observacion,
             request.CobroId,
+            null,
+            null,
+            null,
+            currentUser.UserId,
+            null,
+            null,
+            null,
+            null,
             currentUser.UserId);
 
         foreach (var item in request.Items)

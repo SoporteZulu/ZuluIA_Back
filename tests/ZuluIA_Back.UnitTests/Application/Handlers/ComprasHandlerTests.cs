@@ -411,7 +411,12 @@ public class RecibirOrdenCompraCommandHandlerTests
     [Fact]
     public async Task Handle_OrdenPendiente_LaRecibeYPersiste()
     {
-        var orden = OrdenCompraMeta.Crear(1, 10, null, null);
+        var orden = OrdenCompraMeta.Crear(
+            comprobanteId: 1,
+            proveedorId: 10,
+            fechaEntregaReq: null,
+            condicionesEntrega: null,
+            cantidadTotal: 1m);
         _repo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(orden);
 
         var result = await Sut().Handle(new RecibirOrdenCompraCommand(1), CancellationToken.None);
@@ -445,7 +450,12 @@ public class CancelarOrdenCompraCommandHandlerTests
     [Fact]
     public async Task Handle_OrdenPendiente_LaCancelaYPersiste()
     {
-        var orden = OrdenCompraMeta.Crear(1, 10, null, null);
+        var orden = OrdenCompraMeta.Crear(
+            comprobanteId: 1,
+            proveedorId: 10,
+            fechaEntregaReq: null,
+            condicionesEntrega: null,
+            cantidadTotal: 1m);
         _repo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(orden);
 
         var result = await Sut().Handle(new CancelarOrdenCompraCommand(1), CancellationToken.None);

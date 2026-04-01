@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Xunit;
 using ZuluIA_Back.Api.Controllers;
+using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.OrdenesPreparacion.Commands;
 using ZuluIA_Back.Application.Features.OrdenesPreparacion.DTOs;
 using ZuluIA_Back.Application.Features.OrdenesPreparacion.Queries;
@@ -173,7 +174,10 @@ public class OrdenesPreparacionControllerTests
 
     private static OrdenesPreparacionController CreateController(IMediator mediator)
     {
-        return new OrdenesPreparacionController(mediator)
+        return new OrdenesPreparacionController(
+            mediator,
+            Substitute.For<IApplicationDbContext>(),
+            new ZuluIA_Back.Application.Features.Reportes.Services.ReporteExportacionService())
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

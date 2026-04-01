@@ -16,6 +16,8 @@ public class ItemRepository(AppDbContext context)
         long? categoriaId,
         bool? soloActivos,
         bool? soloConStock,
+        bool? soloProductos,
+        bool? soloServicios,
         CancellationToken ct = default)
     {
         var query = DbSet.AsNoTracking();
@@ -38,6 +40,12 @@ public class ItemRepository(AppDbContext context)
 
         if (soloConStock == true)
             query = query.Where(x => x.ManejaStock && x.StockMinimo >= 0);
+
+        if (soloProductos == true)
+            query = query.Where(x => x.EsProducto);
+
+        if (soloServicios == true)
+            query = query.Where(x => x.EsServicio);
 
         var total = await query.CountAsync(ct);
 

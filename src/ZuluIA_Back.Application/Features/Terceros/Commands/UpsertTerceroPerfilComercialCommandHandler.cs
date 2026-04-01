@@ -55,6 +55,8 @@ public class UpsertTerceroPerfilComercialCommandHandler(
                 riesgo,
                 request.SaldoMaximoVigente,
                 request.VigenciaSaldo,
+                request.VigenciaSaldoDesde,
+                request.VigenciaSaldoHasta,
                 request.CondicionVenta,
                 request.PlazoCobro,
                 request.FacturadorPorDefecto,

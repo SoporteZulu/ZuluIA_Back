@@ -131,8 +131,11 @@ try
     builder.Services.AddApplicationServices();
     builder.Services.AddInfrastructureServices(builder.Configuration);
     builder.Services.AddHttpContextAccessor();
-    builder.Services.AddHostedService<BatchSchedulerHostedService>();
-    builder.Services.AddHostedService<ImpresionSpoolHostedService>();
+    if (!builder.Environment.IsDevelopment())
+    {
+        builder.Services.AddHostedService<BatchSchedulerHostedService>();
+        builder.Services.AddHostedService<ImpresionSpoolHostedService>();
+    }
 
     var app = builder.Build();
 

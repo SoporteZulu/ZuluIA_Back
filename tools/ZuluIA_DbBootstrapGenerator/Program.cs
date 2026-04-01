@@ -7,7 +7,7 @@ using ZuluIA_Back.Infrastructure.Persistence;
 
 var outputPath = args.Length > 0
     ? Path.GetFullPath(args[0])
-    : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "database", "zuluia_back_full_compatible.sql"));
+    : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "database", "zuluia_back_full_compatible.md"));
 
 Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
 
@@ -47,8 +47,17 @@ AppendOperationalSeeds(sql, permissions);
 sql.AppendLine();
 sql.AppendLine("COMMIT;");
 
-File.WriteAllText(outputPath, sql.ToString(), new UTF8Encoding(false));
-Console.WriteLine($"SQL generado en: {outputPath}");
+var markdown = new StringBuilder();
+markdown.AppendLine($"# SQL bootstrap: `{Path.GetFileNameWithoutExtension(outputPath)}`");
+markdown.AppendLine();
+markdown.AppendLine("Generado desde el modelo actual para ejecutar manualmente sobre PostgreSQL local.");
+markdown.AppendLine();
+markdown.AppendLine("```sql");
+markdown.Append(sql);
+markdown.AppendLine("```");
+
+File.WriteAllText(outputPath, markdown.ToString(), new UTF8Encoding(false));
+Console.WriteLine($"Documento SQL generado en: {outputPath}");
 
 static void AppendReferenceSeeds(StringBuilder sql)
 {

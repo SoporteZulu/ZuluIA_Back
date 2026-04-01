@@ -166,6 +166,7 @@ public class FacturacionBatchService(
                 puntoFacturacionId,
                 fecha,
                 fechaVencimiento,
+                null,
                 observacion,
                 operacionStock,
                 operacionCuentaCorriente), ct);

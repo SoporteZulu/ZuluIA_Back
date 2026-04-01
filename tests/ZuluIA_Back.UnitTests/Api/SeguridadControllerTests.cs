@@ -140,7 +140,7 @@ public class SeguridadControllerTests
 
     private static SeguridadController CreateController(IMediator mediator, ISeguridadRepository repo, IApplicationDbContext db)
     {
-        return new SeguridadController(mediator, repo, db)
+        return new SeguridadController(mediator, repo, db, Substitute.For<Microsoft.AspNetCore.Routing.EndpointDataSource>())
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

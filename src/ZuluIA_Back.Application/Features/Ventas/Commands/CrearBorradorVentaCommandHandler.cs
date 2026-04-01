@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Terceros.Services;
+using ZuluIA_Back.Application.Features.Ventas.Common;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Interfaces;
@@ -11,7 +13,8 @@ public class CrearBorradorVentaCommandHandler(
     IComprobanteRepository comprobanteRepo,
     IApplicationDbContext db,
     IUnitOfWork uow,
-    ICurrentUserService currentUser)
+    ICurrentUserService currentUser,
+    TerceroOperacionValidationService terceroOperacionValidationService)
     : IRequestHandler<CrearBorradorVentaCommand, Result<long>>
 {
     public async Task<Result<long>> Handle(CrearBorradorVentaCommand request, CancellationToken ct)
@@ -25,6 +28,10 @@ public class CrearBorradorVentaCommandHandler(
 
         if (!tipo.EsVenta)
             return Result.Failure<long>("El tipo de comprobante indicado no pertenece al circuito de ventas.");
+
+        var validationError = await terceroOperacionValidationService.ValidateClienteAsync(request.TerceroId, ct);
+        if (validationError is not null)
+            return Result.Failure<long>(validationError);
 
         if (request.ComprobanteOrigenId.HasValue)
         {
@@ -69,6 +76,24 @@ public class CrearBorradorVentaCommandHandler(
             request.Observacion,
             currentUser.UserId);
 
+        var zonaComercialId = await db.TercerosPerfilesComerciales
+            .AsNoTracking()
+            .Where(x => x.TerceroId == request.TerceroId)
+            .Select(x => x.ZonaComercialId)
+            .FirstOrDefaultAsync(ct);
+
+        comprobante.AsignarDatosComerciales(
+            request.VendedorId,
+            null,
+            zonaComercialId,
+            request.ListaPreciosId,
+            request.CondicionPagoId,
+            request.PlazoDias,
+            request.CanalVentaId,
+            null,
+            null,
+            currentUser.UserId);
+
         var alicuotaIds = request.Items.Select(x => x.AlicuotaIvaId).Distinct().ToList();
         var alicuotas = await db.AlicuotasIva
             .AsNoTracking()
@@ -99,13 +124,30 @@ public class CrearBorradorVentaCommandHandler(
                 itemInput.AlicuotaIvaId,
                 alicuota.Porcentaje,
                 itemInput.DepositoId,
-                orden++);
+                orden++,
+                true,
+                itemInput.Lote,
+                itemInput.Serie,
+                itemInput.FechaVencimiento,
+                itemInput.UnidadMedidaId,
+                itemInput.ObservacionRenglon,
+                itemInput.PrecioListaOriginal,
+                itemInput.ComisionVendedorRenglon,
+                itemInput.ComprobanteItemOrigenId);
+
+            if (itemInput.CantidadDocumentoOrigen.HasValue || itemInput.PrecioDocumentoOrigen.HasValue)
+            {
+                linea.SetDatosDocumentoOrigen(itemInput.CantidadDocumentoOrigen, itemInput.PrecioDocumentoOrigen);
+            }
 
             comprobante.AgregarItem(linea);
         }
 
         if (request.Percepciones > 0)
             comprobante.SetPercepciones(request.Percepciones, currentUser.UserId);
+
+        if (PedidoWorkflowRules.EsPedido(tipo.Codigo, tipo.Descripcion) || request.FechaEntregaCompromiso.HasValue)
+            comprobante.InicializarComoPedido(request.FechaEntregaCompromiso, currentUser.UserId);
 
         if (request.ComprobanteOrigenId.HasValue)
             comprobante.VincularAComprobanteOrigen(request.ComprobanteOrigenId.Value, currentUser.UserId);

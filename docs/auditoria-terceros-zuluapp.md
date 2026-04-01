@@ -164,6 +164,47 @@ Se amplió el DTO paginado de terceros para incluir campos que el frontend ya co
 - `CreatedAt`
 - `Legajo`
 
+### Catálogos legacy de clientes / proveedores
+Se agregó soporte backend para los auxiliares históricos usados por `zuluApp` en `Terceros`:
+- categorías de clientes
+- categorías de proveedores
+- estados de clientes
+- estados de proveedores
+
+Incluye:
+- tablas de persistencia
+- endpoints de consulta para combos/mantenimiento
+- endpoint agregado `GET /api/terceros/catalogos` para resolver los auxiliares en una sola llamada
+- alta, edición, activación y desactivación
+
+### Clasificación específica por rol dentro de `Terceros`
+Se agregó soporte para que cada tercero pueda persistir además:
+- `categoriaClienteId`
+- `estadoClienteId`
+- `categoriaProveedorId`
+- `estadoProveedorId`
+
+Incluye:
+- columnas en `terceros`
+- filtros en el paginado
+- exposición en detalle/listado
+- validación de consistencia entre rol y catálogo asociado
+- exclusión de estados bloqueantes en los selectores activos de clientes/proveedores
+
+### Validación operativa en circuitos de venta / compra
+Se agregó validación transversal para bloquear operaciones cuando el tercero no está habilitado para operar según `zuluApp`:
+- creación de borradores de venta
+- creación de borradores de compra
+- emisión de comprobantes
+- emisión de documentos de venta
+- emisión de documentos de compra
+- conversiones de presupuestos/documentos
+
+La regla aplicada es:
+- el tercero debe existir y estar activo
+- debe tener el rol correspondiente (`Cliente` o `Proveedor`)
+- si tiene estado asociado por rol, ese estado debe existir, estar activo y no ser bloqueante
+
 ## Faltantes reales en backend respecto de `zuluApp`
 
 ### Alta / mantenimiento

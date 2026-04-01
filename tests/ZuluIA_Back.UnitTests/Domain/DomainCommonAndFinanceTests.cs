@@ -134,7 +134,7 @@ public class AsientoLineaTests
 // Imputacion
 // ─────────────────────────────────────────────────────────────────────────────
 
-public class ImputacionTests
+public class ImputacionFinanceTests
 {
     [Fact]
     public void Crear_ConDatosValidos_RetornaInstancia()

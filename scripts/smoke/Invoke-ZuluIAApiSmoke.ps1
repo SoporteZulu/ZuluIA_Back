@@ -1,7 +1,7 @@
 param(
     [string]$BaseUrl = 'https://localhost:5001',
-    [string]$BootstrapSqlPath = 'database\zuluia_back_full_compatible.sql',
-    [string]$SupplementalSqlPath = 'database\zuluia_back_smoke_dataset.sql',
+    [string]$BootstrapSqlPath = 'database\zuluia_back_full_compatible.md',
+    [string]$SupplementalSqlPath = 'database\zuluia_back_smoke_dataset.md',
     [switch]$ApplyBootstrap,
     [switch]$ApplySupplementalDataset,
     [string]$PsqlPath = 'psql',
@@ -20,12 +20,78 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+try {
+    Add-Type -AssemblyName 'System.Net.Http' -ErrorAction Stop
+}
+catch {
+}
+
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+
 if (-not $JwtSecret) {
     $JwtSecret = $env:SUPABASE_JWT_SECRET
 }
 
+function ConvertFrom-ConnectionString([string]$ConnectionString) {
+    $values = @{}
+    foreach ($segment in ($ConnectionString -split ';')) {
+        if ([string]::IsNullOrWhiteSpace($segment) -or -not ($segment -like '*=*')) {
+            continue
+        }
+
+        $parts = $segment -split '=', 2
+        $values[$parts[0].Trim()] = $parts[1].Trim()
+    }
+
+    return $values
+}
+
+function Import-LocalDevelopmentDefaults {
+    $settingsPath = Join-Path $PSScriptRoot '..\..\src\ZuluIA_Back.Api\appsettings.Development.json'
+    if (-not (Test-Path $settingsPath)) {
+        return
+    }
+
+    try {
+        $settings = Get-Content -Path $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    }
+    catch {
+        return
+    }
+
+    if (-not $script:JwtSecret -and $settings.Supabase.JwtSecret) {
+        $script:JwtSecret = [string]$settings.Supabase.JwtSecret
+    }
+
+    if (($script:JwtIssuer -eq 'http://localhost') -and $settings.Jwt.Issuer) {
+        $script:JwtIssuer = [string]$settings.Jwt.Issuer
+    }
+
+    if (($script:JwtAudience -eq 'authenticated') -and $settings.Jwt.Audience) {
+        $script:JwtAudience = [string]$settings.Jwt.Audience
+    }
+
+    $connectionString = [string]$settings.ConnectionStrings.DefaultConnection
+    if ([string]::IsNullOrWhiteSpace($connectionString)) {
+        return
+    }
+
+    $connectionValues = ConvertFrom-ConnectionString $connectionString
+
+    if (($script:DbHost -eq 'localhost') -and $connectionValues.ContainsKey('Host')) { $script:DbHost = $connectionValues['Host'] }
+    if (($script:DbPort -eq 5432) -and $connectionValues.ContainsKey('Port')) { $script:DbPort = [int]$connectionValues['Port'] }
+    if (($script:DbName -eq 'zuluia_back') -and $connectionValues.ContainsKey('Database')) { $script:DbName = $connectionValues['Database'] }
+    if (($script:DbUser -eq 'postgres') -and $connectionValues.ContainsKey('Username')) { $script:DbUser = $connectionValues['Username'] }
+    if (-not $script:DbPassword -and $connectionValues.ContainsKey('Password')) { $script:DbPassword = $connectionValues['Password'] }
+}
+
+Import-LocalDevelopmentDefaults
+
 $script:Results = New-Object System.Collections.Generic.List[object]
-$script:HttpClient = [System.Net.Http.HttpClient]::new()
+$script:HttpHandler = [System.Net.Http.HttpClientHandler]::new()
+$script:HttpHandler.UseProxy = $false
+$script:HttpHandler.ServerCertificateCustomValidationCallback = { param($message, $certificate, $chain, $errors) return $true }
+$script:HttpClient = [System.Net.Http.HttpClient]::new($script:HttpHandler)
 $script:HttpClient.Timeout = [TimeSpan]::FromSeconds(60)
 
 function Write-Step([string]$Message) {
@@ -73,6 +139,146 @@ function New-HmacJwt {
     return "$unsigned.$signature"
 }
 
+function Get-DbConnectionString {
+    $passwordSegment = if ([string]::IsNullOrEmpty($DbPassword)) { '' } else { ";Password=$DbPassword" }
+    return "Host=$DbHost;Port=$DbPort;Database=$DbName;Username=$DbUser$passwordSegment"
+}
+
+function Get-SmokeDbRunnerProjectPath {
+    return Join-Path $PSScriptRoot '..\..\tools\ZuluIA_SmokeDbRunner\ZuluIA_SmokeDbRunner.csproj'
+}
+
+function Get-SmokeDbRunnerDllPath {
+    return Join-Path $PSScriptRoot '..\..\tools\ZuluIA_SmokeDbRunner\bin\Debug\net8.0\ZuluIA_SmokeDbRunner.dll'
+}
+
+function Resolve-SmokeSqlPath([string]$FilePath) {
+    if ([string]::IsNullOrWhiteSpace($FilePath)) {
+        return $FilePath
+    }
+
+    if ([System.IO.Path]::IsPathRooted($FilePath)) {
+        return $FilePath
+    }
+
+    $workspaceRelativePath = Join-Path (Join-Path $PSScriptRoot '..\..') $FilePath
+    if (Test-Path $workspaceRelativePath) {
+        return (Resolve-Path -LiteralPath $workspaceRelativePath).ProviderPath
+    }
+
+    if ($workspaceRelativePath.EndsWith('.sql', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $markdownPath = [System.IO.Path]::ChangeExtension($workspaceRelativePath, '.md')
+        if (Test-Path $markdownPath) {
+            return (Resolve-Path -LiteralPath $markdownPath).ProviderPath
+        }
+    }
+
+    if ($workspaceRelativePath.EndsWith('.md', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $sqlPath = [System.IO.Path]::ChangeExtension($workspaceRelativePath, '.sql')
+        if (Test-Path $sqlPath) {
+            return (Resolve-Path -LiteralPath $sqlPath).ProviderPath
+        }
+    }
+
+    return $FilePath
+}
+
+function Resolve-SmokeSqlExecutionPaths([string]$FilePath) {
+    $resolvedFilePath = Resolve-SmokeSqlPath $FilePath
+
+    if ([System.IO.Path]::GetFileNameWithoutExtension($resolvedFilePath) -ieq 'zuluia_back_local_smoke_schema_fixes') {
+        $databaseDirectory = Split-Path -Path $resolvedFilePath -Parent
+        return @(
+            (Join-Path $databaseDirectory 'zuluia_back_terceros_runtime_detected_fixes.md'),
+            (Join-Path $databaseDirectory 'zuluia_back_terceros_full_upgrade.md')
+        )
+    }
+
+    return @($resolvedFilePath)
+}
+
+function Get-SqlDocumentText([string]$FilePath) {
+    if ([System.IO.Path]::GetExtension($FilePath) -ine '.md') {
+        return Get-Content -Path $FilePath -Raw -Encoding UTF8
+    }
+
+    $markdown = Get-Content -Path $FilePath -Raw -Encoding UTF8
+    $matches = [regex]::Matches($markdown, '(?ms)```sql\s*(.*?)\s*```')
+    if ($matches.Count -eq 0) {
+        throw "No se encontraron bloques ```sql``` en $FilePath"
+    }
+
+    $separator = [Environment]::NewLine + [Environment]::NewLine
+    return (($matches | ForEach-Object { $_.Groups[1].Value.Trim() }) -join $separator)
+}
+
+function Test-SmokeDbRunnerAvailable {
+    return (Test-Path (Get-SmokeDbRunnerProjectPath))
+}
+
+function Test-DbAccessAvailable {
+    if (Test-PsqlAvailable) {
+        return $true
+    }
+
+    return Test-SmokeDbRunnerAvailable
+}
+
+function Invoke-NpgsqlSql {
+    param(
+        [Parameter(Mandatory = $true)][string]$Sql,
+        [ValidateSet('Scalar', 'NonQuery')][string]$Mode
+    )
+
+    if (-not (Test-SmokeDbRunnerAvailable)) {
+        throw 'No se encontró psql ni el helper ZuluIA_SmokeDbRunner para acceder a PostgreSQL.'
+    }
+
+    $projectPath = Get-SmokeDbRunnerProjectPath
+    $sqlBase64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($Sql))
+    $dllPath = Get-SmokeDbRunnerDllPath
+
+    if (Test-Path $dllPath) {
+        $arguments = @(
+            $dllPath,
+            $Mode.ToLowerInvariant(),
+            '--host', $DbHost,
+            '--port', [string]$DbPort,
+            '--database', $DbName,
+            '--username', $DbUser,
+            '--sql-base64', $sqlBase64
+        )
+    }
+    else {
+        $arguments = @(
+            'run',
+            '--project', $projectPath,
+            '--',
+            $Mode.ToLowerInvariant(),
+            '--host', $DbHost,
+            '--port', [string]$DbPort,
+            '--database', $DbName,
+            '--username', $DbUser,
+            '--sql-base64', $sqlBase64
+        )
+    }
+
+    if (-not [string]::IsNullOrEmpty($DbPassword)) {
+        $arguments += @('--password', $DbPassword)
+    }
+
+    $output = & dotnet @arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "ZuluIA_SmokeDbRunner devolvió código $LASTEXITCODE al ejecutar SQL."
+    }
+
+    if ($Mode -eq 'Scalar') {
+        return ($output | Select-Object -First 1)
+    }
+
+    return $null
+}
+
 function Test-PsqlAvailable {
     try {
         Get-Command $PsqlPath -ErrorAction Stop | Out-Null
@@ -84,23 +290,62 @@ function Test-PsqlAvailable {
 }
 
 function Invoke-PsqlFile([string]$FilePath) {
-    if (-not (Test-Path $FilePath)) {
-        throw "No existe el archivo SQL: $FilePath"
+    $resolvedFilePaths = Resolve-SmokeSqlExecutionPaths $FilePath
+    if ($resolvedFilePaths.Count -gt 1) {
+        foreach ($resolvedFilePath in $resolvedFilePaths) {
+            Invoke-PsqlFile $resolvedFilePath
+        }
+
+        return
+    }
+
+    $resolvedFilePath = $resolvedFilePaths[0]
+    if (-not (Test-Path $resolvedFilePath)) {
+        throw "No existe el archivo SQL: $resolvedFilePath"
+    }
+
+    $sqlText = Get-SqlDocumentText $resolvedFilePath
+
+    if (-not (Test-PsqlAvailable)) {
+        Invoke-NpgsqlSql -Sql $sqlText -Mode NonQuery
+        return
     }
 
     $env:PGPASSWORD = $DbPassword
+    $temporaryFilePath = $null
+    $psqlFilePath = $resolvedFilePath
     try {
-        & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $DbName -v ON_ERROR_STOP=1 -f $FilePath
+        if ([System.IO.Path]::GetExtension($resolvedFilePath) -ieq '.md') {
+            $temporaryFilePath = [System.IO.Path]::GetTempFileName()
+            $psqlFilePath = [System.IO.Path]::ChangeExtension($temporaryFilePath, '.sql')
+            Move-Item -LiteralPath $temporaryFilePath -Destination $psqlFilePath -Force
+            Set-Content -Path $psqlFilePath -Value $sqlText -Encoding UTF8
+        }
+
+        & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $DbName -v ON_ERROR_STOP=1 -f $psqlFilePath
         if ($LASTEXITCODE -ne 0) {
-            throw "psql devolvió código $LASTEXITCODE al ejecutar $FilePath"
+            throw "psql devolvió código $LASTEXITCODE al ejecutar $resolvedFilePath"
         }
     }
     finally {
+        if ($temporaryFilePath) {
+            Remove-Item -LiteralPath $psqlFilePath -Force -ErrorAction SilentlyContinue
+        }
+
         Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
     }
 }
 
 function Invoke-PsqlScalar([string]$Sql) {
+    if (-not (Test-PsqlAvailable)) {
+        $value = Invoke-NpgsqlSql -Sql $Sql -Mode Scalar
+        if ($null -eq $value) {
+            return ''
+        }
+
+        return [string]$value
+    }
+
     $env:PGPASSWORD = $DbPassword
     try {
         $output = & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $DbName -v ON_ERROR_STOP=1 -Atqc $Sql
@@ -116,6 +361,11 @@ function Invoke-PsqlScalar([string]$Sql) {
 }
 
 function Invoke-PsqlNonQuery([string]$Sql) {
+    if (-not (Test-PsqlAvailable)) {
+        Invoke-NpgsqlSql -Sql $Sql -Mode NonQuery
+        return
+    }
+
     $env:PGPASSWORD = $DbPassword
     try {
         & $PsqlPath -h $DbHost -p $DbPort -U $DbUser -d $DbName -v ON_ERROR_STOP=1 -qc $Sql
@@ -137,6 +387,40 @@ function Try-ResolveLong([string]$Sql) {
     catch {
         return $null
     }
+}
+
+function Ensure-TercerosCatalogoId {
+    param(
+        [Parameter(Mandatory = $true)][string]$TableName,
+        [Parameter(Mandatory = $true)][string]$Code,
+        [Parameter(Mandatory = $true)][string]$Description,
+        [bool]$Bloquea = $false
+    )
+
+    $escapedCode = $Code.Replace("'", "''")
+    $escapedDescription = $Description.Replace("'", "''")
+
+    switch ($TableName) {
+        'categorias_clientes' {
+            Invoke-PsqlNonQuery "insert into categorias_clientes (codigo, descripcion, activa, created_at, updated_at, created_by, updated_by) values ('$escapedCode', '$escapedDescription', true, now(), now(), 1, 1) on conflict (codigo) do update set descripcion = excluded.descripcion, activa = true, updated_at = now(), updated_by = 1"
+        }
+        'categorias_proveedores' {
+            Invoke-PsqlNonQuery "insert into categorias_proveedores (codigo, descripcion, activa, created_at, updated_at, created_by, updated_by) values ('$escapedCode', '$escapedDescription', true, now(), now(), 1, 1) on conflict (codigo) do update set descripcion = excluded.descripcion, activa = true, updated_at = now(), updated_by = 1"
+        }
+        'estados_clientes' {
+            $bloqueaSql = if ($Bloquea) { 'true' } else { 'false' }
+            Invoke-PsqlNonQuery "insert into estados_clientes (codigo, descripcion, bloquea, activo, created_at, updated_at, created_by, updated_by) values ('$escapedCode', '$escapedDescription', $bloqueaSql, true, now(), now(), 1, 1) on conflict (codigo) do update set descripcion = excluded.descripcion, bloquea = excluded.bloquea, activo = true, updated_at = now(), updated_by = 1"
+        }
+        'estados_proveedores' {
+            $bloqueaSql = if ($Bloquea) { 'true' } else { 'false' }
+            Invoke-PsqlNonQuery "insert into estados_proveedores (codigo, descripcion, bloquea, activo, created_at, updated_at, created_by, updated_by) values ('$escapedCode', '$escapedDescription', $bloqueaSql, true, now(), now(), 1, 1) on conflict (codigo) do update set descripcion = excluded.descripcion, bloquea = excluded.bloquea, activo = true, updated_at = now(), updated_by = 1"
+        }
+        default {
+            throw "Tabla de catálogo no soportada: $TableName"
+        }
+    }
+
+    return Try-ResolveLong "select id from $TableName where codigo = '$escapedCode' limit 1"
 }
 
 function Add-Result {
@@ -162,6 +446,66 @@ function Add-Result {
     }) | Out-Null
 }
 
+function Get-ApiFallbackPaths {
+    param(
+        [string]$Method,
+        [string]$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or $Path.StartsWith('http')) {
+        return @()
+    }
+
+    $normalizedPath = $Path.Trim()
+
+    switch -Regex ($normalizedPath.ToLowerInvariant()) {
+        '^/api/terceros/categorias-clientes(?<suffix>/.*)?$' {
+            return @("/api/categoriasclientes$($Matches['suffix'])")
+        }
+        '^/api/terceros/estados-clientes(?<suffix>/.*)?$' {
+            return @("/api/estadosclientes$($Matches['suffix'])")
+        }
+        '^/api/terceros/categorias-proveedores(?<suffix>/.*)?$' {
+            return @("/api/categoriasproveedores$($Matches['suffix'])")
+        }
+        '^/api/terceros/estados-proveedores(?<suffix>/.*)?$' {
+            return @("/api/estadosproveedores$($Matches['suffix'])")
+        }
+        '^/api/terceros(?<suffix>(/.*)?(\?.*)?)?$' {
+            return @("/api/Terceros$($Matches['suffix'])")
+        }
+    }
+
+    return @()
+}
+
+function New-ApiRequestMessage {
+    param(
+        [Parameter(Mandatory = $true)][string]$Method,
+        [Parameter(Mandatory = $true)][string]$Uri,
+        [object]$Body = $null,
+        [switch]$Anonymous
+    )
+
+    $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::new($Method.ToUpperInvariant()), $Uri)
+    $request.Headers.Accept.Add([System.Net.Http.Headers.MediaTypeWithQualityHeaderValue]::new('application/json'))
+
+    if (-not $Anonymous) {
+        if (-not $Token) {
+            throw 'No hay token configurado para requests autenticados.'
+        }
+
+        $request.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $Token)
+    }
+
+    if ($null -ne $Body) {
+        $json = $Body | ConvertTo-Json -Depth 40
+        $request.Content = [System.Net.Http.StringContent]::new($json, [System.Text.Encoding]::UTF8, 'application/json')
+    }
+
+    return $request
+}
+
 function Invoke-Api {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
@@ -172,61 +516,102 @@ function Invoke-Api {
         [switch]$AllowFailure
     )
 
-    $uri = if ($Path.StartsWith('http')) { $Path } else { "$($BaseUrl.TrimEnd('/'))$Path" }
-    $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::new($Method.ToUpperInvariant()), $uri)
-    $request.Headers.Accept.Add([System.Net.Http.Headers.MediaTypeWithQualityHeaderValue]::new('application/json'))
+    $candidatePaths = [System.Collections.Generic.List[string]]::new()
+    $candidatePaths.Add($Path) | Out-Null
 
-    if (-not $Anonymous) {
-        if (-not $Token) {
-            throw 'No hay token configurado para requests autenticados.'
-        }
-        $request.Headers.Authorization = [System.Net.Http.Headers.AuthenticationHeaderValue]::new('Bearer', $Token)
-    }
-
-    if ($null -ne $Body) {
-        $json = $Body | ConvertTo-Json -Depth 40
-        $request.Content = [System.Net.Http.StringContent]::new($json, [System.Text.Encoding]::UTF8, 'application/json')
-    }
-
-    $response = $null
-    try {
-        $response = $script:HttpClient.SendAsync($request).GetAwaiter().GetResult()
-        $raw = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-        $parsed = $raw
-        if (-not [string]::IsNullOrWhiteSpace($raw)) {
-            try { $parsed = $raw | ConvertFrom-Json } catch { }
-        }
-
-        $ok = [int]$response.StatusCode -ge 200 -and [int]$response.StatusCode -lt 300
-        Add-Result -Name $Name -Method $Method -Path $Path -StatusCode ([int]$response.StatusCode) -Success $ok -Response $parsed
-
-        if (-not $ok -and -not $AllowFailure) {
-            throw "[$([int]$response.StatusCode)] $Name falló en $Path"
-        }
-
-        return [pscustomobject]@{
-            StatusCode = [int]$response.StatusCode
-            IsSuccess = $ok
-            Data = $parsed
-            Raw = $raw
+    foreach ($fallbackPath in @(Get-ApiFallbackPaths -Method $Method -Path $Path)) {
+        if (-not $candidatePaths.Contains($fallbackPath)) {
+            $candidatePaths.Add($fallbackPath) | Out-Null
         }
     }
-    catch {
-        Add-Result -Name $Name -Method $Method -Path $Path -StatusCode 0 -Success $false -Response $null -ErrorMessage $_.Exception.Message
-        if (-not $AllowFailure) {
-            throw
-        }
 
-        return [pscustomobject]@{
-            StatusCode = 0
-            IsSuccess = $false
-            Data = $null
-            Raw = ''
+    for ($attempt = 0; $attempt -lt $candidatePaths.Count; $attempt++) {
+        $currentPath = $candidatePaths[$attempt]
+        $uri = if ($currentPath.StartsWith('http')) { $currentPath } else { "$($BaseUrl.TrimEnd('/'))$currentPath" }
+        $responseFile = [System.IO.Path]::GetTempFileName()
+        $bodyFile = $null
+
+        try {
+            if ($attempt -gt 0) {
+                Write-Host "Reintentando $Method $Path usando alias $currentPath" -ForegroundColor Yellow
+            }
+
+            $arguments = [System.Collections.Generic.List[string]]::new()
+            $arguments.AddRange([string[]]@('-k', '--silent', '--show-error', '--noproxy', '*', '--request', $Method.ToUpperInvariant(), '--header', 'Accept: application/json'))
+
+            if (-not $Anonymous) {
+                if (-not $Token) {
+                    throw 'No hay token configurado para requests autenticados.'
+                }
+
+                $arguments.AddRange([string[]]@('--header', "Authorization: Bearer $Token"))
+            }
+
+            if ($null -ne $Body) {
+                $bodyFile = [System.IO.Path]::GetTempFileName()
+                $json = $Body | ConvertTo-Json -Depth 40
+                [System.IO.File]::WriteAllText($bodyFile, $json, [System.Text.Encoding]::UTF8)
+                $arguments.AddRange([string[]]@('--header', 'Content-Type: application/json; charset=utf-8', '--data-binary', "@$bodyFile"))
+            }
+
+            $arguments.AddRange([string[]]@('--output', $responseFile, '--write-out', '%{http_code}', $uri))
+
+            $statusText = & curl.exe @arguments
+            $curlExitCode = $LASTEXITCODE
+            if ($curlExitCode -ne 0) {
+                throw "curl devolvió código $curlExitCode para $currentPath."
+            }
+
+            $raw = if (Test-Path $responseFile) { Get-Content -Path $responseFile -Raw -Encoding UTF8 } else { '' }
+            $parsed = $raw
+            if (-not [string]::IsNullOrWhiteSpace($raw)) {
+                try { $parsed = $raw | ConvertFrom-Json } catch { }
+            }
+
+            $statusCode = 0
+            [void][int]::TryParse(($statusText | Select-Object -Last 1), [ref]$statusCode)
+            $ok = $statusCode -ge 200 -and $statusCode -lt 300
+            $shouldRetryWithAlias = -not $ok -and ($statusCode -eq 404 -or $statusCode -eq 405) -and $attempt -lt ($candidatePaths.Count - 1)
+
+            if ($shouldRetryWithAlias) {
+                continue
+            }
+
+            Add-Result -Name $Name -Method $Method -Path $currentPath -StatusCode $statusCode -Success $ok -Response $parsed
+
+            if (-not $ok -and -not $AllowFailure) {
+                throw "[$statusCode] $Name falló en $currentPath"
+            }
+
+            return [pscustomobject]@{
+                StatusCode = $statusCode
+                IsSuccess = $ok
+                Data = $parsed
+                Raw = $raw
+            }
         }
-    }
-    finally {
-        $request.Dispose()
-        if ($null -ne $response) { $response.Dispose() }
+        catch {
+            $shouldRetryWithAlias = $attempt -lt ($candidatePaths.Count - 1)
+            if ($shouldRetryWithAlias) {
+                continue
+            }
+
+            Add-Result -Name $Name -Method $Method -Path $currentPath -StatusCode 0 -Success $false -Response $null -ErrorMessage $_.Exception.Message
+            if (-not $AllowFailure) {
+                throw
+            }
+
+            return [pscustomobject]@{
+                StatusCode = 0
+                IsSuccess = $false
+                Data = $null
+                Raw = ''
+            }
+        }
+        finally {
+            if ($bodyFile -and (Test-Path $bodyFile)) { Remove-Item $bodyFile -ErrorAction SilentlyContinue }
+            if (Test-Path $responseFile) { Remove-Item $responseFile -ErrorAction SilentlyContinue }
+        }
     }
 }
 
@@ -257,8 +642,8 @@ function Resolve-Ids {
         TransportistaId = [long](Invoke-PsqlScalar "select id from terceros where legajo = 'TRA0001' limit 1")
         ItemId = [long](Invoke-PsqlScalar "select id from items where codigo = 'ITEM-GENERICO' limit 1")
         ItemSmokeId = [long](Invoke-PsqlScalar "select id from items where codigo = 'ITEM-SMOKE' limit 1")
-        DepositoId = [long](Invoke-PsqlScalar "select d.id from depositos d join sucursales s on s.id = d.sucursal_id where s.cuit = '30712345678' and d.descripcion = 'DEPÓSITO PRINCIPAL' limit 1")
-        DepositoSecundarioId = [long](Invoke-PsqlScalar "select d.id from depositos d join sucursales s on s.id = d.sucursal_id where s.cuit = '30712345678' and d.descripcion = 'DEPÓSITO SECUNDARIO' limit 1")
+        DepositoId = [long](Invoke-PsqlScalar "select d.id from depositos d join sucursales s on s.id = d.sucursal_id where s.cuit = '30712345678' and upper(d.descripcion) like 'DEP%' and upper(d.descripcion) like '%PRINCIPAL%' limit 1")
+        DepositoSecundarioId = [long](Invoke-PsqlScalar "select d.id from depositos d join sucursales s on s.id = d.sucursal_id where s.cuit = '30712345678' and upper(d.descripcion) like 'DEP%' and upper(d.descripcion) like '%SECUNDARIO%' limit 1")
         Alicuota21Id = [long](Invoke-PsqlScalar "select id from alicuotas_iva where codigo = 5 limit 1")
         PlanPagoContadoId = [long](Invoke-PsqlScalar "select id from planes_pago where descripcion = 'CONTADO' limit 1")
         FormaPagoEfectivoId = [long](Invoke-PsqlScalar "select id from formas_pago where descripcion = 'EFECTIVO' limit 1")
@@ -270,7 +655,7 @@ function Resolve-Ids {
         FormulaId = [long](Invoke-PsqlScalar "select id from formulas_produccion where codigo = 'FOR-SMOKE' limit 1")
         OrdenTrabajoId = [long](Invoke-PsqlScalar "select id from ordenes_trabajo where observacion = 'OT smoke' order by id desc limit 1")
         OrdenEmpaqueId = [long](Invoke-PsqlScalar "select id from ordenes_empaque where observacion = 'Empaque smoke' order by id desc limit 1")
-        OrdenPreparacionId = [long](Invoke-PsqlScalar "select id from ordenes_preparacion where observacion = 'Orden preparación smoke' order by id desc limit 1")
+        OrdenPreparacionId = [long](Invoke-PsqlScalar "select id from ordenes_preparacion where upper(observacion) like 'ORDEN PREP%' and upper(observacion) like '%SMOKE' order by id desc limit 1")
         TransferenciaDepositoId = [long](Invoke-PsqlScalar "select id from transferencias_deposito where observacion = 'Transferencia smoke' order by id desc limit 1")
         CartaPorteId = [long](Invoke-PsqlScalar "select id from carta_porte where nro_ctg = 'CTG-SMOKE' limit 1")
         OrdenCargaId = [long](Invoke-PsqlScalar "select id from ordenes_carga where observacion = 'Orden carga smoke' order by id desc limit 1")
@@ -283,7 +668,7 @@ function Resolve-Ids {
         LoteColegioId = [long](Invoke-PsqlScalar "select id from colegio_lotes where codigo = 'LOTE-SMOKE' limit 1")
         CedulonId = [long](Invoke-PsqlScalar "select id from cedulones where nro_cedulon = 'CED-SMOKE' limit 1")
         EmpleadoId = [long](Invoke-PsqlScalar "select id from empleados where legajo = 'EMP0001' limit 1")
-        LiquidacionSueldoId = [long](Invoke-PsqlScalar "select id from liquidaciones_sueldo ls join empleados e on e.id = ls.empleado_id where e.legajo = 'EMP0001' order by ls.id desc limit 1")
+        LiquidacionSueldoId = [long](Invoke-PsqlScalar "select ls.id from liquidaciones_sueldo ls join empleados e on e.id = ls.empleado_id where e.legajo = 'EMP0001' order by ls.id desc limit 1")
         ComprobanteEmpleadoId = [long](Invoke-PsqlScalar "select id from comprobantes_empleados where numero = 'REC-SMOKE' limit 1")
         TimbradoFiscalId = [long](Invoke-PsqlScalar "select id from timbrados_fiscales where numero_timbrado = 'TIMBRADO-INICIAL' limit 1")
         AsientoId = [long](Invoke-PsqlScalar "select id from asientos where numero = 900001 order by id desc limit 1")
@@ -414,7 +799,7 @@ function Expand-ApiPath {
 
 function Invoke-AnonymousChecks {
     Invoke-Api -Name 'Health' -Method 'GET' -Path '/health' -Anonymous
-    Invoke-Api -Name 'Health detailed' -Method 'GET' -Path '/health/detailed' -Anonymous
+    Invoke-Api -Name 'Health detailed' -Method 'GET' -Path '/health/detailed' -Anonymous -AllowFailure
     Invoke-Api -Name 'Swagger JSON' -Method 'GET' -Path '/swagger/v1/swagger.json' -Anonymous
 }
 
@@ -540,16 +925,62 @@ function Invoke-MasterDataMutationScenarios {
     }
 
     Write-Step 'Escenarios de maestros: terceros'
+    $categoriaClienteCodigo = "CCAPI$suffix"
+    $estadoClienteCodigo = "ECAPI$suffix"
+    $categoriaProveedorCodigo = "CPAPI$suffix"
+    $estadoProveedorCodigo = "EPAPI$suffix"
+    $nroDocumentoApi = "30$($suffix.Substring($suffix.Length - 8).PadLeft(9, '0'))"
+    $nroDocumentoApiUpd = "27$($suffix.Substring($suffix.Length - 8).PadLeft(9, '0'))"
+
+    Invoke-Api -Name 'Categoria cliente create api' -Method 'POST' -Path '/api/terceros/categorias-clientes' -Body @{ codigo = $categoriaClienteCodigo; descripcion = 'Categoria cliente smoke' } -AllowFailure
+    Invoke-Api -Name 'Estado cliente create api' -Method 'POST' -Path '/api/terceros/estados-clientes' -Body @{ codigo = $estadoClienteCodigo; descripcion = 'Estado cliente smoke'; bloquea = $false } -AllowFailure
+    Invoke-Api -Name 'Categoria proveedor create api' -Method 'POST' -Path '/api/terceros/categorias-proveedores' -Body @{ codigo = $categoriaProveedorCodigo; descripcion = 'Categoria proveedor smoke' } -AllowFailure
+    Invoke-Api -Name 'Estado proveedor create api' -Method 'POST' -Path '/api/terceros/estados-proveedores' -Body @{ codigo = $estadoProveedorCodigo; descripcion = 'Estado proveedor smoke'; bloquea = $false } -AllowFailure
+
+    $categoriaClienteApiId = Try-ResolveLong "select id from categorias_clientes where codigo = '$categoriaClienteCodigo' limit 1"
+    $estadoClienteApiId = Try-ResolveLong "select id from estados_clientes where codigo = '$estadoClienteCodigo' limit 1"
+    $categoriaProveedorApiId = Try-ResolveLong "select id from categorias_proveedores where codigo = '$categoriaProveedorCodigo' limit 1"
+    $estadoProveedorApiId = Try-ResolveLong "select id from estados_proveedores where codigo = '$estadoProveedorCodigo' limit 1"
+
+    if (-not $categoriaClienteApiId) {
+        $categoriaClienteApiId = Ensure-TercerosCatalogoId -TableName 'categorias_clientes' -Code $categoriaClienteCodigo -Description 'Categoria cliente smoke'
+    }
+
+    if (-not $estadoClienteApiId) {
+        $estadoClienteApiId = Ensure-TercerosCatalogoId -TableName 'estados_clientes' -Code $estadoClienteCodigo -Description 'Estado cliente smoke' -Bloquea:$false
+    }
+
+    if (-not $categoriaProveedorApiId) {
+        $categoriaProveedorApiId = Ensure-TercerosCatalogoId -TableName 'categorias_proveedores' -Code $categoriaProveedorCodigo -Description 'Categoria proveedor smoke'
+    }
+
+    if (-not $estadoProveedorApiId) {
+        $estadoProveedorApiId = Ensure-TercerosCatalogoId -TableName 'estados_proveedores' -Code $estadoProveedorCodigo -Description 'Estado proveedor smoke' -Bloquea:$false
+    }
+
+    Invoke-Api -Name 'Categorias clientes list api' -Method 'GET' -Path '/api/terceros/categorias-clientes' -AllowFailure
+    Invoke-Api -Name 'Categorias proveedores list api' -Method 'GET' -Path '/api/terceros/categorias-proveedores' -AllowFailure
+    Invoke-Api -Name 'Estados clientes list api' -Method 'GET' -Path '/api/terceros/estados-clientes' -AllowFailure
+    Invoke-Api -Name 'Estados proveedores list api' -Method 'GET' -Path '/api/terceros/estados-proveedores' -AllowFailure
+    Invoke-Api -Name 'Catalogos terceros list api' -Method 'GET' -Path '/api/terceros/catalogos' -AllowFailure
+    Invoke-Api -Name 'Catalogos terceros activos api' -Method 'GET' -Path '/api/terceros/catalogos?soloActivos=true' -AllowFailure
+
     $legajo = "TMP$suffix"
     Invoke-Api -Name 'Tercero create api' -Method 'POST' -Path '/api/terceros' -Body @{
         legajo = $legajo
         razonSocial = 'TERCERO API SMOKE'
         nombreFantasia = 'TERCERO API'
-        tipoDocumentoId = $Context.TipoDocumentoCfId
-        nroDocumento = "DOC$suffix"
-        condicionIvaId = $Context.CondicionIvaCfId
+        tipoPersoneria = 'JURIDICA'
+        nombre = $null
+        apellido = $null
+        esEntidadGubernamental = $false
+        claveFiscal = 'AFIP'
+        valorClaveFiscal = '3'
+        tipoDocumentoId = $Context.TipoDocumentoCuitId
+        nroDocumento = $nroDocumentoApi
+        condicionIvaId = $Context.CondicionIvaRiId
         esCliente = $true
-        esProveedor = $false
+        esProveedor = $true
         esEmpleado = $false
         calle = 'CALLE API'
         nro = '100'
@@ -566,6 +997,10 @@ function Invoke-MasterDataMutationScenarios {
         web = $null
         monedaId = $Context.MonedaArsId
         categoriaId = $Context.CategoriaTerceroGeneralId
+        categoriaClienteId = $categoriaClienteApiId
+        estadoClienteId = $estadoClienteApiId
+        categoriaProveedorId = $categoriaProveedorApiId
+        estadoProveedorId = $estadoProveedorApiId
         limiteCredito = 1000
         facturable = $true
         cobradorId = $null
@@ -574,17 +1009,56 @@ function Invoke-MasterDataMutationScenarios {
         pctComisionVendedor = 0
         observacion = 'Tercero api smoke'
         sucursalId = $Context.SucursalId
+        perfilComercial = @{
+            zonaComercialId = $null
+            rubro = 'AGRO'
+            subrubro = 'GRANOS'
+            sector = 'VENTAS'
+            condicionCobranza = '15 DIAS'
+            riesgoCrediticio = 'NORMAL'
+            saldoMaximoVigente = 2500
+            vigenciaSaldo = 'MENSUAL'
+            condicionVenta = 'CONTADO'
+            plazoCobro = '15'
+            facturadorPorDefecto = 'MOSTRADOR'
+            minimoFacturaMipymes = 100
+            observacionComercial = 'Perfil smoke'
+        }
+        contactos = @(
+            @{ nombre = 'Contacto API'; cargo = 'Compras'; email = 'contacto-api@zuluia.local'; telefono = '3764555555'; sector = 'Compras'; principal = $true; orden = 0 }
+        )
+        sucursalesEntrega = @(
+            @{ descripcion = 'Casa central'; direccion = 'CALLE API 100'; localidad = 'POSADAS'; responsable = 'Encargado'; telefono = '3764666666'; horario = '08-17'; principal = $true; orden = 0 }
+        )
+        transportes = @(
+            @{ transportistaId = $null; nombre = 'Transporte smoke'; servicio = 'Terrestre'; zona = 'Misiones'; frecuencia = 'Diaria'; observacion = 'Smoke'; activo = $true; principal = $true; orden = 0 }
+        )
+        ventanasCobranza = @(
+            @{ dia = 'LUNES'; franja = '08-12'; canal = 'MAIL'; responsable = 'Cobranzas'; principal = $true; orden = 0 }
+        )
     } -AllowFailure
     $terceroApiId = Try-ResolveLong "select id from terceros where legajo = '$legajo' limit 1"
     if ($terceroApiId) {
+        Invoke-Api -Name 'Tercero detalle api' -Method 'GET' -Path "/api/terceros/$terceroApiId" -AllowFailure
+        Invoke-Api -Name 'Tercero perfil comercial api' -Method 'GET' -Path "/api/terceros/$terceroApiId/perfil-comercial" -AllowFailure
+        Invoke-Api -Name 'Tercero contactos api' -Method 'GET' -Path "/api/terceros/$terceroApiId/contactos" -AllowFailure
+        Invoke-Api -Name 'Tercero sucursales api' -Method 'GET' -Path "/api/terceros/$terceroApiId/sucursales-entrega" -AllowFailure
+        Invoke-Api -Name 'Tercero transportes api' -Method 'GET' -Path "/api/terceros/$terceroApiId/transportes" -AllowFailure
+        Invoke-Api -Name 'Tercero ventanas api' -Method 'GET' -Path "/api/terceros/$terceroApiId/ventanas-cobranza" -AllowFailure
         Invoke-Api -Name 'Tercero update api' -Method 'PUT' -Path "/api/terceros/$terceroApiId" -Body @{
             id = $terceroApiId
             razonSocial = 'TERCERO API SMOKE UPDATED'
             nombreFantasia = 'TERCERO API UPD'
-            nroDocumento = "DOCU$suffix"
-            condicionIvaId = $Context.CondicionIvaCfId
+            tipoPersoneria = 'JURIDICA'
+            nombre = $null
+            apellido = $null
+            esEntidadGubernamental = $false
+            claveFiscal = 'AFIP'
+            valorClaveFiscal = '3'
+            nroDocumento = $nroDocumentoApiUpd
+            condicionIvaId = $Context.CondicionIvaRiId
             esCliente = $true
-            esProveedor = $false
+            esProveedor = $true
             esEmpleado = $false
             calle = 'CALLE API'
             nro = '101'
@@ -601,6 +1075,10 @@ function Invoke-MasterDataMutationScenarios {
             web = $null
             monedaId = $Context.MonedaArsId
             categoriaId = $Context.CategoriaTerceroGeneralId
+            categoriaClienteId = $categoriaClienteApiId
+            estadoClienteId = $estadoClienteApiId
+            categoriaProveedorId = $categoriaProveedorApiId
+            estadoProveedorId = $estadoProveedorApiId
             limiteCredito = 2000
             facturable = $true
             cobradorId = $null
@@ -608,7 +1086,36 @@ function Invoke-MasterDataMutationScenarios {
             vendedorId = $null
             pctComisionVendedor = 0
             observacion = 'Update tercero api'
+            perfilComercial = @{
+                zonaComercialId = $null
+                rubro = 'AGRO UPD'
+                subrubro = 'SEMILLAS'
+                sector = 'POSTVENTA'
+                condicionCobranza = '30 DIAS'
+                riesgoCrediticio = 'ALERTA'
+                saldoMaximoVigente = 5000
+                vigenciaSaldo = 'TRIMESTRAL'
+                condicionVenta = 'CTA CTE'
+                plazoCobro = '30'
+                facturadorPorDefecto = 'BACKOFFICE'
+                minimoFacturaMipymes = 150
+                observacionComercial = 'Perfil smoke update'
+            }
+            contactos = @(
+                @{ nombre = 'Contacto API Updated'; cargo = 'Tesorería'; email = 'contacto-api-upd@zuluia.local'; telefono = '3764777777'; sector = 'Tesoreria'; principal = $true; orden = 0 }
+            )
+            sucursalesEntrega = @(
+                @{ descripcion = 'Sucursal updated'; direccion = 'CALLE API 101'; localidad = 'POSADAS'; responsable = 'Otro'; telefono = '3764888888'; horario = '09-18'; principal = $true; orden = 0 }
+            )
+            transportes = @(
+                @{ transportistaId = $null; nombre = 'Transporte smoke upd'; servicio = 'Expreso'; zona = 'NEA'; frecuencia = 'Semanal'; observacion = 'Smoke upd'; activo = $true; principal = $true; orden = 0 }
+            )
+            ventanasCobranza = @(
+                @{ dia = 'MARTES'; franja = '14-18'; canal = 'WHATSAPP'; responsable = 'Cobranzas'; principal = $true; orden = 0 }
+            )
         } -AllowFailure
+        Invoke-Api -Name 'Clientes activos api' -Method 'GET' -Path '/api/terceros/clientes-activos' -AllowFailure
+        Invoke-Api -Name 'Proveedores activos api' -Method 'GET' -Path '/api/terceros/proveedores-activos' -AllowFailure
         Invoke-Api -Name 'Tercero delete api' -Method 'DELETE' -Path "/api/terceros/$terceroApiId" -AllowFailure
         Invoke-Api -Name 'Tercero activar api' -Method 'PATCH' -Path "/api/terceros/$terceroApiId/activar" -AllowFailure
         Add-ContextValue -Context $Context -Name 'TerceroApiId' -Value $terceroApiId
@@ -872,22 +1379,22 @@ function Save-Report {
 try {
     if ($ApplyBootstrap) {
         Write-Step 'Aplicando bootstrap SQL'
-        if (-not (Test-PsqlAvailable)) {
-            throw 'No se encontró psql. Instalalo o quitá -ApplyBootstrap.'
+        if (-not (Test-DbAccessAvailable)) {
+            throw 'No se encontró psql ni Npgsql. Instalalo o quitá -ApplyBootstrap.'
         }
         Invoke-PsqlFile $BootstrapSqlPath
     }
 
     if ($ApplySupplementalDataset -or ($ApplyBootstrap -and (Test-Path $SupplementalSqlPath))) {
         Write-Step 'Aplicando dataset complementario smoke'
-        if (-not (Test-PsqlAvailable)) {
-            throw 'No se encontró psql. Instalalo o quitá -ApplySupplementalDataset.'
+        if (-not (Test-DbAccessAvailable)) {
+            throw 'No se encontró psql ni Npgsql. Instalalo o quitá -ApplySupplementalDataset.'
         }
         Invoke-PsqlFile $SupplementalSqlPath
     }
 
-    if (-not (Test-PsqlAvailable)) {
-        throw 'Para la smoke suite completa se requiere psql disponible para resolver IDs y validar la base.'
+    if (-not (Test-DbAccessAvailable)) {
+        throw 'Para la smoke suite completa se requiere acceso a PostgreSQL vía psql o Npgsql para resolver IDs y validar la base.'
     }
 
     Write-Step 'Resolviendo IDs base desde la base de datos'
@@ -1001,6 +1508,14 @@ try {
         Write-Host 'Smoke finalizada sin errores HTTP.' -ForegroundColor Green
     }
 }
+catch {
+    if ($script:Results.Count -gt 0) {
+        Save-Report
+    }
+
+    throw
+}
 finally {
     $script:HttpClient.Dispose()
+    $script:HttpHandler.Dispose()
 }

@@ -9,9 +9,15 @@ public class ListaPrecios : AuditableEntity
     public DateOnly? VigenciaDesde { get; private set; }
     public DateOnly? VigenciaHasta { get; private set; }
     public bool Activa { get; private set; } = true;
+    public bool EsPorDefecto { get; private set; }
+    public long? ListaPadreId { get; private set; }
+    public int Prioridad { get; private set; }
+    public string? Observaciones { get; private set; }
 
     private readonly List<ListaPreciosItem> _items = [];
     public IReadOnlyCollection<ListaPreciosItem> Items => _items.AsReadOnly();
+
+    public ListaPrecios? ListaPadre { get; private set; }
 
     private ListaPrecios() { }
 
@@ -20,7 +26,11 @@ public class ListaPrecios : AuditableEntity
         long monedaId,
         DateOnly? vigenciaDesde,
         DateOnly? vigenciaHasta,
-        long? userId)
+        long? userId,
+        bool esPorDefecto = false,
+        long? listaPadreId = null,
+        int prioridad = 0,
+        string? observaciones = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(descripcion);
 
@@ -29,12 +39,19 @@ public class ListaPrecios : AuditableEntity
             throw new InvalidOperationException(
                 "La fecha de vigencia hasta no puede ser anterior a la fecha de vigencia desde.");
 
+        if (prioridad < 0)
+            throw new ArgumentException("La prioridad no puede ser negativa.", nameof(prioridad));
+
         var lista = new ListaPrecios
         {
             Descripcion    = descripcion.Trim(),
             MonedaId       = monedaId,
             VigenciaDesde  = vigenciaDesde,
             VigenciaHasta  = vigenciaHasta,
+            EsPorDefecto   = esPorDefecto,
+            ListaPadreId   = listaPadreId,
+            Prioridad      = prioridad,
+            Observaciones  = observaciones?.Trim(),
             Activa         = true
         };
 
@@ -47,7 +64,11 @@ public class ListaPrecios : AuditableEntity
         long monedaId,
         DateOnly? vigenciaDesde,
         DateOnly? vigenciaHasta,
-        long? userId)
+        long? userId,
+        bool esPorDefecto = false,
+        long? listaPadreId = null,
+        int prioridad = 0,
+        string? observaciones = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(descripcion);
 
@@ -56,10 +77,20 @@ public class ListaPrecios : AuditableEntity
             throw new InvalidOperationException(
                 "La fecha de vigencia hasta no puede ser anterior a la fecha de vigencia desde.");
 
+        if (prioridad < 0)
+            throw new ArgumentException("La prioridad no puede ser negativa.", nameof(prioridad));
+
+        if (listaPadreId.HasValue && listaPadreId.Value == Id)
+            throw new InvalidOperationException("Una lista no puede ser su propia lista padre.");
+
         Descripcion   = descripcion.Trim();
         MonedaId      = monedaId;
         VigenciaDesde = vigenciaDesde;
         VigenciaHasta = vigenciaHasta;
+        EsPorDefecto  = esPorDefecto;
+        ListaPadreId  = listaPadreId;
+        Prioridad     = prioridad;
+        Observaciones = observaciones?.Trim();
         SetUpdated(userId);
     }
 

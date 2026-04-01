@@ -82,6 +82,7 @@ public class TransferenciasDepositoController(IMediator mediator, IApplicationDb
             transferencia.DepositoDestinoId,
             Estado = transferencia.Estado.ToString().ToUpperInvariant(),
             transferencia.Fecha,
+            transferencia.FechaDespacho,
             transferencia.FechaConfirmacion,
             CantidadRenglones = transferencia.Detalles.Count,
             CantidadItems = transferencia.Detalles.Sum(x => x.Cantidad),
@@ -134,6 +135,11 @@ public class TransferenciasDepositoController(IMediator mediator, IApplicationDb
     public async Task<IActionResult> Confirmar(long id, CancellationToken ct)
         => FromResult(await Mediator.Send(new ConfirmarTransferenciaDepositoCommand(id), ct));
 
+    [HttpPost("{id:long}/despachar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Despachar(long id, CancellationToken ct)
+        => FromResult(await Mediator.Send(new DespacharTransferenciaDepositoCommand(id), ct));
+
     [HttpPost("{id:long}/anular")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> Anular(long id, CancellationToken ct)
@@ -172,6 +178,7 @@ public class TransferenciasDepositoController(IMediator mediator, IApplicationDb
         {
             Cantidad = items.Count,
             Borrador = items.Count(x => x.Estado == ZuluIA_Back.Domain.Enums.EstadoTransferenciaDeposito.Borrador),
+            EnTransito = items.Count(x => x.Estado == ZuluIA_Back.Domain.Enums.EstadoTransferenciaDeposito.EnTransito),
             Confirmadas = items.Count(x => x.Estado == ZuluIA_Back.Domain.Enums.EstadoTransferenciaDeposito.Confirmada),
             Anuladas = items.Count(x => x.Estado == ZuluIA_Back.Domain.Enums.EstadoTransferenciaDeposito.Anulada),
             VinculadasAOrdenPreparacion = items.Count(x => x.OrdenPreparacionId.HasValue),
@@ -210,7 +217,7 @@ public class TransferenciasDepositoController(IMediator mediator, IApplicationDb
                 ["OrdenPreparacionId"] = ordenPreparacionId?.ToString() ?? "Todas",
                 ["Estado"] = estadoEnum?.ToString().ToUpperInvariant() ?? "Todos"
             },
-            Columnas = ["Id", "SucursalId", "OrdenPreparacionId", "DepositoOrigenId", "DepositoDestinoId", "Fecha", "Estado", "FechaConfirmacion", "Renglones", "CantidadItems", "Observacion"],
+            Columnas = ["Id", "SucursalId", "OrdenPreparacionId", "DepositoOrigenId", "DepositoDestinoId", "Fecha", "FechaDespacho", "Estado", "FechaConfirmacion", "Renglones", "CantidadItems", "Observacion"],
             Filas = items.Select(x => (IReadOnlyList<string>)new[]
             {
                 x.Id.ToString(),
@@ -219,6 +226,7 @@ public class TransferenciasDepositoController(IMediator mediator, IApplicationDb
                 x.DepositoOrigenId.ToString(),
                 x.DepositoDestinoId.ToString(),
                 x.Fecha.ToString("yyyy-MM-dd"),
+                x.FechaDespacho?.ToString("yyyy-MM-dd") ?? "—",
                 x.Estado.ToString().ToUpperInvariant(),
                 x.FechaConfirmacion?.ToString("yyyy-MM-dd") ?? "—",
                 x.Detalles.Count.ToString(),

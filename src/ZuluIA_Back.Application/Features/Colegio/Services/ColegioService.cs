@@ -436,7 +436,24 @@ public class ColegioService(
         }
 
         var total = cedulonesInput.Sum(x => x.Importe);
-        var cobro = Cobro.Crear(sucursalId, terceroId, fecha, monedaId, cotizacion, $"COLEGIO | {observacion}".Trim(), currentUser.UserId);
+        var cobro = Cobro.Crear(
+            sucursalId,
+            terceroId,
+            fecha,
+            monedaId,
+            cotizacion,
+            $"COLEGIO | {observacion}".Trim(),
+            null,
+            null,
+            null,
+            currentUser.UserId,
+            null,
+            TipoCobro.Administrativo,
+            null,
+            null,
+            null,
+            null,
+            currentUser.UserId);
         cobro.AgregarMedio(CobroMedio.Crear(0, cajaId, formaPagoId, null, total, monedaId, cotizacion));
         await cobroRepo.AddAsync(cobro, ct);
         await db.SaveChangesAsync(ct);

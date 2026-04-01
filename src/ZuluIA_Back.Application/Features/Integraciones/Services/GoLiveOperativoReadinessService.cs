@@ -17,10 +17,10 @@ public class GoLiveOperativoReadinessService(
     {
         var settings = await settingsService.ResolveAsync(ct);
         var ahora = DateTimeOffset.UtcNow;
-        var programacionesActivas = await db.BatchProgramaciones.AsNoTracking().CountAsync(x => x.Activa && !x.IsDeleted, ct);
-        var programacionesVencidas = await db.BatchProgramaciones.AsNoTracking().CountAsync(x => x.Activa && !x.IsDeleted && x.ProximaEjecucion <= ahora, ct);
-        var spoolPendiente = await db.ImpresionSpoolTrabajos.AsNoTracking().CountAsync(x => !x.IsDeleted && x.Estado == EstadoImpresionSpool.Pendiente, ct);
-        var spoolConError = await db.ImpresionSpoolTrabajos.AsNoTracking().CountAsync(x => !x.IsDeleted && x.Estado == EstadoImpresionSpool.Error, ct);
+        var programacionesActivas = await db.BatchProgramaciones.AsNoTracking().CountAsync(x => x.Activa && x.DeletedAt == null, ct);
+        var programacionesVencidas = await db.BatchProgramaciones.AsNoTracking().CountAsync(x => x.Activa && x.DeletedAt == null && x.ProximaEjecucion <= ahora, ct);
+        var spoolPendiente = await db.ImpresionSpoolTrabajos.AsNoTracking().CountAsync(x => x.DeletedAt == null && x.Estado == EstadoImpresionSpool.Pendiente, ct);
+        var spoolConError = await db.ImpresionSpoolTrabajos.AsNoTracking().CountAsync(x => x.DeletedAt == null && x.Estado == EstadoImpresionSpool.Error, ct);
         var adapters = fiscalAdapters.Select(x => x.Marca.ToString().ToUpperInvariant()).Distinct().OrderBy(x => x).ToList().AsReadOnly();
         var supportedFormats = parserService.GetSupportedFormats();
         var issues = new List<string>();

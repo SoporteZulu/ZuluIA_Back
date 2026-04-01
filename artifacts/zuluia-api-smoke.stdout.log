@@ -1,0 +1,12 @@
+
+==> Resolviendo IDs base desde la base de datos
+
+==> Generando token JWT de desarrollo para admin.local
+
+==> Pruebas anÇünimas
+
+StatusCode IsSuccess Data                                                                                              
+---------- --------- ----                                                                                              
+       200      True @{status=healthy; app=ZuluIA_Back; environment=Development; database=online; schedulerEnabled=T...
+         0     False                                                                                                   
+Reporte generado en artifacts\zuluia-api-smoke-report.json

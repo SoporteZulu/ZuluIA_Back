@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Terceros.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Interfaces;
@@ -11,7 +12,8 @@ public class CrearBorradorCompraCommandHandler(
     IComprobanteRepository comprobanteRepo,
     IApplicationDbContext db,
     IUnitOfWork uow,
-    ICurrentUserService currentUser)
+    ICurrentUserService currentUser,
+    TerceroOperacionValidationService terceroOperacionValidationService)
     : IRequestHandler<CrearBorradorCompraCommand, Result<long>>
 {
     public async Task<Result<long>> Handle(CrearBorradorCompraCommand request, CancellationToken ct)
@@ -25,6 +27,10 @@ public class CrearBorradorCompraCommandHandler(
 
         if (!tipo.EsCompra)
             return Result.Failure<long>("El tipo de comprobante indicado no pertenece al circuito de compras.");
+
+        var validationError = await terceroOperacionValidationService.ValidateProveedorAsync(request.TerceroId, ct);
+        if (validationError is not null)
+            return Result.Failure<long>(validationError);
 
         if (request.ComprobanteOrigenId.HasValue)
         {

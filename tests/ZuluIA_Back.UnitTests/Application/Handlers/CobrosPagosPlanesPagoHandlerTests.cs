@@ -21,9 +21,10 @@ namespace ZuluIA_Back.UnitTests.Application.Handlers;
 public class AnularCobroCommandHandlerTests
 {
     private readonly ICobroRepository _repo = Substitute.For<ICobroRepository>();
+    private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
-    private AnularCobroCommandHandler Sut() => new(_repo, _uow, _user);
+    private AnularCobroCommandHandler Sut() => new(_repo, _db, _uow, _user);
 
     [Fact]
     public async Task Handle_CobroNoExiste_RetornaFailure()
@@ -96,9 +97,10 @@ public class CreatePagoCommandHandlerTests
 public class AnularPagoCommandHandlerTests
 {
     private readonly IRepository<Pago> _repo = Substitute.For<IRepository<Pago>>();
+    private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
-    private AnularPagoCommandHandler Sut() => new(_repo, _uow, _user);
+    private AnularPagoCommandHandler Sut() => new(_repo, _db, _uow, _user);
 
     [Fact]
     public async Task Handle_PagoNoExiste_RetornaFailure()

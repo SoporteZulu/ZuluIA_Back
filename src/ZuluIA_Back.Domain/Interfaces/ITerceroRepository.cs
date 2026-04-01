@@ -44,6 +44,11 @@ public interface ITerceroRepository : IRepository<Tercero>
         bool? soloActivos,
         long? condicionIvaId,
         long? categoriaId,
+        long? estadoPersonaId,
+        long? categoriaClienteId,
+        long? estadoClienteId,
+        long? categoriaProveedorId,
+        long? estadoProveedorId,
         long? sucursalId,
         CancellationToken ct = default);
 

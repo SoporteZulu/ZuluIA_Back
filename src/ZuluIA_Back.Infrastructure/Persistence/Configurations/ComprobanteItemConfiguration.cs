@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
+using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Infrastructure.Persistence.Configurations;
 
@@ -72,7 +73,73 @@ public class ComprobanteItemConfiguration : IEntityTypeConfiguration<Comprobante
                .HasColumnName("es_gravado")
                .HasDefaultValue(true);
 
+        // Campos extendidos para paridad con zuluApp
+        builder.Property(x => x.Lote)
+               .HasColumnName("lote")
+               .HasMaxLength(100);
+
+        builder.Property(x => x.Serie)
+               .HasColumnName("serie")
+               .HasMaxLength(100);
+
+        builder.Property(x => x.FechaVencimiento)
+               .HasColumnName("fecha_vencimiento");
+
+        builder.Property(x => x.UnidadMedidaId)
+               .HasColumnName("unidad_medida_id");
+
+        builder.Property(x => x.ObservacionRenglon)
+               .HasColumnName("observacion_renglon")
+               .HasMaxLength(500);
+
+        builder.Property(x => x.PrecioListaOriginal)
+               .HasColumnName("precio_lista_original")
+               .HasPrecision(18, 4);
+
+        builder.Property(x => x.ComisionVendedorRenglon)
+               .HasColumnName("comision_vendedor_renglon")
+               .HasPrecision(18, 4);
+
+        builder.Property(x => x.ComprobanteItemOrigenId)
+               .HasColumnName("comprobante_item_origen_id");
+
+        // Campos específicos para notas de débito/crédito (referencias al documento origen)
+        builder.Property(x => x.CantidadDocumentoOrigen)
+                 .HasColumnName("cantidad_documento_origen")
+                 .HasPrecision(18, 4);
+
+        builder.Property(x => x.PrecioDocumentoOrigen)
+                 .HasColumnName("precio_documento_origen")
+                 .HasPrecision(18, 4);
+
+        // Campos de pedido (cumplimiento)
+        builder.Property(x => x.CantidadEntregada)
+               .HasColumnName("cantidad_entregada")
+               .HasPrecision(18, 4)
+               .HasDefaultValue(0m);
+
+        builder.Property(x => x.CantidadPendiente)
+               .HasColumnName("cantidad_pendiente")
+               .HasPrecision(18, 4)
+               .HasDefaultValue(0m);
+
+        builder.Property(x => x.EstadoEntrega)
+               .HasColumnName("estado_entrega_item")
+               .HasConversion(
+                   v => v.HasValue ? (int)v.Value : (int?)null,
+                   v => v.HasValue ? (EstadoEntregaItem)v.Value : null);
+
+        builder.Property(x => x.EsAtrasado)
+               .HasColumnName("es_atrasado")
+               .HasDefaultValue(false);
+
         builder.HasIndex(x => x.ComprobanteId);
         builder.HasIndex(x => x.ItemId);
+        builder.HasIndex(x => x.ComprobanteItemOrigenId);
+        builder.HasIndex(x => x.EstadoEntrega)
+               .HasFilter("estado_entrega_item IS NOT NULL");
+        builder.HasIndex(x => x.EsAtrasado)
+               .HasFilter("es_atrasado = true");
+        builder.HasIndex(x => new { x.ComprobanteId, x.EstadoEntrega });
     }
 }

@@ -340,7 +340,7 @@ public class UpdateTipoRetencionCommandValidatorTests
 // CreateLiquidacionSueldoCommandValidator
 // ─────────────────────────────────────────────────────────────────────────────
 
-public class CreateLiquidacionSueldoCommandValidatorTests
+public class CreateLiquidacionSueldoCommandValidatorRegressionTests
 {
     private readonly CreateLiquidacionSueldoCommandValidator _v = new();
 

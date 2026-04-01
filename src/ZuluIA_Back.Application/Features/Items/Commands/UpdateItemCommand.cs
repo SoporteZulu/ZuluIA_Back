@@ -10,6 +10,7 @@ public record UpdateItemCommand(
     string? CodigoBarras,
     long UnidadMedidaId,
     long AlicuotaIvaId,
+    long? AlicuotaIvaCompraId,
     long MonedaId,
     bool EsProducto,
     bool EsServicio,
@@ -20,6 +21,24 @@ public record UpdateItemCommand(
     decimal PrecioVenta,
     decimal StockMinimo,
     decimal? StockMaximo,
+    decimal? PuntoReposicion,
+    decimal? StockSeguridad,
+    decimal? Peso,
+    decimal? Volumen,
     string? CodigoAfip,
-    long? MarcaId = null
+    long? MarcaId = null,
+    // ── Fase 1: Campos Esenciales de Ventas ──────────────────────────────────
+    bool? AplicaVentas = null,
+    bool? AplicaCompras = null,
+    decimal? PorcentajeGanancia = null,
+    decimal? PorcentajeMaximoDescuento = null,
+    bool? EsRpt = null,
+    string? CodigoAlternativo = null,
+    bool EsTrazable = false,
+    bool PermiteFraccionamiento = false,
+    int? DiasVencimientoLimite = null,
+    long? DepositoDefaultId = null,
+    long? ImpuestoInternoId = null,
+    IReadOnlyList<ItemAtributoComercialInput>? AtributosComerciales = null,
+    IReadOnlyList<ItemComponenteInput>? Componentes = null
 ) : IRequest<Result>;

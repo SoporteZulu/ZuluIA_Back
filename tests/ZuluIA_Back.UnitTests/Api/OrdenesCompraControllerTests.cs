@@ -203,7 +203,7 @@ public class OrdenesCompraControllerTests
 
     private static OrdenCompraMeta BuildOrdenCompra(long id, long comprobanteId, long proveedorId, DateOnly? fechaEntregaReq, string? condicionesEntrega, EstadoOrdenCompra estado, bool habilitada, DateTimeOffset createdAt)
     {
-        var entity = OrdenCompraMeta.Crear(comprobanteId, proveedorId, fechaEntregaReq, condicionesEntrega);
+        var entity = OrdenCompraMeta.Crear(comprobanteId, proveedorId, fechaEntregaReq, condicionesEntrega, 1m);
         SetProperty(entity, nameof(OrdenCompraMeta.Id), id);
         SetProperty(entity, nameof(OrdenCompraMeta.EstadoOc), estado);
         SetProperty(entity, nameof(OrdenCompraMeta.Habilitada), habilitada);

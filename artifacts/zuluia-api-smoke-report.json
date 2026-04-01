@@ -1,0 +1,47 @@
+﻿{
+    "BaseUrl":  "https://localhost:5001",
+    "GeneratedAtUtc":  "\/Date(1774667911947)\/",
+    "Total":  3,
+    "Success":  1,
+    "Failed":  2,
+    "Results":  [
+                    {
+                        "Name":  "Health",
+                        "Method":  "GET",
+                        "Path":  "/health",
+                        "StatusCode":  200,
+                        "Success":  true,
+                        "Error":  "",
+                        "Response":  {
+                                         "status":  "healthy",
+                                         "app":  "ZuluIA_Back",
+                                         "environment":  "Development",
+                                         "database":  "online",
+                                         "schedulerEnabled":  true,
+                                         "spoolEnabled":  true,
+                                         "timestamp":  "2026-03-28T02:54:26.2570705Z"
+                                     },
+                        "TimestampUtc":  "\/Date(1774666466323)\/"
+                    },
+                    {
+                        "Name":  "Health detailed",
+                        "Method":  "GET",
+                        "Path":  "/health/detailed",
+                        "StatusCode":  0,
+                        "Success":  false,
+                        "Error":  "curl devolviÃ³ cÃ³digo 56 para /health/detailed.",
+                        "Response":  null,
+                        "TimestampUtc":  "\/Date(1774667909617)\/"
+                    },
+                    {
+                        "Name":  "Swagger JSON",
+                        "Method":  "GET",
+                        "Path":  "/swagger/v1/swagger.json",
+                        "StatusCode":  0,
+                        "Success":  false,
+                        "Error":  "curl devolviÃ³ cÃ³digo 7 para /swagger/v1/swagger.json.",
+                        "Response":  null,
+                        "TimestampUtc":  "\/Date(1774667911933)\/"
+                    }
+                ]
+}

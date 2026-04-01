@@ -14,6 +14,8 @@ public record UpsertTerceroPerfilComercialCommand(
     string RiesgoCrediticio,
     decimal? SaldoMaximoVigente,
     string? VigenciaSaldo,
+    DateOnly? VigenciaSaldoDesde,
+    DateOnly? VigenciaSaldoHasta,
     string? CondicionVenta,
     string? PlazoCobro,
     string? FacturadorPorDefecto,

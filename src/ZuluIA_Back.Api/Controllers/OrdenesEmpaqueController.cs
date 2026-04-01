@@ -22,7 +22,7 @@ public class OrdenesEmpaqueController(IMediator mediator, IApplicationDbContext 
         [FromQuery] bool incluirAnuladas = false,
         CancellationToken ct = default)
     {
-        var query = db.OrdenesEmpaque.AsNoTracking();
+        var query = db.OrdenesEmpaquesLogistica.AsNoTracking();
         if (!incluirAnuladas) query = query.Where(x => !x.Anulada);
         if (terceroId.HasValue) query = query.Where(x => x.TerceroId == terceroId.Value);
         if (!string.IsNullOrWhiteSpace(estado)) query = query.Where(x => x.Estado == estado.ToUpperInvariant());
@@ -45,7 +45,7 @@ public class OrdenesEmpaqueController(IMediator mediator, IApplicationDbContext 
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(long id, CancellationToken ct)
     {
-        var orden = await db.OrdenesEmpaque.AsNoTracking()
+        var orden = await db.OrdenesEmpaquesLogistica.AsNoTracking()
             .Include(x => x.Detalles)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
 

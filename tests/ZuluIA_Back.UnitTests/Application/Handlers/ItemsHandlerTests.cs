@@ -6,6 +6,7 @@ using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Items.Commands;
 using ZuluIA_Back.Application.Features.Items.DTOs;
 using ZuluIA_Back.Application.Features.Items.Queries;
+using ZuluIA_Back.Application.Features.ListasPrecios.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Items;
 using ZuluIA_Back.Domain.Interfaces;
@@ -18,13 +19,35 @@ namespace ZuluIA_Back.UnitTests.Application.Handlers;
 public class CreateItemCommandHandlerTests
 {
     private readonly IItemRepository _repo = Substitute.For<IItemRepository>();
+    private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
-    private CreateItemCommandHandler Sut() => new(_repo, _uow, _user);
+    private CreateItemCommandHandler Sut() => new(_repo, _db, _uow, _user);
 
     private static CreateItemCommand ValidCommand() => new(
-        "PROD001", "Producto Test", null, null, 1, 1, 1,
-        true, false, false, true, null, 100m, 150m, 0, null, null, null);
+        Codigo: "PROD001",
+        Descripcion: "Producto Test",
+        DescripcionAdicional: null,
+        CodigoBarras: null,
+        UnidadMedidaId: 1,
+        AlicuotaIvaId: 1,
+        AlicuotaIvaCompraId: null,
+        MonedaId: 1,
+        EsProducto: true,
+        EsServicio: false,
+        EsFinanciero: false,
+        ManejaStock: true,
+        CategoriaId: null,
+        PrecioCosto: 100m,
+        PrecioVenta: 150m,
+        StockMinimo: 0m,
+        StockMaximo: null,
+        PuntoReposicion: null,
+        StockSeguridad: null,
+        Peso: null,
+        Volumen: null,
+        CodigoAfip: null,
+        SucursalId: null);
 
     [Fact]
     public async Task Handle_CodigoDuplicado_RetornaFailure()
@@ -51,6 +74,37 @@ public class CreateItemCommandHandlerTests
         await _repo.Received(1).AddAsync(Arg.Any<Item>(), Arg.Any<CancellationToken>());
         await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task Handle_ConComponentes_PersistePackDelItem()
+    {
+        _repo.ExisteCodigoAsync(Arg.Any<string>(), Arg.Any<long?>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+        _user.UserId.Returns((long?)1L);
+
+        var componente = Item.Crear("COMP001", "Componente", 1, 1, 1, true, false, false, true, 10m, 20m, null, 0m, null, null, null, null, null, null);
+        componente.GetType().GetProperty("Id")!.SetValue(componente, 50L);
+        var itemsDbSet = MockDbSetHelper.CreateMockDbSet<Item>([componente]);
+        var componentesDbSet = MockDbSetHelper.CreateMockDbSet<ItemComponente>();
+        _db.Items.Returns(itemsDbSet);
+        _db.ItemsComponentes.Returns(componentesDbSet);
+
+        _repo.When(x => x.AddAsync(Arg.Any<Item>(), Arg.Any<CancellationToken>()))
+            .Do(call => call.Arg<Item>().GetType().GetProperty("Id")!.SetValue(call.Arg<Item>(), 100L));
+
+        var command = ValidCommand() with
+        {
+            Componentes = [new ItemComponenteInput(50L, 2m)]
+        };
+
+        var result = await Sut().Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        componentesDbSet.Should().ContainSingle();
+        componentesDbSet.Single().ItemPadreId.Should().Be(100L);
+        componentesDbSet.Single().ComponenteId.Should().Be(50L);
+        componentesDbSet.Single().Cantidad.Should().Be(2m);
+    }
 }
 
 // ── UpdateItemCommandHandler ──────────────────────────────────────────────────
@@ -58,13 +112,34 @@ public class CreateItemCommandHandlerTests
 public class UpdateItemCommandHandlerTests
 {
     private readonly IItemRepository _repo = Substitute.For<IItemRepository>();
+    private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
-    private UpdateItemCommandHandler Sut() => new(_repo, _uow, _user);
+    private UpdateItemCommandHandler Sut() => new(_repo, _db, _uow, _user);
 
     private static UpdateItemCommand ValidCommand(long id = 1) => new(
-        id, "Producto Actualizado", null, null, 1, 1, 1,
-        true, false, false, true, null, 100m, 150m, 0m, null, null);
+        Id: id,
+        Descripcion: "Producto Actualizado",
+        DescripcionAdicional: null,
+        CodigoBarras: null,
+        UnidadMedidaId: 1,
+        AlicuotaIvaId: 1,
+        AlicuotaIvaCompraId: null,
+        MonedaId: 1,
+        EsProducto: true,
+        EsServicio: false,
+        EsFinanciero: false,
+        ManejaStock: true,
+        CategoriaId: null,
+        PrecioCosto: 100m,
+        PrecioVenta: 150m,
+        StockMinimo: 0m,
+        StockMaximo: null,
+        PuntoReposicion: null,
+        StockSeguridad: null,
+        Peso: null,
+        Volumen: null,
+        CodigoAfip: null);
 
     [Fact]
     public async Task Handle_ItemNoExiste_RetornaFailure()
@@ -91,6 +166,39 @@ public class UpdateItemCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         _repo.Received(1).Update(Arg.Any<Item>());
         await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ConComponentes_ReemplazaPackDelItem()
+    {
+        var item = Item.Crear("PROD001", "Producto Test", 1, 1, 1,
+                               true, false, false, true, 100m, 150m, null, 0, null,
+                               null, null, null, null, null);
+        item.GetType().GetProperty("Id")!.SetValue(item, 1L);
+        _repo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(item);
+        _user.UserId.Returns((long?)1L);
+
+        var componente = Item.Crear("COMP001", "Componente", 1, 1, 1, true, false, false, true, 10m, 20m, null, 0m, null, null, null, null, null, null);
+        componente.GetType().GetProperty("Id")!.SetValue(componente, 50L);
+        var componenteAnterior = ItemComponente.Crear(1L, 60L, 1m);
+        componenteAnterior.GetType().GetProperty("Id")!.SetValue(componenteAnterior, 500L);
+
+        _db.Items.Returns(MockDbSetHelper.CreateMockDbSet<Item>([item, componente]));
+        var componentesDbSet = MockDbSetHelper.CreateMockDbSet<ItemComponente>([componenteAnterior]);
+        _db.ItemsComponentes.Returns(componentesDbSet);
+
+        var command = ValidCommand(1) with
+        {
+            Componentes = [new ItemComponenteInput(50L, 3m)]
+        };
+
+        var result = await Sut().Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        componentesDbSet.Should().ContainSingle();
+        componentesDbSet.Single().ItemPadreId.Should().Be(1L);
+        componentesDbSet.Single().ComponenteId.Should().Be(50L);
+        componentesDbSet.Single().Cantidad.Should().Be(3m);
     }
 }
 
@@ -326,6 +434,12 @@ public class GetItemByIdQueryHandlerTests
         _db.UnidadesMedida.Returns(mockUnidadesMedida40);
         var mockAlicuotasIva41 = MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Referencia.AlicuotaIva>();
         _db.AlicuotasIva.Returns(mockAlicuotasIva41);
+        _db.Stock.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Stock.StockItem>());
+        _db.ComprobantesItems.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Comprobantes.ComprobanteItem>());
+        _db.Comprobantes.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Comprobantes.Comprobante>());
+        _db.TiposComprobante.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Referencia.TipoComprobante>());
+        _db.TransferenciasDepositoDetalles.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Logistica.TransferenciaDepositoDetalle>());
+        _db.TransferenciasDeposito.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Logistica.TransferenciaDeposito>());
 
         var result = await Sut().Handle(new GetItemByIdQuery(1), CancellationToken.None);
 
@@ -339,9 +453,8 @@ public class GetItemByIdQueryHandlerTests
 public class GetItemPrecioQueryHandlerTests
 {
     private readonly IItemRepository _itemRepo = Substitute.For<IItemRepository>();
-    private readonly IListaPreciosRepository _preciosRepo = Substitute.For<IListaPreciosRepository>();
     private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
-    private GetItemPrecioQueryHandler Sut() => new(_itemRepo, _preciosRepo, _db);
+    private GetItemPrecioQueryHandler Sut() => new(_itemRepo, _db, new ZuluIA_Back.Application.Features.ListasPrecios.Services.PrecioListaResolutionService(_db));
 
     [Fact]
     public async Task Handle_ItemNoExiste_RetornaNull()
@@ -391,6 +504,7 @@ public class GetItemsPagedQueryHandlerTests
         _repo.GetPagedAsync(
             Arg.Any<int>(), Arg.Any<int>(),
             Arg.Any<string?>(), Arg.Any<long?>(),
+            Arg.Any<bool?>(), Arg.Any<bool?>(),
             Arg.Any<bool?>(), Arg.Any<bool?>(),
             Arg.Any<CancellationToken>())
             .Returns(empty);

@@ -4,7 +4,7 @@ using ZuluIA_Back.Domain.Entities.Ventas;
 
 namespace ZuluIA_Back.UnitTests.Domain;
 
-public class ContratoTests
+public class ContratoPresupuestoTests
 {
     private static readonly DateOnly Hoy = DateOnly.FromDateTime(DateTime.Today);
 

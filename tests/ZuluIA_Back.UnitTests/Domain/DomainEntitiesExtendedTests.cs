@@ -399,7 +399,7 @@ public class EjercicioTests
 // CartaPorte
 // ─────────────────────────────────────────────────────────────────────────────
 
-public class CartaPorteTests
+public class CartaPorteExtendedTests
 {
     private static CartaPorte CartaValida() => CartaPorte.Crear(
         null,

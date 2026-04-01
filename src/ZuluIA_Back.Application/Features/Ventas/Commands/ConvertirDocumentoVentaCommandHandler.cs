@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Terceros.Services;
+using ZuluIA_Back.Application.Features.Ventas.Common;
 using ZuluIA_Back.Application.Features.Ventas.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
@@ -14,7 +16,9 @@ public class ConvertirDocumentoVentaCommandHandler(
     IApplicationDbContext db,
     IUnitOfWork uow,
     ICurrentUserService currentUser,
-    CircuitoVentasService circuitoVentas)
+    CircuitoVentasService circuitoVentas,
+    TerceroOperacionValidationService terceroOperacionValidationService,
+    ISender sender)
     : IRequestHandler<ConvertirDocumentoVentaCommand, Result<long>>
 {
     public async Task<Result<long>> Handle(ConvertirDocumentoVentaCommand request, CancellationToken ct)
@@ -41,6 +45,10 @@ public class ConvertirDocumentoVentaCommandHandler(
 
         if (!tipoDestino.EsVenta)
             return Result.Failure<long>("El tipo de comprobante destino no pertenece al circuito de ventas.");
+
+        var validationError = await terceroOperacionValidationService.ValidateClienteAsync(origen.TerceroId, ct);
+        if (validationError is not null)
+            return Result.Failure<long>(validationError);
 
         short prefijo = 0;
         long numero = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -92,13 +100,24 @@ public class ConvertirDocumentoVentaCommandHandler(
                 item.PorcentajeIva,
                 item.DepositoId,
                 orden++,
-                item.EsGravado);
+                item.EsGravado,
+                item.Lote,
+                item.Serie,
+                item.FechaVencimiento,
+                item.UnidadMedidaId,
+                item.ObservacionRenglon,
+                item.PrecioListaOriginal,
+                item.ComisionVendedorRenglon,
+                item.ComprobanteItemOrigenId ?? item.Id);
 
             nuevo.AgregarItem(linea);
         }
 
         if (origen.Percepciones > 0)
             nuevo.SetPercepciones(origen.Percepciones, currentUser.UserId);
+
+        if (PedidoWorkflowRules.EsPedido(tipoDestino.Codigo, tipoDestino.Descripcion) || request.FechaEntregaCompromiso.HasValue)
+            nuevo.InicializarComoPedido(request.FechaEntregaCompromiso, currentUser.UserId);
 
         nuevo.Emitir(currentUser.UserId);
 
@@ -115,6 +134,13 @@ public class ConvertirDocumentoVentaCommandHandler(
             ct);
 
         await uow.SaveChangesAsync(ct);
+
+        if (PedidoWorkflowRules.EsRemito(tipoDestino.Codigo, tipoDestino.Descripcion, tipoDestino.AfectaStock)
+            && (origen.EstadoPedido.HasValue || origen.FechaEntregaCompromiso.HasValue))
+        {
+            await sender.Send(new ActualizarCumplimientoPedidoCommand(origen.Id), ct);
+        }
+
         return Result.Success(nuevo.Id);
     }
 }

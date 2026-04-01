@@ -2,6 +2,7 @@ using MediatR;
 using ZuluIA_Back.Application.Features.Comprobantes.Commands;
 using ZuluIA_Back.Application.Features.Ventas.Common;
 using ZuluIA_Back.Domain.Common;
+using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Application.Features.Ventas.Commands;
 
@@ -24,7 +25,10 @@ public class RegistrarDevolucionVentaCommandHandler(IMediator mediator)
                 request.ComprobanteOrigenId,
                 request.Items,
                 request.ReingresaStock ? OperacionStockVenta.Ingreso : OperacionStockVenta.Ninguna,
-                request.AcreditaCuentaCorriente ? OperacionCuentaCorrienteVenta.Credito : OperacionCuentaCorrienteVenta.Ninguna),
+                request.AcreditaCuentaCorriente ? OperacionCuentaCorrienteVenta.Credito : OperacionCuentaCorrienteVenta.Ninguna,
+                request.MotivoDevolucion,
+                request.ObservacionDevolucion,
+                request.AutorizadorDevolucionId),
             ct);
 }
 
@@ -42,5 +46,8 @@ internal record RegistrarDevolucionVentaInternaCommand(
     long? ComprobanteOrigenId,
     IReadOnlyList<ComprobanteItemInput> Items,
     OperacionStockVenta OperacionStock,
-    OperacionCuentaCorrienteVenta OperacionCuentaCorriente
+    OperacionCuentaCorrienteVenta OperacionCuentaCorriente,
+    MotivoDevolucion MotivoDevolucion,
+    string? ObservacionDevolucion,
+    long? AutorizadorDevolucionId
 ) : IRequest<Result<long>>;

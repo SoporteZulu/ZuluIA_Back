@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using ZuluIA_Back.Domain.Entities.Geografia;
 using ZuluIA_Back.Domain.Entities.Terceros;
 
 namespace ZuluIA_Back.Infrastructure.Persistence.Configurations;
@@ -8,7 +9,7 @@ public class DomicilioConfiguration : IEntityTypeConfiguration<PersonaDomicilio>
 {
     public void Configure(EntityTypeBuilder<PersonaDomicilio> builder)
     {
-        builder.ToTable("PER_DOMICILIO");
+        builder.ToTable("per_domicilio");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("dom_id").UseIdentityColumn();
 
@@ -43,5 +44,25 @@ public class DomicilioConfiguration : IEntityTypeConfiguration<PersonaDomicilio>
                .HasColumnName("dom_defecto").IsRequired();
 
         builder.HasIndex(x => x.PersonaId);
+        builder.HasIndex(x => new { x.PersonaId, x.EsDefecto });
+        builder.HasIndex(x => new { x.PersonaId, x.Orden });
+        builder.HasIndex(x => x.TipoDomicilioId);
+        builder.HasIndex(x => x.ProvinciaId);
+        builder.HasIndex(x => x.LocalidadId);
+
+        builder.HasOne<TipoDomicilioCatalogo>()
+               .WithMany()
+               .HasForeignKey(x => x.TipoDomicilioId)
+               .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Provincia>()
+               .WithMany()
+               .HasForeignKey(x => x.ProvinciaId)
+               .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Localidad>()
+               .WithMany()
+               .HasForeignKey(x => x.LocalidadId)
+               .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -29,6 +29,79 @@ public class ItemTests
     }
 
     [Fact]
+    public void Crear_ConCamposLogisticosYStockOperativo_DebePersistirlos()
+    {
+        var item = Item.Crear(
+            "PRODLOG", "Producto logístico",
+            1, 1, 1,
+            true, false, false,
+            true, 100m, 150m,
+            null, 5m, 50m,
+            null, null, null, null, null,
+            10m, 3m, 1.5m, 0.8m);
+
+        item.PuntoReposicion.Should().Be(10m);
+        item.StockSeguridad.Should().Be(3m);
+        item.Peso.Should().Be(1.5m);
+        item.Volumen.Should().Be(0.8m);
+    }
+
+    [Fact]
+    public void Crear_ConCamposAvanzados_DebePersistirlos()
+    {
+        var item = Item.Crear(
+            "PRODAV", "Producto avanzado",
+            1, 1, 1,
+            true, false, false,
+            true, 100m, 150m,
+            null, 5m, 50m,
+            null, null, null, null, null,
+            10m, 3m, 1.5m, 0.8m,
+            "ALT001", true, true, 30, 9L);
+
+        item.CodigoAlternativo.Should().Be("ALT001");
+        item.EsTrazable.Should().BeTrue();
+        item.PermiteFraccionamiento.Should().BeTrue();
+        item.DiasVencimientoLimite.Should().Be(30);
+        item.DepositoDefaultId.Should().Be(9L);
+    }
+
+    [Fact]
+    public void Crear_ConCamposFiscalesCompra_DebePersistirlos()
+    {
+        var item = Item.Crear(
+            "PRODFISC", "Producto fiscal",
+            1, 1, 1,
+            true, false, false,
+            true, 100m, 150m,
+            null, 5m, 50m,
+            null, null, null, null, null,
+            null, null, null, null,
+            null, false, false, null, null,
+            2L, 7L);
+
+        item.AlicuotaIvaCompraId.Should().Be(2L);
+        item.ImpuestoInternoId.Should().Be(7L);
+    }
+
+    [Fact]
+    public void Crear_TrazableSinStock_LanzaExcepcion()
+    {
+        var act = () => Item.Crear(
+            "PRODTR", "Producto trazable inválido",
+            1, 1, 1,
+            true, false, false,
+            false, 100m, 150m,
+            null, 0m, null,
+            null, null, null, null, null,
+            null, null, null, null,
+            null, true, false, null, null);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*trazable*");
+    }
+
+    [Fact]
     public void Crear_ComoServicio_NoDebeManejearStock()
     {
         var item = Item.Crear(
@@ -142,6 +215,57 @@ public class ItemTests
         item.Activo.Should().BeFalse();
     }
 
+    [Fact]
+    public void Activar_ItemDesactivado_DebeReactivarloYLimpiarDeletedAt()
+    {
+        var item = Item.Crear(
+            "PROD001", "Producto",
+            1, 1, 1,
+            true, false, false,
+            true, 0m, 0m,
+            null, 0m, null,
+            null, null, null, null, null);
+
+        item.Desactivar(null);
+        item.Activar(null);
+
+        item.Activo.Should().BeTrue();
+        item.IsDeleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Crear_ConPorcentajeGanancia_DebeCalcularPrecioVenta()
+    {
+        var item = Item.Crear(
+            "PROD002", "Producto con margen",
+            1, 1, 1,
+            true, false, false,
+            true, 100m, 0m,
+            null, null, 0m, null,
+            null, null, null, null,
+            true, true, 25m, null, false, false, null);
+
+        item.PrecioVenta.Should().Be(125m);
+    }
+
+    [Fact]
+    public void Desactivar_ItemSistema_LanzaExcepcion()
+    {
+        var item = Item.Crear(
+            "SIST001", "Producto sistema",
+            1, 1, 1,
+            true, false, false,
+            true, 100m, 150m,
+            null, null, 0m, null,
+            null, null, null, null,
+            true, true, null, null, false, true, null);
+
+        var act = () => item.Desactivar(null);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*item del sistema*");
+    }
+
     // ── Actualizar ──────────────────────────────────────────────────────────
 
     private static Item CrearItemBase() => Item.Crear(
@@ -163,7 +287,9 @@ public class ItemTests
             true, false, false,
             true, 10L,
             "ABC123", 10m, 100m,
-            null, null);
+            null, null,
+            12m, 4m, 1.2m, 0.7m,
+            "ALT002", true, true, 20, 8L);
 
         item.Descripcion.Should().Be("Producto Actualizado");
         item.DescripcionAdicional.Should().Be("Detalle adicional");
@@ -172,6 +298,33 @@ public class ItemTests
         item.ManejaStock.Should().BeTrue();
         item.StockMinimo.Should().Be(10m);
         item.StockMaximo.Should().Be(100m);
+        item.PuntoReposicion.Should().Be(12m);
+        item.StockSeguridad.Should().Be(4m);
+        item.Peso.Should().Be(1.2m);
+        item.Volumen.Should().Be(0.7m);
+        item.CodigoAlternativo.Should().Be("ALT002");
+        item.EsTrazable.Should().BeTrue();
+        item.PermiteFraccionamiento.Should().BeTrue();
+        item.DiasVencimientoLimite.Should().Be(20);
+        item.DepositoDefaultId.Should().Be(8L);
+    }
+
+    [Fact]
+    public void Actualizar_PesoNegativo_LanzaExcepcion()
+    {
+        var item = CrearItemBase();
+
+        var act = () => item.Actualizar(
+            "Producto", null, null,
+            1, 1, 1,
+            true, false, false,
+            true, null,
+            null, 10m, 20m,
+            null, null,
+            null, null, -1m, null);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*peso*negativo*");
     }
 
     [Fact]

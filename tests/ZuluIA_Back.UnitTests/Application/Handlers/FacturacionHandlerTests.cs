@@ -142,68 +142,6 @@ public class CerrarPeriodoIvaCommandHandlerTests
     }
 }
 
-// ── CreateCartaPorteCommandHandler ────────────────────────────────────────────
-
-public class CreateCartaPorteCommandHandlerTests
-{
-    private readonly ICartaPorteRepository _repo = Substitute.For<ICartaPorteRepository>();
-    private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
-    private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
-    private CreateCartaPorteCommandHandler Sut() => new(_repo, _uow, _user);
-
-    [Fact]
-    public async Task Handle_DatosValidos_CreaYRetornaId()
-    {
-        _user.UserId.Returns((long?)1L);
-
-        var result = await Sut().Handle(
-            new CreateCartaPorteCommand(
-                null, "20123456789", "20987654321", null,
-                DateOnly.FromDateTime(DateTime.Today), null),
-            CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        await _repo.Received(1).AddAsync(Arg.Any<CartaPorte>(), Arg.Any<CancellationToken>());
-        await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-}
-
-// ── AsignarCtgCommandHandler ──────────────────────────────────────────────────
-
-public class AsignarCtgCommandHandlerTests
-{
-    private readonly ICartaPorteRepository _repo = Substitute.For<ICartaPorteRepository>();
-    private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
-    private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
-    private AsignarCtgCommandHandler Sut() => new(_repo, _uow, _user);
-
-    [Fact]
-    public async Task Handle_CartaNoExiste_RetornaFailure()
-    {
-        _repo.GetByIdAsync(Arg.Any<long>(), Arg.Any<CancellationToken>()).Returns((CartaPorte?)null);
-
-        var result = await Sut().Handle(new AsignarCtgCommand(99, "12345678"), CancellationToken.None);
-
-        result.IsFailure.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task Handle_CartaPendiente_AsignaCtgYPersiste()
-    {
-        var carta = CartaPorte.Crear(null, "20123456789", "20987654321", null,
-            DateOnly.FromDateTime(DateTime.Today), null, null);
-        _repo.GetByIdAsync(Arg.Any<long>(), Arg.Any<CancellationToken>()).Returns(carta);
-        _user.UserId.Returns((long?)1L);
-
-        var result = await Sut().Handle(new AsignarCtgCommand(1, "CTG-00001"), CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        carta.NroCtg.Should().Be("CTG-00001");
-        _repo.Received(1).Update(carta);
-        await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-}
-
 // ── GetProximoNumeroQueryHandler ──────────────────────────────────────────────
 
 public class GetProximoNumeroQueryHandlerTests

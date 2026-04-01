@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Query;
-using NSubstitute;
 using System.Collections;
 using System.Linq.Expressions;
 
@@ -17,23 +18,75 @@ public static class MockDbSetHelper
         where T : class
     {
         var list = data?.ToList() ?? [];
-        var queryable = list.AsQueryable();
-
-        var mockDbSet = Substitute.For<DbSet<T>, IQueryable<T>, IAsyncEnumerable<T>>();
-
-        ((IQueryable<T>)mockDbSet).Provider
-            .Returns(new TestAsyncQueryProvider<T>(queryable.Provider));
-        ((IQueryable<T>)mockDbSet).Expression
-            .Returns(queryable.Expression);
-        ((IQueryable<T>)mockDbSet).ElementType
-            .Returns(queryable.ElementType);
-        ((IQueryable<T>)mockDbSet).GetEnumerator()
-            .Returns(_ => queryable.GetEnumerator());
-        ((IAsyncEnumerable<T>)mockDbSet).GetAsyncEnumerator(Arg.Any<CancellationToken>())
-            .Returns(_ => new TestAsyncEnumerator<T>(list.GetEnumerator()));
-
-        return mockDbSet;
+        return new TestAsyncDbSet<T>(list);
     }
+}
+
+internal sealed class TestAsyncDbSet<T>(IEnumerable<T> data) : DbSet<T>, IQueryable<T>, IAsyncEnumerable<T>
+    where T : class
+{
+    private readonly List<T> _data = data.ToList();
+
+    private IQueryable<T> Queryable => _data.AsQueryable();
+
+    public Type ElementType => Queryable.ElementType;
+    public Expression Expression => Queryable.Expression;
+    public IQueryProvider Provider => new TestAsyncQueryProvider<T>(Queryable.Provider);
+    Type IQueryable.ElementType => ElementType;
+    Expression IQueryable.Expression => Expression;
+    IQueryProvider IQueryable.Provider => Provider;
+
+    public override IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        => new TestAsyncEnumerator<T>(Queryable.GetEnumerator());
+
+    public override IEntityType EntityType
+        => throw new NotSupportedException("EntityType metadata is not supported in test DbSets.");
+
+    public override LocalView<T> Local
+        => throw new NotSupportedException("Local view is not supported in test DbSets.");
+
+    public override EntityEntry<T> Add(T entity)
+    {
+        _data.Add(entity);
+        return null!;
+    }
+
+    public override ValueTask<EntityEntry<T>> AddAsync(T entity, CancellationToken cancellationToken = default)
+    {
+        _data.Add(entity);
+        return ValueTask.FromResult<EntityEntry<T>>(null!);
+    }
+
+    public override EntityEntry<T> Remove(T entity)
+    {
+        _data.Remove(entity);
+        return null!;
+    }
+
+    public override ValueTask<T?> FindAsync(params object?[]? keyValues)
+        => ValueTask.FromResult(FindEntity(keyValues));
+
+    public override ValueTask<T?> FindAsync(object?[]? keyValues, CancellationToken cancellationToken)
+        => ValueTask.FromResult(FindEntity(keyValues));
+
+    private T? FindEntity(object?[]? keyValues)
+    {
+        if (keyValues is null || keyValues.Length != 1 || keyValues[0] is null)
+            return null;
+
+        var keyProperty = typeof(T).GetProperty("Id")
+            ?? typeof(T).GetProperties().FirstOrDefault(p => p.Name.EndsWith("Id", StringComparison.Ordinal));
+
+        if (keyProperty is null)
+            throw new NotSupportedException($"FindAsync is not supported for {typeof(T).Name} without an Id property.");
+
+        var keyValue = keyValues[0];
+        return _data.FirstOrDefault(entity => Equals(keyProperty.GetValue(entity), keyValue));
+    }
+
+    public IEnumerator<T> GetEnumerator() => Queryable.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => Queryable.GetEnumerator();
 }
 
 internal sealed class TestAsyncEnumerator<T>(IEnumerator<T> inner) : IAsyncEnumerator<T>

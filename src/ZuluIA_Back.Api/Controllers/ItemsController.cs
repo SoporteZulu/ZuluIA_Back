@@ -95,6 +95,9 @@ public class ItemsController(IMediator mediator, IApplicationDbContext db)
         long id,
         [FromQuery] long? listaPreciosId = null,
         [FromQuery] long? monedaId = null,
+        [FromQuery] long? terceroId = null,
+        [FromQuery] long? canalVentaId = null,
+        [FromQuery] long? vendedorId = null,
         [FromQuery] DateOnly? fecha = null,
         CancellationToken ct = default)
     {
@@ -103,7 +106,10 @@ public class ItemsController(IMediator mediator, IApplicationDbContext db)
                 id,
                 listaPreciosId,
                 monedaId,
-                fecha ?? DateOnly.FromDateTime(DateTime.Today)),
+                fecha ?? DateOnly.FromDateTime(DateTime.Today),
+                terceroId,
+                canalVentaId,
+                vendedorId),
             ct);
 
         return OkOrNotFound(result);
@@ -234,6 +240,101 @@ public class ItemsController(IMediator mediator, IApplicationDbContext db)
     {
         var result = await Mediator.Send(new ActivateItemCommand(id), ct);
         return FromResult(result);
+    }
+
+    // ── Fase 1: Endpoints de Configuración de Ventas ─────────────────────────
+
+    /// <summary>
+    /// Actualiza la configuración de ventas del item (aplica ventas/compras, descuento máximo, RPT).
+    /// </summary>
+    [HttpPatch("{id:long}/configuracion-ventas")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ActualizarConfiguracionVentas(
+        long id,
+        [FromBody] UpdateItemConfiguracionVentasCommand command,
+        CancellationToken ct)
+    {
+        if (id != command.ItemId)
+            return BadRequest("El ID del ítem no coincide.");
+
+        var result = await Mediator.Send(command, ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Actualiza el porcentaje de ganancia del item.
+    /// El precio de venta se recalcula automáticamente.
+    /// </summary>
+    [HttpPatch("{id:long}/porcentaje-ganancia")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ActualizarPorcentajeGanancia(
+        long id,
+        [FromBody] UpdateItemPorcentajeGananciaCommand command,
+        CancellationToken ct)
+    {
+        if (id != command.ItemId)
+            return BadRequest("El ID del ítem no coincide.");
+
+        var result = await Mediator.Send(command, ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
+    /// Calcula el precio de venta basado en el porcentaje de ganancia configurado.
+    /// </summary>
+    [HttpGet("{id:long}/precio-venta-calculado")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPrecioVentaCalculado(long id, CancellationToken ct)
+    {
+        var item = await db.Items.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (item is null)
+            return NotFound();
+
+        var precioCalculado = item.CalcularPrecioVentaPorGanancia();
+
+        return Ok(new
+        {
+            itemId = id,
+            precioCosto = item.PrecioCosto,
+            porcentajeGanancia = item.PorcentajeGanancia,
+            precioVentaActual = item.PrecioVenta,
+            precioVentaCalculado = precioCalculado,
+            coincide = Math.Abs(item.PrecioVenta - precioCalculado) < 0.01m
+        });
+    }
+
+    /// <summary>
+    /// Valida si un porcentaje de descuento es válido para el item.
+    /// </summary>
+    [HttpPost("{id:long}/validar-descuento")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ValidarDescuento(
+        long id,
+        [FromBody] decimal porcentajeDescuento,
+        CancellationToken ct)
+    {
+        var item = await db.Items.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (item is null)
+            return NotFound();
+
+        var esValido = item.ValidarDescuento(porcentajeDescuento);
+
+        return Ok(new
+        {
+            itemId = id,
+            porcentajeDescuentoSolicitado = porcentajeDescuento,
+            porcentajeMaximoPermitido = item.PorcentajeMaximoDescuento,
+            esValido,
+            mensaje = esValido
+                ? "Descuento válido"
+                : $"Descuento excede el máximo permitido ({item.PorcentajeMaximoDescuento}%)"
+        });
     }
 
     // ── BOM / ItemComponente ──────────────────────────────────────────────────

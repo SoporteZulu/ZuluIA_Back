@@ -7,6 +7,8 @@ using NSubstitute;
 using Xunit;
 using ZuluIA_Back.Api.Controllers;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Reportes.Services;
+using ZuluIA_Back.Application.Features.RRHH.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.RRHH;
 using ZuluIA_Back.Domain.Entities.Terceros;
@@ -131,10 +133,28 @@ public class EmpleadosReadControllerTests
         IEmpleadoRepository? repo = null,
         IApplicationDbContext? db = null)
     {
+        var dbInstance = db ?? Substitute.For<IApplicationDbContext>();
+        var currentUser = Substitute.For<ICurrentUserService>();
+        var tesoreriaService = new ZuluIA_Back.Application.Features.Tesoreria.Services.TesoreriaService(
+            dbInstance,
+            Substitute.For<ZuluIA_Back.Domain.Interfaces.IRepository<ZuluIA_Back.Domain.Entities.Finanzas.TesoreriaMovimiento>>(),
+            Substitute.For<ZuluIA_Back.Domain.Interfaces.IRepository<ZuluIA_Back.Domain.Entities.Finanzas.TesoreriaCierre>>(),
+            currentUser);
+        var rrhhService = new RrhhService(
+            dbInstance,
+            repo ?? Substitute.For<IEmpleadoRepository>(),
+            Substitute.For<ZuluIA_Back.Domain.Interfaces.IRepository<ZuluIA_Back.Domain.Entities.RRHH.ComprobanteEmpleado>>(),
+            Substitute.For<ZuluIA_Back.Domain.Interfaces.IRepository<ZuluIA_Back.Domain.Entities.RRHH.ImputacionEmpleado>>(),
+            Substitute.For<ZuluIA_Back.Domain.Interfaces.IRepository<ZuluIA_Back.Domain.Entities.RRHH.LiquidacionSueldo>>(),
+            tesoreriaService,
+            new ReporteExportacionService(),
+            currentUser);
         var controller = new EmpleadosController(
             mediator,
             repo ?? Substitute.For<IEmpleadoRepository>(),
-            db ?? Substitute.For<IApplicationDbContext>())
+            dbInstance,
+            rrhhService,
+            new ReporteExportacionService())
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

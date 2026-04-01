@@ -53,6 +53,14 @@ public class TerceroPerfilComercialConfiguration : IEntityTypeConfiguration<Terc
             .HasColumnName("vigencia_saldo")
             .HasMaxLength(100);
 
+        builder.Property(x => x.VigenciaSaldoDesde)
+            .HasColumnName("vigencia_saldo_desde")
+            .HasColumnType("date");
+
+        builder.Property(x => x.VigenciaSaldoHasta)
+            .HasColumnName("vigencia_saldo_hasta")
+            .HasColumnType("date");
+
         builder.Property(x => x.CondicionVenta)
             .HasColumnName("condicion_venta")
             .HasMaxLength(150);

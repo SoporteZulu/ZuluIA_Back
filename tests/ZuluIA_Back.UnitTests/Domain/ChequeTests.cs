@@ -9,13 +9,14 @@ public class ChequeTests
 {
     private static readonly DateOnly Hoy = DateOnly.FromDateTime(DateTime.Today);
 
-    private static Cheque CrearCheque() =>
-        Cheque.Crear(1, null, "123", "Banco Test", Hoy, Hoy.AddDays(10), 100m, 1, null, null);
+    private static Cheque CrearChequeTercero() =>
+        Cheque.Crear(1, null, "123", "Banco Test", Hoy, Hoy.AddDays(10), 100m, 1,
+            TipoCheque.Tercero, true, false, "Titular Test", null, null, null, null, null, null);
 
     [Fact]
     public void Crear_ConDatosValidos_DebeIniciarEnCartera()
     {
-        var cheque = CrearCheque();
+        var cheque = CrearChequeTercero();
 
         cheque.Estado.Should().Be(EstadoCheque.Cartera);
     }
@@ -23,7 +24,7 @@ public class ChequeTests
     [Fact]
     public void Depositar_DesdeCartera_DebeQuedarDepositado()
     {
-        var cheque = CrearCheque();
+        var cheque = CrearChequeTercero();
 
         cheque.Depositar(Hoy, Hoy.AddDays(2), null);
 
@@ -34,7 +35,7 @@ public class ChequeTests
     [Fact]
     public void Acreditar_DesdeDepositado_DebeQuedarAcreditado()
     {
-        var cheque = CrearCheque();
+        var cheque = CrearChequeTercero();
         cheque.Depositar(Hoy, Hoy.AddDays(2), null);
 
         cheque.Acreditar(Hoy.AddDays(2), null);
@@ -45,7 +46,7 @@ public class ChequeTests
     [Fact]
     public void Entregar_ConTercero_DebeQuedarEntregadoYAsignarTercero()
     {
-        var cheque = CrearCheque();
+        var cheque = CrearChequeTercero();
 
         cheque.Entregar(55, "Entrega a proveedor", null);
 
@@ -55,12 +56,36 @@ public class ChequeTests
     }
 
     [Fact]
-    public void Rechazar_DebeQuedarRechazado()
+    public void Rechazar_DebeQuedarRechazadoYGuardarConcepto()
     {
-        var cheque = CrearCheque();
+        var cheque = CrearChequeTercero();
 
-        cheque.Rechazar("Sin fondos", null);
+        cheque.Rechazar("Sin fondos", "Observación", null);
 
         cheque.Estado.Should().Be(EstadoCheque.Rechazado);
+        cheque.ConceptoRechazo.Should().Be("Sin fondos");
+    }
+
+    [Fact]
+    public void Endosar_AlaOrden_DebeQuedarEndosado()
+    {
+        var cheque = CrearChequeTercero();
+
+        cheque.Endosar(77, "Endoso a tercero", null);
+
+        cheque.Estado.Should().Be(EstadoCheque.Endosado);
+        cheque.TerceroId.Should().Be(77);
+    }
+
+    [Fact]
+    public void Anular_ChequePropioEnCartera_DebeQuedarAnulado()
+    {
+        var cheque = Cheque.Crear(1, null, "999", "Banco Test", Hoy, Hoy.AddDays(10), 100m, 1,
+            TipoCheque.Propio, false, false, null, null, null, 5, null, null, null);
+
+        cheque.Anular("Error de emisión", null);
+
+        cheque.Estado.Should().Be(EstadoCheque.Anulado);
+        cheque.Observacion.Should().Contain("ANULADO");
     }
 }

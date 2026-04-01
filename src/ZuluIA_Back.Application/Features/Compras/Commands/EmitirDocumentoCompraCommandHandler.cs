@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Terceros.Services;
 using ZuluIA_Back.Application.Features.Compras.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Enums;
@@ -13,7 +14,8 @@ public class EmitirDocumentoCompraCommandHandler(
     IApplicationDbContext db,
     IUnitOfWork uow,
     ICurrentUserService currentUser,
-    CircuitoComprasService circuitoCompras)
+    CircuitoComprasService circuitoCompras,
+    TerceroOperacionValidationService terceroOperacionValidationService)
     : IRequestHandler<EmitirDocumentoCompraCommand, Result<long>>
 {
     public async Task<Result<long>> Handle(EmitirDocumentoCompraCommand request, CancellationToken ct)
@@ -34,6 +36,10 @@ public class EmitirDocumentoCompraCommandHandler(
 
         if (!tipo.EsCompra)
             return Result.Failure<long>("El comprobante no pertenece al circuito de compras.");
+
+        var validationError = await terceroOperacionValidationService.ValidateProveedorAsync(comprobante.TerceroId, ct);
+        if (validationError is not null)
+            return Result.Failure<long>(validationError);
 
         comprobante.Emitir(currentUser.UserId);
         comprobanteRepo.Update(comprobante);

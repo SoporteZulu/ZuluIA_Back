@@ -92,7 +92,7 @@ public class ItemsControllerTests
         var controller = CreateController(mediator, BuildDb());
         var fecha = new DateOnly(2026, 3, 21);
 
-        var result = await controller.GetPrecio(9, 5, 1, fecha, CancellationToken.None);
+        var result = await controller.GetPrecio(9, listaPreciosId: 5, monedaId: 1, fecha: fecha, ct: CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         ok.Value.Should().BeSameAs(dto);
@@ -361,12 +361,21 @@ public class ItemsControllerTests
 
     private static CreateItemCommand BuildCreateCommand()
     {
-        return new CreateItemCommand("A-001", "Articulo", null, "123", 1, 2, 1, true, false, false, true, 3, 100, 150, 1, 10, null, 10);
+        return new CreateItemCommand(
+            "A-001", "Articulo", null, "123", 1, 2, null, 1,
+            true, false, false, true, 3, 100, 150, 1, 10,
+            null, null, null, null, null,
+            null, null, null, null,
+            10);
     }
 
     private static UpdateItemCommand BuildUpdateCommand(long id)
     {
-        return new UpdateItemCommand(id, "Articulo", null, "123", 1, 2, 1, true, false, false, true, 3, 100, 150, 1, 10, null);
+        return new UpdateItemCommand(
+            id, "Articulo", null, "123", 1, 2, null, 1,
+            true, false, false, true, 3, 100, 150, 1, 10,
+            null, null, null, null, null,
+            null, null, null, null, null);
     }
 
     private static Item BuildItem(long id, string codigo, string descripcion, string? codigoBarras)

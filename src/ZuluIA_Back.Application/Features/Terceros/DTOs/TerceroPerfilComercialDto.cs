@@ -12,6 +12,8 @@ public class TerceroPerfilComercialDto
     public string RiesgoCrediticio { get; set; } = "NORMAL";
     public decimal? SaldoMaximoVigente { get; set; }
     public string? VigenciaSaldo { get; set; }
+    public DateOnly? VigenciaSaldoDesde { get; set; }
+    public DateOnly? VigenciaSaldoHasta { get; set; }
     public string? CondicionVenta { get; set; }
     public string? PlazoCobro { get; set; }
     public string? FacturadorPorDefecto { get; set; }

@@ -236,7 +236,14 @@ public class FormulasProduccionControllerTests
 
     private static FormulasProduccionController CreateController(IMediator mediator, IFormulaProduccionRepository repo, IApplicationDbContext db)
     {
-        return new FormulasProduccionController(mediator, repo, db)
+        return new FormulasProduccionController(
+            mediator,
+            repo,
+            new ZuluIA_Back.Application.Features.Produccion.Services.FormulaProduccionHistorialService(
+                db,
+                Substitute.For<ZuluIA_Back.Domain.Interfaces.IRepository<ZuluIA_Back.Domain.Entities.Produccion.FormulaProduccionHistorial>>(),
+                Substitute.For<ICurrentUserService>()),
+            db)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

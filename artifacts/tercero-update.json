@@ -1,0 +1,55 @@
+﻿{
+    "estadoProveedorId":  null,
+    "condicionIvaId":  3,
+    "calle":  null,
+    "web":  null,
+    "celular":  null,
+    "barrioId":  null,
+    "nombre":  null,
+    "categoriaProveedorId":  null,
+    "email":  null,
+    "apellido":  null,
+    "telefono":  null,
+    "monedaId":  1,
+    "id":  7,
+    "ventanasCobranza":  [
+
+                         ],
+    "limiteCredito":  0,
+    "observacion":  "smoke update",
+    "facturable":  true,
+    "codigoPostal":  null,
+    "nroIngresosBrutos":  null,
+    "categoriaClienteId":  null,
+    "pctComisionCobrador":  0,
+    "pctComisionVendedor":  0,
+    "nroDocumento":  "30123456789",
+    "esEmpleado":  false,
+    "tipoPersoneria":  "JURIDICA",
+    "esEntidadGubernamental":  false,
+    "nroMunicipal":  null,
+    "cobradorId":  null,
+    "perfilComercial":  null,
+    "nro":  null,
+    "dpto":  null,
+    "razonSocial":  "TERCERO TEST UPDATE",
+    "nombreFantasia":  "TERCERO TEST UPDATE",
+    "claveFiscal":  null,
+    "vendedorId":  null,
+    "categoriaId":  1,
+    "localidadId":  null,
+    "sucursalesEntrega":  [
+
+                          ],
+    "contactos":  [
+
+                  ],
+    "transportes":  [
+
+                    ],
+    "estadoClienteId":  null,
+    "esProveedor":  false,
+    "esCliente":  true,
+    "piso":  null,
+    "valorClaveFiscal":  null
+}

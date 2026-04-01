@@ -25,7 +25,7 @@ public class OrdenesEmpaqueControllerTests
             BuildOrdenEmpaque(2, 10, "CONFIRMADO", false, new DateOnly(2026, 3, 15), 150m),
             BuildOrdenEmpaque(3, 11, "CONFIRMADO", true, new DateOnly(2026, 3, 20), 200m)
         ]);
-        db.OrdenesEmpaque.Returns(items);
+        db.OrdenesEmpaquesLogistica.Returns(items);
         var controller = CreateController(mediator, db);
 
         var result = await controller.GetAll(10, "confirmado", false, CancellationToken.None);
@@ -44,7 +44,7 @@ public class OrdenesEmpaqueControllerTests
         var mediator = Substitute.For<IMediator>();
         var db = Substitute.For<IApplicationDbContext>();
         var items = MockDbSetHelper.CreateMockDbSet(Array.Empty<OrdenEmpaque>());
-        db.OrdenesEmpaque.Returns(items);
+        db.OrdenesEmpaquesLogistica.Returns(items);
         var controller = CreateController(mediator, db);
 
         var result = await controller.GetById(99, CancellationToken.None);
@@ -62,7 +62,7 @@ public class OrdenesEmpaqueControllerTests
         orden.AgregarDetalle(9, "Caja master", 2m, 100m, 21m, "fragil");
         orden.AgregarDetalle(null, "Etiqueta", 1m, 42m, null, null);
         var items = MockDbSetHelper.CreateMockDbSet([orden]);
-        db.OrdenesEmpaque.Returns(items);
+        db.OrdenesEmpaquesLogistica.Returns(items);
         var controller = CreateController(mediator, db);
 
         var result = await controller.GetById(5, CancellationToken.None);

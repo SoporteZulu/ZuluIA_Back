@@ -1,0 +1,17 @@
+Atributos
+AtributosItems
+Bancos
+Chequeras
+Cubos
+CubosCampos
+CubosFiltros
+ImpuestosPorItem
+ImpuestosPorPersona
+Integradoras
+Jurisdicciones
+Marcas
+Matriculas
+PlanesTarjeta
+SeguimientosOrdenPago
+TarjetasTipos
+Zonas

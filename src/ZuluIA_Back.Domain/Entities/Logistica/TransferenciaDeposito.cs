@@ -12,6 +12,7 @@ public class TransferenciaDeposito : AuditableEntity
     public DateOnly Fecha { get; private set; }
     public EstadoTransferenciaDeposito Estado { get; private set; }
     public string? Observacion { get; private set; }
+    public DateOnly? FechaDespacho { get; private set; }
     public DateOnly? FechaConfirmacion { get; private set; }
 
     private readonly List<TransferenciaDepositoDetalle> _detalles = [];
@@ -21,6 +22,9 @@ public class TransferenciaDeposito : AuditableEntity
 
     public static TransferenciaDeposito Crear(long sucursalId, long depositoOrigenId, long depositoDestinoId, DateOnly fecha, string? observacion, long? userId)
     {
+        if (fecha == default)
+            throw new InvalidOperationException("La fecha de la transferencia es obligatoria.");
+
         if (depositoOrigenId == depositoDestinoId)
             throw new InvalidOperationException("El depósito de origen y destino no pueden ser el mismo.");
 
@@ -50,17 +54,36 @@ public class TransferenciaDeposito : AuditableEntity
     {
         if (ordenPreparacionId <= 0)
             throw new InvalidOperationException("La orden de preparación asociada es obligatoria.");
+        if (Estado != EstadoTransferenciaDeposito.Borrador)
+            throw new InvalidOperationException("Solo se puede vincular una orden de preparación a una transferencia en borrador.");
 
         OrdenPreparacionId = ordenPreparacionId;
         SetUpdated(userId);
     }
 
-    public void Confirmar(DateOnly fechaConfirmacion, long? userId)
+    /// <summary>
+    /// Marca la transferencia como despachada desde el depósito origen y en tránsito hacia destino.
+    /// </summary>
+    public void Despachar(DateOnly fechaDespacho, long? userId)
     {
         if (Estado != EstadoTransferenciaDeposito.Borrador)
-            throw new InvalidOperationException("Solo se puede confirmar una transferencia en borrador.");
+            throw new InvalidOperationException("Solo se puede despachar una transferencia en borrador.");
         if (!_detalles.Any())
             throw new InvalidOperationException("La transferencia debe tener al menos un detalle.");
+        if (fechaDespacho == default || fechaDespacho < Fecha)
+            throw new InvalidOperationException("La fecha de despacho no puede ser anterior a la fecha de la transferencia.");
+
+        Estado = EstadoTransferenciaDeposito.EnTransito;
+        FechaDespacho = fechaDespacho;
+        SetUpdated(userId);
+    }
+
+    public void Confirmar(DateOnly fechaConfirmacion, long? userId)
+    {
+        if (Estado != EstadoTransferenciaDeposito.EnTransito)
+            throw new InvalidOperationException("Solo se puede confirmar una transferencia en tránsito.");
+        if (fechaConfirmacion == default || fechaConfirmacion < Fecha)
+            throw new InvalidOperationException("La fecha de confirmación no puede ser anterior a la fecha de la transferencia.");
 
         Estado = EstadoTransferenciaDeposito.Confirmada;
         FechaConfirmacion = fechaConfirmacion;

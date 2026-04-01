@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Terceros.Services;
+using ZuluIA_Back.Application.Features.Ventas.Common;
 using ZuluIA_Back.Application.Features.Ventas.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Enums;
@@ -13,7 +15,9 @@ public class EmitirDocumentoVentaCommandHandler(
     IApplicationDbContext db,
     IUnitOfWork uow,
     ICurrentUserService currentUser,
-    CircuitoVentasService circuitoVentas)
+    CircuitoVentasService circuitoVentas,
+    TerceroOperacionValidationService terceroOperacionValidationService,
+    ISender sender)
     : IRequestHandler<EmitirDocumentoVentaCommand, Result<long>>
 {
     public async Task<Result<long>> Handle(EmitirDocumentoVentaCommand request, CancellationToken ct)
@@ -35,6 +39,10 @@ public class EmitirDocumentoVentaCommandHandler(
         if (!tipo.EsVenta)
             return Result.Failure<long>("El comprobante no pertenece al circuito de ventas.");
 
+        var validationError = await terceroOperacionValidationService.ValidateClienteAsync(comprobante.TerceroId, ct);
+        if (validationError is not null)
+            return Result.Failure<long>(validationError);
+
         comprobante.Emitir(currentUser.UserId);
         comprobanteRepo.Update(comprobante);
 
@@ -46,6 +54,33 @@ public class EmitirDocumentoVentaCommandHandler(
             ct);
 
         await uow.SaveChangesAsync(ct);
+
+        if (comprobante.ComprobanteOrigenId.HasValue
+            && PedidoWorkflowRules.EsRemito(tipo.Codigo, tipo.Descripcion, tipo.AfectaStock))
+        {
+            var origen = await db.Comprobantes
+                .AsNoTracking()
+                .Where(x => x.Id == comprobante.ComprobanteOrigenId.Value)
+                .Select(x => new { x.Id, x.TipoComprobanteId, x.EstadoPedido, x.FechaEntregaCompromiso })
+                .FirstOrDefaultAsync(ct);
+
+            if (origen is not null)
+            {
+                var tipoOrigen = await db.TiposComprobante
+                    .AsNoTracking()
+                    .Where(x => x.Id == origen.TipoComprobanteId)
+                    .Select(x => new { x.Codigo, x.Descripcion })
+                    .FirstOrDefaultAsync(ct);
+
+                if (origen.EstadoPedido.HasValue
+                    || origen.FechaEntregaCompromiso.HasValue
+                    || (tipoOrigen is not null && PedidoWorkflowRules.EsPedido(tipoOrigen.Codigo, tipoOrigen.Descripcion)))
+                {
+                    await sender.Send(new ActualizarCumplimientoPedidoCommand(origen.Id), ct);
+                }
+            }
+        }
+
         return Result.Success(comprobante.Id);
     }
 }

@@ -21,7 +21,11 @@ public class CreateListaPreciosCommandHandler(
             request.MonedaId,
             request.VigenciaDesde,
             request.VigenciaHasta,
-            currentUser.UserId);
+            currentUser.UserId,
+            request.EsPorDefecto,
+            request.ListaPadreId,
+            request.Prioridad,
+            request.Observaciones);
 
         await repo.AddAsync(lista, ct);
         await uow.SaveChangesAsync(ct);

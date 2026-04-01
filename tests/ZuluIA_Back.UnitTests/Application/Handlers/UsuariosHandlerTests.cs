@@ -22,10 +22,11 @@ public class CreateUsuarioCommandHandlerTests
     private readonly IUsuarioRepository _repo = Substitute.For<IUsuarioRepository>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
-    private CreateUsuarioCommandHandler Sut() => new(_repo, _uow, _user);
+    private readonly IPasswordHasherService _passwordHasher = Substitute.For<IPasswordHasherService>();
+    private CreateUsuarioCommandHandler Sut() => new(_repo, _uow, _user, _passwordHasher);
 
     private static CreateUsuarioCommand ValidCommand() => new(
-        "jdoe", "John Doe", "jdoe@test.com", null, new List<long> { 1L });
+        "jdoe", "John Doe", "jdoe@test.com", null, "Secret123!", new List<long> { 1L });
 
     [Fact]
     public async Task Handle_UserNameDuplicado_RetornaFailure()
@@ -45,6 +46,7 @@ public class CreateUsuarioCommandHandlerTests
         _repo.ExisteUserNameAsync(Arg.Any<string>(), Arg.Any<long?>(), Arg.Any<CancellationToken>())
              .Returns(false);
         _user.UserId.Returns((long?)1L);
+        _passwordHasher.HashPassword(Arg.Any<string>()).Returns("HASH");
 
         var result = await Sut().Handle(ValidCommand(), CancellationToken.None);
 

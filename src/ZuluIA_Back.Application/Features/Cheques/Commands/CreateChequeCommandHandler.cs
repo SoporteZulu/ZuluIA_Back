@@ -17,34 +17,51 @@ public class CreateChequeCommandHandler(
 {
     public async Task<Result<long>> Handle(CreateChequeCommand request, CancellationToken ct)
     {
-        var cheque = Cheque.Crear(
-            request.CajaId,
-            request.TerceroId,
-            request.NroCheque,
-            request.Banco,
-            request.FechaEmision,
-            request.FechaVencimiento,
-            request.Importe,
-            request.MonedaId,
-            request.Observacion,
-            currentUser.UserId);
+        try
+        {
+            var cheque = Cheque.Crear(
+                request.CajaId,
+                request.TerceroId,
+                request.NroCheque,
+                request.Banco,
+                request.FechaEmision,
+                request.FechaVencimiento,
+                request.Importe,
+                request.MonedaId,
+                request.Tipo,
+                request.EsALaOrden,
+                request.EsCruzado,
+                request.Titular,
+                request.CodigoSucursalBancaria,
+                request.CodigoPostal,
+                request.ChequeraId,
+                request.ComprobanteOrigenId,
+                request.Observacion,
+                currentUser.UserId,
+                request.Plaza,
+                request.Cuit);
 
-        await repo.AddAsync(cheque, ct);
-        await uow.SaveChangesAsync(ct);
+            await repo.AddAsync(cheque, ct);
+            await uow.SaveChangesAsync(ct);
 
-        await auditoriaService.RegistrarAsync(
-            cheque,
-            TipoOperacionCheque.Alta,
-            null,
-            request.FechaEmision,
-            null,
-            request.TerceroId,
-            request.Observacion,
-            currentUser.UserId,
-            ct);
+            await auditoriaService.RegistrarAsync(
+                cheque,
+                TipoOperacionCheque.Alta,
+                null,
+                request.FechaEmision,
+                null,
+                request.TerceroId,
+                request.Observacion,
+                currentUser.UserId,
+                ct);
 
-        await uow.SaveChangesAsync(ct);
+            await uow.SaveChangesAsync(ct);
 
-        return Result.Success(cheque.Id);
+            return Result.Success(cheque.Id);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Result.Failure<long>(ex.Message);
+        }
     }
 }

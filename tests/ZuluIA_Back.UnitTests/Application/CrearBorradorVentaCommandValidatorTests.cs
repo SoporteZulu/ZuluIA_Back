@@ -15,6 +15,7 @@ public class CrearBorradorVentaCommandValidatorTests
         TipoComprobanteId: 1,
         Fecha: DateOnly.FromDateTime(DateTime.Today),
         FechaVencimiento: null,
+        FechaEntregaCompromiso: null,
         TerceroId: 1,
         MonedaId: 1,
         Cotizacion: 1m,

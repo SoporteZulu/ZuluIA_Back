@@ -1,0 +1,57 @@
+﻿{
+    "estadoProveedorId":  null,
+    "condicionIvaId":  3,
+    "calle":  null,
+    "web":  null,
+    "celular":  null,
+    "barrioId":  null,
+    "nombre":  null,
+    "tipoDocumentoId":  1,
+    "categoriaProveedorId":  null,
+    "email":  null,
+    "apellido":  null,
+    "telefono":  null,
+    "monedaId":  1,
+    "perfilComercial":  null,
+    "ventanasCobranza":  [
+
+                         ],
+    "limiteCredito":  0,
+    "observacion":  "smoke write",
+    "facturable":  true,
+    "codigoPostal":  null,
+    "nroIngresosBrutos":  null,
+    "categoriaClienteId":  null,
+    "pctComisionCobrador":  0,
+    "pctComisionVendedor":  0,
+    "nroDocumento":  "30241735192",
+    "esEmpleado":  false,
+    "tipoPersoneria":  "JURIDICA",
+    "sucursalId":  1,
+    "localidadId":  null,
+    "esEntidadGubernamental":  false,
+    "nroMunicipal":  null,
+    "cobradorId":  null,
+    "nro":  null,
+    "dpto":  null,
+    "razonSocial":  "TERCERO TEST 260328014302",
+    "nombreFantasia":  null,
+    "claveFiscal":  null,
+    "vendedorId":  null,
+    "categoriaId":  1,
+    "legajo":  "TST260328014302",
+    "sucursalesEntrega":  [
+
+                          ],
+    "contactos":  [
+
+                  ],
+    "transportes":  [
+
+                    ],
+    "estadoClienteId":  null,
+    "esProveedor":  false,
+    "esCliente":  true,
+    "piso":  null,
+    "valorClaveFiscal":  null
+}

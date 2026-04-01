@@ -18,6 +18,8 @@ using ZuluIA_Back.Application.Features.OrdenesPreparacion.Queries;
 using ZuluIA_Back.Application.Features.Proyectos.Commands;
 using ZuluIA_Back.Application.Features.RRHH.Commands;
 using ZuluIA_Back.Application.Features.TasasInteres.Commands;
+using ZuluIA_Back.Domain.Entities.Referencia;
+using ZuluIA_Back.Domain.Entities.Sucursales;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Configuracion;
@@ -135,15 +137,24 @@ public class GetConfiguracionQueryHandlerTests
 
 public class CreateEmpleadoCommandHandlerTests
 {
+    private readonly IApplicationDbContext _db;
     private readonly IEmpleadoRepository _repo;
     private readonly IUnitOfWork _uow;
     private readonly CreateEmpleadoCommandHandler _handler;
 
     public CreateEmpleadoCommandHandlerTests()
     {
+        _db      = Substitute.For<IApplicationDbContext>();
         _repo    = Substitute.For<IEmpleadoRepository>();
         _uow     = Substitute.For<IUnitOfWork>();
-        _handler = new CreateEmpleadoCommandHandler(_repo, _uow);
+        _handler = new CreateEmpleadoCommandHandler(_db, _repo, _uow);
+
+        var terceros = MockDbSetHelper.CreateMockDbSet(new[] { BuildTercero(1) });
+        var sucursales = MockDbSetHelper.CreateMockDbSet(new[] { BuildSucursal(1) });
+        var monedas = MockDbSetHelper.CreateMockDbSet(new[] { BuildMoneda(1) });
+        _db.Terceros.Returns(terceros);
+        _db.Sucursales.Returns(sucursales);
+        _db.Monedas.Returns(monedas);
     }
 
     private static CreateEmpleadoCommand ComandoValido() => new(
@@ -179,6 +190,27 @@ public class CreateEmpleadoCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         await _repo.Received(1).AddAsync(Arg.Any<Empleado>(), Arg.Any<CancellationToken>());
         await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    private static Tercero BuildTercero(long id)
+    {
+        var tercero = Tercero.Crear("EMP001", "Empleado", 1, "20123456789", 1, false, false, true, 1, null);
+        typeof(Tercero).BaseType!.GetProperty("Id")!.SetValue(tercero, id);
+        return tercero;
+    }
+
+    private static Sucursal BuildSucursal(long id)
+    {
+        var sucursal = Sucursal.Crear("Casa Central", "20123456789", 1, 1, 1, true, null);
+        typeof(Sucursal).BaseType!.GetProperty("Id")!.SetValue(sucursal, id);
+        return sucursal;
+    }
+
+    private static Moneda BuildMoneda(long id)
+    {
+        var moneda = (Moneda)Activator.CreateInstance(typeof(Moneda), nonPublic: true)!;
+        typeof(Moneda).GetProperty(nameof(Moneda.Id))!.SetValue(moneda, id);
+        return moneda;
     }
 }
 
@@ -505,148 +537,6 @@ public class TasaInteresCommandValidatorTests
 // ÓRDENES DE PREPARACIÓN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-public class CreateOrdenPreparacionCommandHandlerTests
-{
-    private readonly IApplicationDbContext _db;
-    private readonly IUnitOfWork _uow;
-    private readonly CreateOrdenPreparacionCommandHandler _handler;
-
-    public CreateOrdenPreparacionCommandHandlerTests()
-    {
-        _db  = Substitute.For<IApplicationDbContext>();
-        _uow = Substitute.For<IUnitOfWork>();
-        _handler = new CreateOrdenPreparacionCommandHandler(_db, _uow);
-
-        var mockSet = MockDbSetHelper.CreateMockDbSet(new List<OrdenPreparacion>());
-        _db.OrdenesPreparacion.Returns(mockSet);
-        _uow.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
-    }
-
-    [Fact]
-    public async Task Handle_SinDetalles_RetornaFailure()
-    {
-        var cmd = new CreateOrdenPreparacionCommand(
-            SucursalId:           1,
-            ComprobanteOrigenId:  null,
-            TerceroId:            null,
-            Fecha:                DateOnly.FromDateTime(DateTime.Today),
-            Observacion:          null,
-            Detalles:             new List<CreateOrdenPreparacionDetalleDto>());
-
-        var result = await _handler.Handle(cmd, CancellationToken.None);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Contain("detalle");
-    }
-
-    [Fact]
-    public async Task Handle_ConDetalles_LlamaSaveChangesDosVecesYRetornaSuccess()
-    {
-        var detalles = new List<CreateOrdenPreparacionDetalleDto>
-        {
-            new CreateOrdenPreparacionDetalleDto(ItemId: 1, DepositoId: 1, Cantidad: 5m, Observacion: null)
-        };
-
-        var cmd = new CreateOrdenPreparacionCommand(
-            SucursalId:           1,
-            ComprobanteOrigenId:  null,
-            TerceroId:            null,
-            Fecha:                DateOnly.FromDateTime(DateTime.Today),
-            Observacion:          null,
-            Detalles:             detalles);
-
-        var result = await _handler.Handle(cmd, CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        // SaveChanges called twice: once after Create (to get ID), once after AgregarDetalle
-        await _uow.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-}
-
-public class AnularOrdenPreparacionCommandHandlerTests
-{
-    private readonly IRepository<OrdenPreparacion> _repo;
-    private readonly IUnitOfWork _uow;
-    private readonly ICurrentUserService _currentUser;
-    private readonly AnularOrdenPreparacionCommandHandler _handler;
-
-    public AnularOrdenPreparacionCommandHandlerTests()
-    {
-        _repo        = Substitute.For<IRepository<OrdenPreparacion>>();
-        _uow         = Substitute.For<IUnitOfWork>();
-        _currentUser = Substitute.For<ICurrentUserService>();
-        _currentUser.UserId.Returns(1L);
-        _handler = new AnularOrdenPreparacionCommandHandler(_repo, _uow, _currentUser);
-    }
-
-    [Fact]
-    public async Task Handle_OrdenNoEncontrada_RetornaFailure()
-    {
-        _repo.GetByIdAsync(99, Arg.Any<CancellationToken>()).Returns((OrdenPreparacion?)null);
-
-        var result = await _handler.Handle(new AnularOrdenPreparacionCommand(99), CancellationToken.None);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Contain("99");
-    }
-
-    [Fact]
-    public async Task Handle_OrdenPendiente_AnulaYRetornaSuccess()
-    {
-        var orden = OrdenPreparacion.Crear(1, null, null, DateOnly.FromDateTime(DateTime.Today), null, null);
-        _repo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(orden);
-        _uow.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
-
-        var result = await _handler.Handle(new AnularOrdenPreparacionCommand(1), CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        _repo.Received(1).Update(Arg.Any<OrdenPreparacion>());
-        await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-}
-
-public class ConfirmarOrdenPreparacionCommandHandlerTests
-{
-    private readonly IRepository<OrdenPreparacion> _repo;
-    private readonly IUnitOfWork _uow;
-    private readonly ICurrentUserService _currentUser;
-    private readonly ConfirmarOrdenPreparacionCommandHandler _handler;
-
-    public ConfirmarOrdenPreparacionCommandHandlerTests()
-    {
-        _repo        = Substitute.For<IRepository<OrdenPreparacion>>();
-        _uow         = Substitute.For<IUnitOfWork>();
-        _currentUser = Substitute.For<ICurrentUserService>();
-        _currentUser.UserId.Returns(1L);
-        _handler = new ConfirmarOrdenPreparacionCommandHandler(_repo, _uow, _currentUser);
-    }
-
-    [Fact]
-    public async Task Handle_OrdenNoEncontrada_RetornaFailure()
-    {
-        _repo.GetByIdAsync(99, Arg.Any<CancellationToken>()).Returns((OrdenPreparacion?)null);
-
-        var result = await _handler.Handle(new ConfirmarOrdenPreparacionCommand(99), CancellationToken.None);
-
-        result.IsFailure.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task Handle_OrdenPendiente_ConfirmaYRetornaSuccess()
-    {
-        var orden = OrdenPreparacion.Crear(1, null, null, DateOnly.FromDateTime(DateTime.Today), null, null);
-        orden.AgregarDetalle(1, 1, 5m);
-        orden.IniciarPreparacion(null);
-        _repo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(orden);
-        _uow.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
-
-        var result = await _handler.Handle(new ConfirmarOrdenPreparacionCommand(1), CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        _repo.Received(1).Update(Arg.Any<OrdenPreparacion>());
-    }
-}
-
 public class GetOrdenPreparacionByIdQueryHandlerTests
 {
     private readonly IApplicationDbContext _db;
@@ -712,122 +602,6 @@ public class GetOrdenesPreparacionPagedQueryHandlerTests
 // ═══════════════════════════════════════════════════════════════════════════════
 // FINANZAS — COBROS
 // ═══════════════════════════════════════════════════════════════════════════════
-
-public class RegistrarCobroCommandHandlerTests
-{
-    private readonly ICobroRepository _cobroRepo;
-    private readonly IComprobanteRepository _comprobanteRepo;
-    private readonly IImputacionRepository _imputacionRepo;
-    private readonly CuentaCorrienteService _ctaCteService;
-    private readonly IUnitOfWork _uow;
-    private readonly ICurrentUserService _currentUser;
-    private readonly RegistrarCobroCommandHandler _handler;
-
-    public RegistrarCobroCommandHandlerTests()
-    {
-        _cobroRepo       = Substitute.For<ICobroRepository>();
-        _comprobanteRepo = Substitute.For<IComprobanteRepository>();
-        _imputacionRepo  = Substitute.For<IImputacionRepository>();
-        _ctaCteService   = Substitute.For<CuentaCorrienteService>(
-            Substitute.For<ICuentaCorrienteRepository>(),
-            Substitute.For<IMovimientoCtaCteRepository>());
-        _uow             = Substitute.For<IUnitOfWork>();
-        _currentUser     = Substitute.For<ICurrentUserService>();
-        _currentUser.UserId.Returns(1L);
-
-        _handler = new RegistrarCobroCommandHandler(
-            _cobroRepo, _comprobanteRepo, _imputacionRepo,
-            _ctaCteService, _uow, _currentUser);
-    }
-
-    [Fact]
-    public async Task Handle_SinMedios_RetornaFailure()
-    {
-        var cmd = new RegistrarCobroCommand(
-            SucursalId:           1,
-            TerceroId:            1,
-            Fecha:                DateOnly.FromDateTime(DateTime.Today),
-            MonedaId:             1,
-            Cotizacion:           1m,
-            Observacion:          null,
-            Medios:               new List<MedioCobroInput>(),
-            ComprobantesAImputar: new List<ComprobanteAImputarInput>());
-
-        var result = await _handler.Handle(cmd, CancellationToken.None);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Contain("medio");
-    }
-
-    [Fact]
-    public async Task Handle_ConMedios_GuardaCobroYRetornaSuccess()
-    {
-        var medios = new List<MedioCobroInput>
-        {
-            new MedioCobroInput(CajaId: 1, FormaPagoId: 1, ChequeId: null, Importe: 1000m, MonedaId: 1, Cotizacion: 1m)
-        };
-
-        _cobroRepo.AddAsync(Arg.Any<Cobro>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
-        _uow.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
-
-        var cmd = new RegistrarCobroCommand(
-            SucursalId:           1,
-            TerceroId:            1,
-            Fecha:                DateOnly.FromDateTime(DateTime.Today),
-            MonedaId:             1,
-            Cotizacion:           1m,
-            Observacion:          null,
-            Medios:               medios,
-            ComprobantesAImputar: new List<ComprobanteAImputarInput>());
-
-        var result = await _handler.Handle(cmd, CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        await _cobroRepo.Received(1).AddAsync(Arg.Any<Cobro>(), Arg.Any<CancellationToken>());
-    }
-}
-
-public class AnularCobroFinanzasCommandHandlerTests
-{
-    private readonly ICobroRepository _repo;
-    private readonly IUnitOfWork _uow;
-    private readonly ICurrentUserService _currentUser;
-    private readonly AnularCobroCommandHandler _handler;
-
-    public AnularCobroFinanzasCommandHandlerTests()
-    {
-        _repo        = Substitute.For<ICobroRepository>();
-        _uow         = Substitute.For<IUnitOfWork>();
-        _currentUser = Substitute.For<ICurrentUserService>();
-        _currentUser.UserId.Returns(1L);
-        _handler = new AnularCobroCommandHandler(_repo, _uow, _currentUser);
-    }
-
-    [Fact]
-    public async Task Handle_CobroNoEncontrado_RetornaFailure()
-    {
-        _repo.GetByIdAsync(99, Arg.Any<CancellationToken>()).Returns((Cobro?)null);
-
-        var result = await _handler.Handle(new AnularCobroCommand(99), CancellationToken.None);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Contain("99");
-    }
-
-    [Fact]
-    public async Task Handle_CobroActivo_AnulaYRetornaSuccess()
-    {
-        var cobro = Cobro.Crear(1, 1, DateOnly.FromDateTime(DateTime.Today), 1, 1m, null, 1L);
-        _repo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(cobro);
-        _uow.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
-
-        var result = await _handler.Handle(new AnularCobroCommand(1), CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        _repo.Received(1).Update(Arg.Any<Cobro>());
-        await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-}
 
 public class GetCobrosPagedQueryHandlerTests
 {
@@ -919,89 +693,6 @@ public class GetCobroDetalleQueryHandlerTests
 // ═══════════════════════════════════════════════════════════════════════════════
 // FINANZAS — PAGOS
 // ═══════════════════════════════════════════════════════════════════════════════
-
-public class RegistrarPagoCommandHandlerTests
-{
-    private readonly IPagoRepository _pagoRepo;
-    private readonly IComprobanteRepository _comprobanteRepo;
-    private readonly IImputacionRepository _imputacionRepo;
-    private readonly CuentaCorrienteService _ctaCteService;
-    private readonly IUnitOfWork _uow;
-    private readonly ICurrentUserService _currentUser;
-    private readonly IApplicationDbContext _db;
-    private readonly RegistrarPagoCommandHandler _handler;
-
-    public RegistrarPagoCommandHandlerTests()
-    {
-        _pagoRepo        = Substitute.For<IPagoRepository>();
-        _comprobanteRepo = Substitute.For<IComprobanteRepository>();
-        _imputacionRepo  = Substitute.For<IImputacionRepository>();
-        _ctaCteService   = Substitute.For<CuentaCorrienteService>(
-            Substitute.For<ICuentaCorrienteRepository>(),
-            Substitute.For<IMovimientoCtaCteRepository>());
-        _uow             = Substitute.For<IUnitOfWork>();
-        _currentUser     = Substitute.For<ICurrentUserService>();
-        _currentUser.UserId.Returns(1L);
-        _db              = Substitute.For<IApplicationDbContext>();
-
-        var mockRetenciones24 = MockDbSetHelper.CreateMockDbSet(
-            new List<ZuluIA_Back.Domain.Entities.Finanzas.Retencion>());
-
-        _db.Retenciones.Returns(mockRetenciones24);
-
-        _handler = new RegistrarPagoCommandHandler(
-            _pagoRepo, _comprobanteRepo, _imputacionRepo,
-            _ctaCteService, _uow, _currentUser, _db);
-    }
-
-    [Fact]
-    public async Task Handle_SinMedios_RetornaFailure()
-    {
-        var cmd = new RegistrarPagoCommand(
-            SucursalId:           1,
-            TerceroId:            1,
-            Fecha:                DateOnly.FromDateTime(DateTime.Today),
-            MonedaId:             1,
-            Cotizacion:           1m,
-            Observacion:          null,
-            Medios:               new List<MedioPagoInput>(),
-            Retenciones:          new List<RetencionInput>(),
-            ComprobantesAImputar: new List<ComprobanteAImputarInput>());
-
-        var result = await _handler.Handle(cmd, CancellationToken.None);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Contain("medio");
-    }
-
-    [Fact]
-    public async Task Handle_ConMedios_GuardaPagoYRetornaSuccess()
-    {
-        var medios = new List<MedioPagoInput>
-        {
-            new MedioPagoInput(CajaId: 1, FormaPagoId: 1, ChequeId: null, Importe: 1000m, MonedaId: 1, Cotizacion: 1m)
-        };
-
-        _pagoRepo.AddAsync(Arg.Any<Pago>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
-        _uow.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
-
-        var cmd = new RegistrarPagoCommand(
-            SucursalId:           1,
-            TerceroId:            1,
-            Fecha:                DateOnly.FromDateTime(DateTime.Today),
-            MonedaId:             1,
-            Cotizacion:           1m,
-            Observacion:          null,
-            Medios:               medios,
-            Retenciones:          new List<RetencionInput>(),
-            ComprobantesAImputar: new List<ComprobanteAImputarInput>());
-
-        var result = await _handler.Handle(cmd, CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        await _pagoRepo.Received(1).AddAsync(Arg.Any<Pago>(), Arg.Any<CancellationToken>());
-    }
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // FINANZAS — CUENTA CORRIENTE

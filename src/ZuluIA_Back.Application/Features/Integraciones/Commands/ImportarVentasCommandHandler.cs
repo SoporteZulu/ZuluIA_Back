@@ -28,6 +28,7 @@ public class ImportarVentasCommandHandler(
                     venta.TipoComprobanteId,
                     venta.Fecha,
                     venta.FechaVencimiento,
+                    null,
                     venta.TerceroId,
                     venta.MonedaId,
                     venta.Cotizacion,
@@ -66,7 +67,14 @@ public class ImportarVentasCommandHandler(
             await uow.SaveChangesAsync(ct);
             return Result.Success(job.Id);
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
+        {
+            procesoService.Fallar(job, ex.Message);
+            await procesoService.RegistrarLogAsync(job.Id, Domain.Enums.NivelLogIntegracion.Error, ex.Message, null, null, ct);
+            await uow.SaveChangesAsync(ct);
+            return Result.Failure<long>(ex.Message);
+        }
+        catch (InvalidOperationException ex)
         {
             procesoService.Fallar(job, ex.Message);
             await procesoService.RegistrarLogAsync(job.Id, Domain.Enums.NivelLogIntegracion.Error, ex.Message, null, null, ct);
