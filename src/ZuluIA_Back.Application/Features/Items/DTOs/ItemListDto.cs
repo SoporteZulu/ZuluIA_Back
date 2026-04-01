@@ -49,6 +49,7 @@ public class ItemListDto
     public string? CodigoAfip { get; set; }
     public long? SucursalId { get; set; }
     public bool Activo { get; set; }
+    public bool EsVendible { get; set; }
     
     // ── Fase 1: Campos adicionales para listado ──────────────────────────────
     public bool AplicaVentas { get; set; }

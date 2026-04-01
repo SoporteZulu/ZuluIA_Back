@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Items.DTOs;
+using ZuluIA_Back.Application.Features.Items.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Interfaces;
@@ -10,7 +11,8 @@ namespace ZuluIA_Back.Application.Features.Items.Queries;
 
 public class GetItemsPagedQueryHandler(
     IItemRepository repo,
-    IApplicationDbContext db)
+    IApplicationDbContext db,
+    ItemCommercialStockService itemCommercialStockService)
     : IRequestHandler<GetItemsPagedQuery, PagedResult<ItemListDto>>
 {
     public async Task<PagedResult<ItemListDto>> Handle(
@@ -26,6 +28,7 @@ public class GetItemsPagedQueryHandler(
             request.SoloConStock,
             request.SoloProductos,
             request.SoloServicios,
+            request.SoloVendibles,
             ct);
 
         var categoriaIds = result.Items
@@ -157,15 +160,6 @@ public class GetItemsPagedQueryHandler(
                 .ToDictionaryAsync(x => x.Key, x => x.Value, ct)
             : new Dictionary<long, string>();
 
-        var stockPorItem = itemIds.Count > 0
-            ? await db.Stock
-                .AsNoTracking()
-                .Where(x => itemIds.Contains(x.ItemId))
-                .GroupBy(x => x.ItemId)
-                .Select(x => new { ItemId = x.Key, Cantidad = x.Sum(s => s.Cantidad) })
-                .ToDictionaryAsync(x => x.ItemId, x => x.Cantidad, ct)
-            : new Dictionary<long, decimal>();
-
         var componentesPorItem = itemIds.Count > 0
             ? await db.ItemsComponentes
                 .AsNoTracking()
@@ -175,36 +169,9 @@ public class GetItemsPagedQueryHandler(
                 .ToDictionaryAsync(x => x.ItemId, x => x.Cantidad, ct)
             : new Dictionary<long, int>();
 
-        var stockOperativoRows = itemIds.Count > 0
-            ? await (
-                from ci in db.ComprobantesItems.AsNoTracking()
-                join c in db.Comprobantes.AsNoTracking() on ci.ComprobanteId equals c.Id
-                join tc in db.TiposComprobante.AsNoTracking() on c.TipoComprobanteId equals tc.Id
-                where itemIds.Contains(ci.ItemId)
-                      && tc.EsVenta
-                      && !tc.AfectaStock
-                      && c.Estado != EstadoComprobante.Anulado
-                      && c.Estado != EstadoComprobante.Convertido
-                select new
-                {
-                    ci.ItemId,
-                    c.Estado,
-                    CantidadOperativa = ci.Cantidad - ci.CantidadBonificada
-                })
-                .ToListAsync(ct)
-            : [];
-
-        var stockOperativoPorItem = stockOperativoRows
-            .GroupBy(x => x.ItemId)
-            .ToDictionary(
-                x => x.Key,
-                x => (
-                    StockReservado: x.Where(v => v.Estado == EstadoComprobante.Borrador)
-                        .Sum(v => v.CantidadOperativa),
-                    StockComprometido: x.Where(v => v.Estado == EstadoComprobante.Emitido ||
-                                                    v.Estado == EstadoComprobante.PagadoParcial ||
-                                                    v.Estado == EstadoComprobante.Pagado)
-                        .Sum(v => v.CantidadOperativa)));
+        var stockPorItem = itemIds.Count > 0
+            ? await itemCommercialStockService.GetSnapshotsAsync(itemIds, ct)
+            : new Dictionary<long, ItemCommercialStockSnapshot>();
 
         var stockEnTransitoPorItem = itemIds.Count > 0
             ? await (
@@ -223,8 +190,7 @@ public class GetItemsPagedQueryHandler(
 
         foreach (var i in result.Items)
         {
-            var stockFisico = stockPorItem.GetValueOrDefault(i.Id);
-            var stockOperativo = stockOperativoPorItem.GetValueOrDefault(i.Id);
+            var stockSnapshot = stockPorItem.GetValueOrDefault(i.Id);
 
             dtos.Add(new ItemListDto
             {
@@ -266,10 +232,10 @@ public class GetItemsPagedQueryHandler(
                 ManejaStock = i.ManejaStock,
                 PrecioCosto = i.PrecioCosto,
                 PrecioVenta = i.PrecioVenta,
-                Stock = stockFisico,
-                StockDisponible = stockFisico - stockOperativo.StockComprometido - stockOperativo.StockReservado,
-                StockComprometido = stockOperativo.StockComprometido,
-                StockReservado = stockOperativo.StockReservado,
+                Stock = stockSnapshot.Stock,
+                StockDisponible = stockSnapshot.StockDisponible,
+                StockComprometido = stockSnapshot.StockComprometido,
+                StockReservado = stockSnapshot.StockReservado,
                 StockEnTransito = stockEnTransitoPorItem.GetValueOrDefault(i.Id),
                 StockMinimo = i.StockMinimo,
                 StockMaximo = i.StockMaximo,
@@ -287,6 +253,7 @@ public class GetItemsPagedQueryHandler(
                 CodigoAfip = i.CodigoAfip,
                 SucursalId = i.SucursalId,
                 Activo = i.Activo,
+                EsVendible = i.Activo && i.AplicaVentas && !i.EsFinanciero,
                 AplicaVentas = i.AplicaVentas,
                 AplicaCompras = i.AplicaCompras,
                 PorcentajeGanancia = i.PorcentajeGanancia,

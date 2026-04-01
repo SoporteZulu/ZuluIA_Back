@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Items.DTOs;
+using ZuluIA_Back.Application.Features.Items.Services;
 using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Interfaces;
 
@@ -9,7 +10,8 @@ namespace ZuluIA_Back.Application.Features.Items.Queries;
 
 public class GetItemByIdQueryHandler(
     IItemRepository repo,
-    IApplicationDbContext db)
+    IApplicationDbContext db,
+    ItemCommercialStockService itemCommercialStockService)
     : IRequestHandler<GetItemByIdQuery, ItemDto?>
 {
     public async Task<ItemDto?> Handle(GetItemByIdQuery request, CancellationToken ct)
@@ -150,36 +152,7 @@ public class GetItemByIdQueryHandler(
             })
             .ToList();
 
-        var stockFisico = await db.Stock
-            .AsNoTracking()
-            .Where(x => x.ItemId == request.Id)
-            .SumAsync(x => x.Cantidad, ct);
-
-        var stockOperativoRows = await (
-            from ci in db.ComprobantesItems.AsNoTracking()
-            join c in db.Comprobantes.AsNoTracking() on ci.ComprobanteId equals c.Id
-            join tc in db.TiposComprobante.AsNoTracking() on c.TipoComprobanteId equals tc.Id
-            where ci.ItemId == request.Id
-                  && tc.EsVenta
-                  && !tc.AfectaStock
-                  && c.Estado != EstadoComprobante.Anulado
-                  && c.Estado != EstadoComprobante.Convertido
-            select new
-            {
-                c.Estado,
-                CantidadOperativa = ci.Cantidad - ci.CantidadBonificada
-            })
-            .ToListAsync(ct);
-
-        var stockReservado = stockOperativoRows
-            .Where(x => x.Estado == EstadoComprobante.Borrador)
-            .Sum(x => x.CantidadOperativa);
-
-        var stockComprometido = stockOperativoRows
-            .Where(x => x.Estado == EstadoComprobante.Emitido ||
-                        x.Estado == EstadoComprobante.PagadoParcial ||
-                        x.Estado == EstadoComprobante.Pagado)
-            .Sum(x => x.CantidadOperativa);
+        var stockSnapshot = await itemCommercialStockService.GetSnapshotAsync(request.Id, ct);
 
         var stockEnTransito = await (
             from td in db.TransferenciasDepositoDetalles.AsNoTracking()
@@ -214,10 +187,10 @@ public class GetItemByIdQueryHandler(
             ManejaStock = item.ManejaStock,
             PrecioCosto = item.PrecioCosto,
             PrecioVenta = item.PrecioVenta,
-            Stock = stockFisico,
-            StockDisponible = stockFisico - stockComprometido - stockReservado,
-            StockComprometido = stockComprometido,
-            StockReservado = stockReservado,
+            Stock = stockSnapshot.Stock,
+            StockDisponible = stockSnapshot.StockDisponible,
+            StockComprometido = stockSnapshot.StockComprometido,
+            StockReservado = stockSnapshot.StockReservado,
             StockEnTransito = stockEnTransito,
             StockMinimo = item.StockMinimo,
             StockMaximo = item.StockMaximo,

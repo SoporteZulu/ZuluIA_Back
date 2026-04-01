@@ -18,28 +18,51 @@ public class ItemRepository(AppDbContext context)
         bool? soloConStock,
         bool? soloProductos,
         bool? soloServicios,
+        bool? soloVendibles,
         CancellationToken ct = default)
     {
         var query = DbSet.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var term = search.ToLower();
+            var term = search.Trim();
+            var termUpper = term.ToUpperInvariant();
+            var termLower = term.ToLowerInvariant();
+
             query = query.Where(x =>
-                x.Codigo.ToLower().Contains(term)          ||
-                x.Descripcion.ToLower().Contains(term)     ||
-                (x.CodigoBarras != null &&
-                 x.CodigoBarras.ToLower().Contains(term)));
+                x.Codigo.Contains(termUpper) ||
+                (x.CodigoAlternativo != null && x.CodigoAlternativo.Contains(termUpper)) ||
+                x.Descripcion.ToLower().Contains(termLower) ||
+                (x.CodigoBarras != null && x.CodigoBarras.Contains(term)));
         }
 
         if (categoriaId.HasValue)
             query = query.Where(x => x.CategoriaId == categoriaId.Value);
 
+        if (soloVendibles == true)
+            query = query.Where(x => x.Activo && x.AplicaVentas && !x.EsFinanciero);
+
         if (soloActivos.HasValue)
             query = query.Where(x => x.Activo == soloActivos.Value);
 
         if (soloConStock == true)
-            query = query.Where(x => x.ManejaStock && x.StockMinimo >= 0);
+        {
+            var stockPorItem = Context.Stock
+                .AsNoTracking()
+                .GroupBy(x => x.ItemId)
+                .Select(x => new
+                {
+                    ItemId = x.Key,
+                    Cantidad = x.Sum(s => s.Cantidad)
+                });
+
+            query =
+                from item in query
+                join stock in stockPorItem on item.Id equals stock.ItemId into stockJoin
+                from stock in stockJoin.DefaultIfEmpty()
+                where !item.ManejaStock || (stock != null && stock.Cantidad > 0)
+                select item;
+        }
 
         if (soloProductos == true)
             query = query.Where(x => x.EsProducto);
@@ -49,8 +72,33 @@ public class ItemRepository(AppDbContext context)
 
         var total = await query.CountAsync(ct);
 
-        var items = await query
-            .OrderBy(x => x.Codigo)
+        IOrderedQueryable<Item> orderedQuery;
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            var termUpper = term.ToUpperInvariant();
+            var termLower = term.ToLowerInvariant();
+
+            orderedQuery = query
+                .OrderByDescending(x => x.Codigo == termUpper)
+                .ThenByDescending(x => x.CodigoAlternativo != null && x.CodigoAlternativo == termUpper)
+                .ThenByDescending(x => x.CodigoBarras != null && x.CodigoBarras == term)
+                .ThenByDescending(x => x.Codigo.StartsWith(termUpper))
+                .ThenByDescending(x => x.CodigoAlternativo != null && x.CodigoAlternativo.StartsWith(termUpper))
+                .ThenByDescending(x => x.CodigoBarras != null && x.CodigoBarras.StartsWith(term))
+                .ThenByDescending(x => x.Descripcion.ToLower().StartsWith(termLower))
+                .ThenBy(x => x.Descripcion)
+                .ThenBy(x => x.Codigo);
+        }
+        else
+        {
+            orderedQuery = query
+                .OrderBy(x => x.Descripcion)
+                .ThenBy(x => x.Codigo);
+        }
+
+        var items = await orderedQuery
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);

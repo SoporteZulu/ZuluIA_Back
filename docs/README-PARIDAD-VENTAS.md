@@ -49,6 +49,7 @@ Se ha creado un **sistema completo de documentación** para cerrar la paridad fu
 **👉 Empieza aquí:**
 1. Lee: [**comparativa-tripartita-ventas.md**](./comparativa-tripartita-ventas.md) → Funcionalidad zuluApp **(30 min)**
 2. Ejecuta: [**guia-practica-trabajo-paralelo.md**](./guia-practica-trabajo-paralelo.md) → Sección 11: Validación Final **(20 min)**
+3. Revisa resultado ejecutivo productos: [**validacion-final-productos-ventas.md**](./validacion-final-productos-ventas.md) **(5 min)**
 3. ¡Valida paridad!
 
 ---

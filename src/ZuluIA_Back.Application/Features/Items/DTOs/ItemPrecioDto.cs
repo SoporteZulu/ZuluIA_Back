@@ -15,4 +15,11 @@ public class ItemPrecioDto
     public decimal PrecioVenta { get; set; }
     public long MonedaId { get; set; }
     public bool ManejaStock { get; set; }
+    public bool Activo { get; set; }
+    public bool AplicaVentas { get; set; }
+    public bool EsVendible { get; set; }
+    public decimal Stock { get; set; }
+    public decimal StockDisponible { get; set; }
+    public decimal StockComprometido { get; set; }
+    public decimal StockReservado { get; set; }
 }

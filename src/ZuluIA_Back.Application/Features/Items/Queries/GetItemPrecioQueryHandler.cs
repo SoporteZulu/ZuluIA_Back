@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Items.DTOs;
+using ZuluIA_Back.Application.Features.Items.Services;
 using ZuluIA_Back.Application.Features.ListasPrecios.Services;
 using ZuluIA_Back.Domain.Interfaces;
 
@@ -10,7 +11,8 @@ namespace ZuluIA_Back.Application.Features.Items.Queries;
 public class GetItemPrecioQueryHandler(
     IItemRepository itemRepo,
     IApplicationDbContext db,
-    PrecioListaResolutionService precioListaResolutionService)
+    PrecioListaResolutionService precioListaResolutionService,
+    ItemCommercialStockService itemCommercialStockService)
     : IRequestHandler<GetItemPrecioQuery, ItemPrecioDto?>
 {
     public async Task<ItemPrecioDto?> Handle(
@@ -19,6 +21,9 @@ public class GetItemPrecioQueryHandler(
     {
         var item = await itemRepo.GetByIdAsync(request.ItemId, ct);
         if (item is null) return null;
+
+        if (!item.Activo || !item.AplicaVentas || item.EsFinanciero || (!item.EsProducto && !item.EsServicio))
+            return null;
 
         var alicuota = await db.AlicuotasIva
             .AsNoTracking()
@@ -47,6 +52,10 @@ public class GetItemPrecioQueryHandler(
             }
         }
 
+        var stockSnapshot = item.ManejaStock
+            ? await itemCommercialStockService.GetSnapshotAsync(item.Id, ct)
+            : default;
+
         return new ItemPrecioDto
         {
             Id                    = item.Id,
@@ -58,7 +67,14 @@ public class GetItemPrecioQueryHandler(
             PrecioCosto           = item.PrecioCosto,
             PrecioVenta           = precioVenta,
             MonedaId              = item.MonedaId,
-            ManejaStock           = item.ManejaStock
+            ManejaStock           = item.ManejaStock,
+            Activo                = item.Activo,
+            AplicaVentas          = item.AplicaVentas,
+            EsVendible            = item.Activo && item.AplicaVentas && !item.EsFinanciero,
+            Stock                 = stockSnapshot.Stock,
+            StockComprometido     = stockSnapshot.StockComprometido,
+            StockReservado        = stockSnapshot.StockReservado,
+            StockDisponible       = stockSnapshot.StockDisponible
         };
     }
 }

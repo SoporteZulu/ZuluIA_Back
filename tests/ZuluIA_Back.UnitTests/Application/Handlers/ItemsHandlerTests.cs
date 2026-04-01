@@ -6,6 +6,7 @@ using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Items.Commands;
 using ZuluIA_Back.Application.Features.Items.DTOs;
 using ZuluIA_Back.Application.Features.Items.Queries;
+using ZuluIA_Back.Application.Features.Items.Services;
 using ZuluIA_Back.Application.Features.ListasPrecios.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Items;
@@ -410,7 +411,7 @@ public class GetItemByIdQueryHandlerTests
 {
     private readonly IItemRepository _repo = Substitute.For<IItemRepository>();
     private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
-    private GetItemByIdQueryHandler Sut() => new(_repo, _db);
+    private GetItemByIdQueryHandler Sut() => new(_repo, _db, new ItemCommercialStockService(_db));
 
     [Fact]
     public async Task Handle_ItemNoExiste_RetornaNull()
@@ -430,10 +431,20 @@ public class GetItemByIdQueryHandlerTests
                                true, false, false, true, 100m, 150m, null, 0, null,
                                null, null, null, null, null);
         _repo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(item);
+        _db.CategoriasItems.Returns(MockDbSetHelper.CreateMockDbSet<CategoriaItem>());
+        _db.MarcasComerciales.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Comercial.MarcaComercial>());
         var mockUnidadesMedida40 = MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Referencia.UnidadMedida>();
         _db.UnidadesMedida.Returns(mockUnidadesMedida40);
         var mockAlicuotasIva41 = MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Referencia.AlicuotaIva>();
         _db.AlicuotasIva.Returns(mockAlicuotasIva41);
+        _db.Impuestos.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Impuestos.Impuesto>());
+        _db.Depositos.Returns(MockDbSetHelper.CreateMockDbSet<Deposito>());
+        _db.ListaPreciosItems.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Precios.ListaPreciosItem>());
+        _db.ListasPrecios.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Precios.ListaPrecios>());
+        _db.ItemsAtributosComerciales.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Comercial.ItemAtributoComercial>());
+        _db.AtributosComerciales.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Comercial.AtributoComercial>());
+        _db.ItemsComponentes.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Items.ItemComponente>());
+        _db.Items.Returns(MockDbSetHelper.CreateMockDbSet<Item>([item]));
         _db.Stock.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Stock.StockItem>());
         _db.ComprobantesItems.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Comprobantes.ComprobanteItem>());
         _db.Comprobantes.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Comprobantes.Comprobante>());
@@ -454,7 +465,7 @@ public class GetItemPrecioQueryHandlerTests
 {
     private readonly IItemRepository _itemRepo = Substitute.For<IItemRepository>();
     private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
-    private GetItemPrecioQueryHandler Sut() => new(_itemRepo, _db, new ZuluIA_Back.Application.Features.ListasPrecios.Services.PrecioListaResolutionService(_db));
+    private GetItemPrecioQueryHandler Sut() => new(_itemRepo, _db, new ZuluIA_Back.Application.Features.ListasPrecios.Services.PrecioListaResolutionService(_db), new ItemCommercialStockService(_db));
 
     [Fact]
     public async Task Handle_ItemNoExiste_RetornaNull()
@@ -478,6 +489,10 @@ public class GetItemPrecioQueryHandlerTests
         _itemRepo.GetByIdAsync(1, Arg.Any<CancellationToken>()).Returns(item);
         var mockAlicuotasIva42 = MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Referencia.AlicuotaIva>();
         _db.AlicuotasIva.Returns(mockAlicuotasIva42);
+        _db.Stock.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Stock.StockItem>());
+        _db.ComprobantesItems.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Comprobantes.ComprobanteItem>());
+        _db.Comprobantes.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Comprobantes.Comprobante>());
+        _db.TiposComprobante.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Referencia.TipoComprobante>());
 
         var result = await Sut().Handle(
             new GetItemPrecioQuery(1, null, null, null),
@@ -495,7 +510,7 @@ public class GetItemsPagedQueryHandlerTests
 {
     private readonly IItemRepository _repo = Substitute.For<IItemRepository>();
     private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
-    private GetItemsPagedQueryHandler Sut() => new(_repo, _db);
+    private GetItemsPagedQueryHandler Sut() => new(_repo, _db, new ItemCommercialStockService(_db));
 
     [Fact]
     public async Task Handle_SinItems_RetornaPaginaVacia()
@@ -505,7 +520,7 @@ public class GetItemsPagedQueryHandlerTests
             Arg.Any<int>(), Arg.Any<int>(),
             Arg.Any<string?>(), Arg.Any<long?>(),
             Arg.Any<bool?>(), Arg.Any<bool?>(),
-            Arg.Any<bool?>(), Arg.Any<bool?>(),
+            Arg.Any<bool?>(), Arg.Any<bool?>(), Arg.Any<bool?>(),
             Arg.Any<CancellationToken>())
             .Returns(empty);
         var mockCategoriasItems43 = MockDbSetHelper.CreateMockDbSet<CategoriaItem>();
@@ -514,7 +529,7 @@ public class GetItemsPagedQueryHandlerTests
         _db.UnidadesMedida.Returns(mockUnidadesMedida44);
 
         var result = await Sut().Handle(
-            new GetItemsPagedQuery(1, 20, null, null, null, null, null, null),
+            new GetItemsPagedQuery(1, 20, null, null, null, null, null, null, null),
             CancellationToken.None);
 
         result.Items.Should().BeEmpty();

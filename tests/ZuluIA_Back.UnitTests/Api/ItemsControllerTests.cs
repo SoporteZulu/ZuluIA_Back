@@ -32,14 +32,14 @@ public class ItemsControllerTests
             .Returns(paged);
         var controller = CreateController(mediator, BuildDb());
 
-        var result = await controller.GetAll(2, 25, "art", 3, true, false, true, false, CancellationToken.None);
+        var result = await controller.GetAll(2, 25, "art", 3, true, false, true, false, true, CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         ok.Value.Should().BeSameAs(paged);
         await mediator.Received(1).Send(
             Arg.Is<GetItemsPagedQuery>(q =>
                 q.Page == 2 && q.PageSize == 25 && q.Search == "art" && q.CategoriaId == 3 &&
-                q.SoloActivos == true && q.SoloConStock == false && q.SoloProductos == true && q.SoloServicios == false),
+                q.SoloActivos == true && q.SoloConStock == false && q.SoloProductos == true && q.SoloServicios == false && q.SoloVendibles == true),
             Arg.Any<CancellationToken>());
     }
 
@@ -65,7 +65,23 @@ public class ItemsControllerTests
             .Returns(dto);
         var controller = CreateController(mediator, BuildDb(items: [BuildItem(9, "A-001", "Articulo", "123") ]));
 
-        var result = await controller.GetByCodigo("a-001", CancellationToken.None);
+        var result = await controller.GetByCodigo("a-001", false, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.Value.Should().BeSameAs(dto);
+        await mediator.Received(1).Send(Arg.Is<GetItemByIdQuery>(q => q.Id == 9), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetByCodigoAlternativo_CuandoExiste_ConsultaMediatorYDevuelveOk()
+    {
+        var mediator = Substitute.For<IMediator>();
+        var dto = new ItemDto { Id = 9, Codigo = "A-001", CodigoAlternativo = "ALT-9", Descripcion = "Articulo" };
+        mediator.Send(Arg.Any<GetItemByIdQuery>(), Arg.Any<CancellationToken>())
+            .Returns(dto);
+        var controller = CreateController(mediator, BuildDb(items: [BuildItem(9, "A-001", "Articulo", "123", true, true, "ALT-9") ]));
+
+        var result = await controller.GetByCodigoAlternativo("alt-9", false, CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         ok.Value.Should().BeSameAs(dto);
@@ -77,9 +93,62 @@ public class ItemsControllerTests
     {
         var controller = CreateController(Substitute.For<IMediator>(), BuildDb(items: [BuildItem(9, "A-001", "Articulo", "123") ]));
 
-        var result = await controller.GetByCodigoBarras("999", CancellationToken.None);
+        var result = await controller.GetByCodigoBarras("999", false, CancellationToken.None);
 
         result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task GetByCodigo_CuandoSoloVendiblesYItemNoVendible_DevuelveNotFound()
+    {
+        var controller = CreateController(
+            Substitute.For<IMediator>(),
+            BuildDb(items: [BuildItem(9, "A-001", "Articulo", "123", activo: false)]));
+
+        var result = await controller.GetByCodigo("a-001", true, CancellationToken.None);
+
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task GetByCodigoBarras_CuandoSoloVendiblesYItemNoVendible_DevuelveNotFound()
+    {
+        var controller = CreateController(
+            Substitute.For<IMediator>(),
+            BuildDb(items: [BuildItem(9, "A-001", "Articulo", "123", aplicaVentas: false)]));
+
+        var result = await controller.GetByCodigoBarras("123", true, CancellationToken.None);
+
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task GetByCodigoAlternativo_CuandoSoloVendiblesYItemNoVendible_DevuelveNotFound()
+    {
+        var controller = CreateController(
+            Substitute.For<IMediator>(),
+            BuildDb(items: [BuildItem(9, "A-001", "Articulo", "123", true, false, "ALT-9")]));
+
+        var result = await controller.GetByCodigoAlternativo("ALT-9", true, CancellationToken.None);
+
+        result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task GetVendibles_EnviaQueryCorrectaYDevuelveOk()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<GetItemsVendiblesQuery>(), Arg.Any<CancellationToken>())
+            .Returns([new ItemSelectorDto { Id = 1, Codigo = "A1", Descripcion = "Articulo", PrecioVenta = 100m, EsVendible = true }]);
+        var controller = CreateController(mediator, BuildDb());
+
+        var result = await controller.GetVendibles("art", true, 15, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        ok.Value.Should().BeAssignableTo<IReadOnlyList<ItemSelectorDto>>().Subject.Should().ContainSingle();
+        await mediator.Received(1).Send(
+            Arg.Is<GetItemsVendiblesQuery>(q => q.Search == "art" && q.SoloConStock && q.Take == 15),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -378,10 +447,41 @@ public class ItemsControllerTests
             null, null, null, null, null);
     }
 
-    private static Item BuildItem(long id, string codigo, string descripcion, string? codigoBarras)
+    private static Item BuildItem(
+        long id,
+        string codigo,
+        string descripcion,
+        string? codigoBarras,
+        bool activo = true,
+        bool aplicaVentas = true,
+        string? codigoAlternativo = null)
     {
-        var entity = Item.Crear(codigo, descripcion, 1, 2, 1, true, false, false, true, 100, 150, 3, 1, 10, codigoBarras, null, null, 10, null);
+        var entity = Item.Crear(
+            codigo: codigo,
+            descripcion: descripcion,
+            unidadMedidaId: 1,
+            alicuotaIvaId: 2,
+            monedaId: 1,
+            esProducto: true,
+            esServicio: false,
+            esFinanciero: false,
+            manejaStock: true,
+            precioCosto: 100,
+            precioVenta: 150,
+            categoriaId: 3,
+            stockMinimo: 1,
+            stockMaximo: 10,
+            codigoBarras: codigoBarras,
+            descripcionAdicional: null,
+            codigoAfip: null,
+            sucursalId: 10,
+            userId: null,
+            codigoAlternativo: codigoAlternativo);
         SetProperty(entity, nameof(Item.Id), id);
+        if (!activo)
+            entity.Desactivar(null);
+        if (!aplicaVentas)
+            entity.ActualizarConfiguracionVentas(false, true, null, false, null);
         return entity;
     }
 

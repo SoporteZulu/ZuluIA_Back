@@ -174,6 +174,7 @@
 **11. Validación Final:**
 - Acceptance testing vs zuluApp
 - Checklist final por matriz
+- Validación ejecutiva específica de productos: [validacion-final-productos-ventas.md](./validacion-final-productos-ventas.md)
 
 **🔗 Link:** [guia-practica-trabajo-paralelo.md](./guia-practica-trabajo-paralelo.md)
 

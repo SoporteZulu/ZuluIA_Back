@@ -15,6 +15,7 @@ using ZuluIA_Back.Application.Features.Fiscal.Services;
 using ZuluIA_Back.Application.Features.Impresion.Interfaces;
 using ZuluIA_Back.Application.Features.Impresion.Services;
 using ZuluIA_Back.Application.Features.Integraciones.Services;
+using ZuluIA_Back.Application.Features.Items.Services;
 using ZuluIA_Back.Application.Features.Logistica.Services;
 using ZuluIA_Back.Application.Features.ListasPrecios.Services;
 using ZuluIA_Back.Application.Features.PuntoVenta.Services;
@@ -75,6 +76,7 @@ public static class DependencyInjection
         services.AddScoped<IntegracionProcesoService>();
         services.AddScoped<LegacyExportacionService>();
         services.AddScoped<LogisticaInternaService>();
+        services.AddScoped<ItemCommercialStockService>();
         services.AddScoped<PrecioListaResolutionService>();
         services.AddScoped<FormulaProduccionHistorialService>();
         services.AddScoped<PuntoVentaFiscalService>();

@@ -12,5 +12,6 @@ public record GetItemsPagedQuery(
     bool? SoloActivos = null,
     bool? SoloConStock = null,
     bool? SoloProductos = null,
-    bool? SoloServicios = null
+    bool? SoloServicios = null,
+    bool? SoloVendibles = null
 ) : IRequest<PagedResult<ItemListDto>>;

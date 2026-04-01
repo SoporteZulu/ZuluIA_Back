@@ -328,6 +328,78 @@ Los errores reportados por `run_build` son **únicamente de archivos `.sql`** en
 
 La **Fase 1** de la paridad funcional de Items/Productos está **100% implementada**.
 
+---
+
+## 15. CIERRE MÍNIMO OK VENTAS
+
+Sobre la base de Fase 1 se cerró además la paridad comercial mínima usable para ventas, sin ampliar scope administrativo.
+
+### Capacidades operativas cerradas
+- ✅ selector comercial usable desde backend con `GET /api/items/vendibles`
+- ✅ búsqueda rápida por código, código alternativo, código de barras y descripción
+- ✅ filtro explícito de vendibles en `GET /api/items` mediante `soloVendibles`
+- ✅ validación de item inactivo o no vendible en `GET /api/items/{id}/precio`
+- ✅ snapshot consistente de precio y stock comercial para renglones de venta
+- ✅ búsquedas directas por código y código de barras con `soloVendibles=true`
+
+### Contrato comercial mínimo disponible
+
+#### Selector liviano para ventas
+```http
+GET /api/items/vendibles?search=lapiz&soloConStock=true&take=20
+```
+
+**Respuesta mínima**:
+```json
+[
+   {
+      "id": 10,
+      "codigo": "PROD001",
+      "codigoBarras": "7791234567890",
+      "descripcion": "Lapiz negro",
+      "unidadMedidaId": 1,
+      "unidadMedidaDescripcion": "Unidad",
+      "alicuotaIvaId": 5,
+      "precioVenta": 1250.00,
+      "stockDisponible": 14.00,
+      "porcentajeMaximoDescuento": 10.0,
+      "manejaStock": true,
+      "esVendible": true,
+      "display": "PROD001 - Lapiz negro"
+   }
+]
+```
+
+#### Precio para renglón de venta
+```http
+GET /api/items/{id}/precio?listaPreciosId=1&monedaId=1
+```
+
+Ahora devuelve además:
+- `activo`
+- `aplicaVentas`
+- `esVendible`
+- `stock`
+- `stockDisponible`
+- `stockComprometido`
+- `stockReservado`
+
+### Validación aplicada
+- un item inactivo no se resuelve para venta
+- un item con `AplicaVentas = false` no se resuelve para venta
+- un item financiero no se ofrece como item vendible
+- `soloConStock` excluye productos sin disponible, pero mantiene servicios
+
+### Validación ejecutada
+- ✅ tests focalizados de items: `49/49` OK
+- ✅ `dotnet build ZuluIA_Back.sln` OK
+
+### Residual fuera de esta ventana
+- no se agregó ABM administrativo nuevo
+- no se abrió un endpoint dedicado por código alternativo exacto
+- no se centralizó toda la lógica comercial de stock en un servicio compartido
+- no se tocó frontend
+
 ### Resumen de Entregables
 - ✅ 6 nuevos campos en entidad `Item`
 - ✅ 6 nuevos métodos de negocio

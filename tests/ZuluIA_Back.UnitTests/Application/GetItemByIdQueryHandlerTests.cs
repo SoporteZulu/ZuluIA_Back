@@ -3,6 +3,7 @@ using NSubstitute;
 using Xunit;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Items.Queries;
+using ZuluIA_Back.Application.Features.Items.Services;
 using ZuluIA_Back.Domain.Entities.Comercial;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Impuestos;
@@ -109,7 +110,7 @@ public class GetItemByIdQueryHandlerTests
         db.Items.Returns(MockDbSetHelper.CreateMockDbSet<Item>([item, componente]));
         db.ItemsComponentes.Returns(MockDbSetHelper.CreateMockDbSet<ItemComponente>([itemComponente]));
 
-        var handler = new GetItemByIdQueryHandler(repo, db);
+        var handler = new GetItemByIdQueryHandler(repo, db, new ItemCommercialStockService(db));
 
         var result = await handler.Handle(new GetItemByIdQuery(100L), CancellationToken.None);
 

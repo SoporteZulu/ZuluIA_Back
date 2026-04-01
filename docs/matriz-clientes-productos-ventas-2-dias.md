@@ -256,6 +256,14 @@ No meter en esta ventana:
 - el backend permite decidir si el ítem puede venderse
 - están cubiertos tests de productos activos/no vendibles/sin stock
 
+### Estado actual backend productos
+- ✅ `GET /api/items` ya soporta `soloVendibles`, `soloConStock`, `soloProductos` y búsqueda comercial útil
+- ✅ existe selector liviano `GET /api/items/vendibles` para combos/autocomplete de ventas
+- ✅ `GET /api/items/{id}/precio` bloquea inactivos/no vendibles y devuelve snapshot de stock comercial
+- ✅ `GET /api/items/por-codigo/{codigo}` y `GET /api/items/por-codigo-barras/{codigoBarras}` aceptan `soloVendibles=true`
+- ✅ cobertura focalizada mínima validada para selector, búsquedas, precio y stock
+- Residual no crítico: endpoint exacto dedicado por código alternativo y consolidación de lógica comercial en servicio compartido
+
 ---
 
 ## 8. Cómo usar múltiples requests a Copilot por máquina

@@ -25,13 +25,32 @@ public class ItemsController(IMediator mediator, IApplicationDbContext db)
         [FromQuery] bool? soloConStock = null,
         [FromQuery] bool? soloProductos = null,
         [FromQuery] bool? soloServicios = null,
+        [FromQuery] bool? soloVendibles = null,
         CancellationToken ct = default)
     {
         var result = await Mediator.Send(
             new GetItemsPagedQuery(
                 page, pageSize, search,
                 categoriaId, soloActivos, soloConStock,
-                soloProductos, soloServicios),
+                soloProductos, soloServicios, soloVendibles),
+            ct);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Selector comercial liviano de ítems vendibles para combos y autocomplete de ventas.
+    /// </summary>
+    [HttpGet("vendibles")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetVendibles(
+        [FromQuery] string? search = null,
+        [FromQuery] bool soloConStock = false,
+        [FromQuery] int take = 20,
+        CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(
+            new GetItemsVendiblesQuery(search, soloConStock, take),
             ct);
 
         return Ok(result);
@@ -55,12 +74,37 @@ public class ItemsController(IMediator mediator, IApplicationDbContext db)
     [HttpGet("por-codigo/{codigo}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetByCodigo(string codigo, CancellationToken ct)
+    public async Task<IActionResult> GetByCodigo(
+        string codigo,
+        [FromQuery] bool soloVendibles = false,
+        CancellationToken ct = default)
     {
         var item = await db.Items
             .AsNoTracking()
             .FirstOrDefaultAsync(x =>
-                x.Codigo == codigo.Trim().ToUpperInvariant(), ct);
+                x.Codigo == codigo.Trim().ToUpperInvariant() &&
+                (!soloVendibles || (x.Activo && x.AplicaVentas && !x.EsFinanciero && (x.EsProducto || x.EsServicio))), ct);
+
+        return OkOrNotFound(item is null ? null
+            : await Mediator.Send(new GetItemByIdQuery(item.Id), ct));
+    }
+
+    /// <summary>
+    /// Busca un ítem por código alternativo exacto.
+    /// </summary>
+    [HttpGet("por-codigo-alternativo/{codigoAlternativo}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetByCodigoAlternativo(
+        string codigoAlternativo,
+        [FromQuery] bool soloVendibles = false,
+        CancellationToken ct = default)
+    {
+        var item = await db.Items
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x =>
+                x.CodigoAlternativo == codigoAlternativo.Trim().ToUpperInvariant() &&
+                (!soloVendibles || (x.Activo && x.AplicaVentas && !x.EsFinanciero && (x.EsProducto || x.EsServicio))), ct);
 
         return OkOrNotFound(item is null ? null
             : await Mediator.Send(new GetItemByIdQuery(item.Id), ct));
@@ -74,11 +118,14 @@ public class ItemsController(IMediator mediator, IApplicationDbContext db)
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByCodigoBarras(
         string codigoBarras,
-        CancellationToken ct)
+        [FromQuery] bool soloVendibles = false,
+        CancellationToken ct = default)
     {
         var item = await db.Items
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.CodigoBarras == codigoBarras.Trim(), ct);
+            .FirstOrDefaultAsync(x =>
+                x.CodigoBarras == codigoBarras.Trim() &&
+                (!soloVendibles || (x.Activo && x.AplicaVentas && !x.EsFinanciero && (x.EsProducto || x.EsServicio))), ct);
 
         return OkOrNotFound(item is null ? null
             : await Mediator.Send(new GetItemByIdQuery(item.Id), ct));

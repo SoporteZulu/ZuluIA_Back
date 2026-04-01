@@ -3,6 +3,7 @@ using NSubstitute;
 using Xunit;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Items.Queries;
+using ZuluIA_Back.Application.Features.Items.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Comercial;
@@ -75,6 +76,7 @@ public class GetItemsPagedQueryHandlerTests
                 true,
                 true,
                 false,
+            true,
                 Arg.Any<CancellationToken>())
             .Returns(new PagedResult<Item>([item], 1, 20, 1));
 
@@ -126,7 +128,7 @@ public class GetItemsPagedQueryHandlerTests
         db.TransferenciasDepositoDetalles.Returns(MockDbSetHelper.CreateMockDbSet<TransferenciaDepositoDetalle>(transferenciaEnTransito.Detalles));
         db.ItemsComponentes.Returns(MockDbSetHelper.CreateMockDbSet<ItemComponente>([componentePack]));
 
-        var handler = new GetItemsPagedQueryHandler(repo, db);
+        var handler = new GetItemsPagedQueryHandler(repo, db, new ItemCommercialStockService(db));
 
         var result = await handler.Handle(
             new GetItemsPagedQuery(
@@ -137,7 +139,8 @@ public class GetItemsPagedQueryHandlerTests
                 SoloActivos: true,
                 SoloConStock: true,
                 SoloProductos: true,
-                SoloServicios: false),
+                SoloServicios: false,
+                SoloVendibles: true),
             CancellationToken.None);
 
         result.Items.Should().ContainSingle();
@@ -179,6 +182,7 @@ public class GetItemsPagedQueryHandlerTests
         dto.DepositoDefaultDescripcion.Should().Be("Depósito principal");
         dto.CodigoAfip.Should().Be("AFIP01");
         dto.CreatedAt.Should().NotBe(default);
+        dto.EsVendible.Should().BeTrue();
         dto.AplicaVentas.Should().BeTrue();
         dto.AplicaCompras.Should().BeFalse();
         dto.PorcentajeGanancia.Should().Be(25m);
