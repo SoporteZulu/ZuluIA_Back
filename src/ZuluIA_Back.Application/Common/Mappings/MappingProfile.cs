@@ -22,11 +22,26 @@ public class MappingProfile : Profile
             .ForMember(d => d.Estado,             o => o.MapFrom(s => s.Estado.ToString().ToUpperInvariant()))
             .ForMember(d => d.TerceroRazonSocial, o => o.Ignore())
             .ForMember(d => d.MonedaSimbolo,      o => o.Ignore())
-            .ForMember(d => d.Medios,             o => o.Ignore());
+            .ForMember(d => d.Medios,             o => o.Ignore())
+            .ForMember(d => d.SucursalDescripcion, o => o.Ignore())
+            .ForMember(d => d.TerceroLegajo, o => o.Ignore())
+            .ForMember(d => d.VendedorNombre, o => o.Ignore())
+            .ForMember(d => d.VendedorLegajo, o => o.Ignore())
+            .ForMember(d => d.CobradorNombre, o => o.Ignore())
+            .ForMember(d => d.CobradorLegajo, o => o.Ignore())
+            .ForMember(d => d.ZonaComercialDescripcion, o => o.Ignore())
+            .ForMember(d => d.UsuarioCajeroNombre, o => o.Ignore())
+            .ForMember(d => d.TotalEfectivo, o => o.Ignore())
+            .ForMember(d => d.TotalCheques, o => o.Ignore())
+            .ForMember(d => d.TotalElectronico, o => o.Ignore())
+            .ForMember(d => d.CreatedByUsuario, o => o.Ignore())
+            .ForMember(d => d.UpdatedByUsuario, o => o.Ignore());
         CreateMap<CobroMedio, CobroMedioDto>()
             .ForMember(d => d.CajaDescripcion,      o => o.Ignore())
             .ForMember(d => d.FormaPagoDescripcion, o => o.Ignore())
-            .ForMember(d => d.MonedaSimbolo,        o => o.Ignore());
+            .ForMember(d => d.MonedaSimbolo,        o => o.Ignore())
+            .ForMember(d => d.ChequeNumero, o => o.Ignore())
+            .ForMember(d => d.ChequeBanco, o => o.Ignore());
         CreateMap<Pago, PagoDto>()
             .ForMember(d => d.Estado,             o => o.MapFrom(s => s.Estado.ToString().ToUpperInvariant()))
             .ForMember(d => d.TerceroRazonSocial, o => o.Ignore())
@@ -73,10 +88,6 @@ public class MappingProfile : Profile
             .ForMember(d => d.Completo, o => o.MapFrom(s => s.Completo));
 
         // ── Tercero → TerceroDto (detalle completo) ───────────────────────────
-        // Los campos de descripción (TipoDocumentoDescripcion, CondicionIvaDescripcion,
-        // CobradorNombre, VendedorNombre, etc.) se ignoran aquí porque requieren
-        // joins a otras tablas que el QueryHandler resuelve por separado.
-        // El Domicilio se mapea como objeto anidado.
         CreateMap<Tercero, TerceroDto>()
             .ForMember(d => d.Domicilio,
                        o => o.MapFrom(s => s.Domicilio))
@@ -90,6 +101,11 @@ public class MappingProfile : Profile
             .ForMember(d => d.PerfilComercial, o => o.Ignore())
             .ForMember(d => d.CuentaCorriente, o => o.Ignore())
             .ForMember(d => d.MediosContacto, o => o.Ignore())
+            .ForMember(d => d.EstadoPersonaDescripcion, o => o.Ignore())
+            .ForMember(d => d.UsuarioCliente, o => o.Ignore())
+            .ForMember(d => d.Domicilios, o => o.Ignore())
+            .ForMember(d => d.SucursalEntregaPrincipal, o => o.Ignore())
+            .ForMember(d => d.RequiereDefinirEntrega, o => o.Ignore())
 
             // Campos aplanados del Domicilio (derivados del ValueObject)
             .ForMember(d => d.Calle,               o => o.MapFrom(s => s.Domicilio.Calle))
@@ -143,8 +159,6 @@ public class MappingProfile : Profile
             .ForMember(d => d.EstadoOperativoBloquea, o => o.Ignore());
 
         // ── Tercero → TerceroListDto (fila de grilla paginada) ────────────────
-        // RolDisplay se calcula en el AfterMap para no duplicar lógica
-        // en cada query handler.
         CreateMap<Tercero, TerceroListDto>()
             .ForMember(d => d.NroInterno, o => o.MapFrom(s => s.Id))
             .ForMember(d => d.FechaAlta, o => o.Ignore())
@@ -201,7 +215,15 @@ public class MappingProfile : Profile
             .ForMember(d => d.EstadoOperativo, o => o.Ignore())
             .ForMember(d => d.EstadoOperativoDescripcion, o => o.Ignore())
             .ForMember(d => d.EstadoOperativoBloquea, o => o.Ignore())
-            // RolDisplay se calcula en el AfterMap — Ignore en la validación estática
+            .ForMember(d => d.EstadoPersonaDescripcion, o => o.Ignore())
+            .ForMember(d => d.TieneSucursalesEntrega, o => o.Ignore())
+            .ForMember(d => d.SucursalEntregaPrincipalDescripcion, o => o.Ignore())
+            .ForMember(d => d.RequiereDefinirEntrega, o => o.Ignore())
+            .ForMember(d => d.PuedeVender, o => o.Ignore())
+            .ForMember(d => d.PuedeComprar, o => o.Ignore())
+            .ForMember(d => d.MotivoBloqueoVentas, o => o.Ignore())
+            .ForMember(d => d.MotivoBloqueoCompras, o => o.Ignore())
+            // RolDisplay se calcula en el AfterMap
             .ForMember(d => d.RolDisplay, o => o.Ignore())
             .AfterMap((src, dst) =>
             {
@@ -233,7 +255,8 @@ public class MappingProfile : Profile
             .ForMember(d => d.GeografiaCompleta, o => o.Ignore())
             .ForMember(d => d.UbicacionCompleta, o => o.Ignore())
             .ForMember(d => d.ProvinciaDescripcion, o => o.Ignore())
-            .ForMember(d => d.LocalidadDescripcion, o => o.Ignore());
+            .ForMember(d => d.LocalidadDescripcion, o => o.Ignore())
+            .ForMember(d => d.TipoDomicilioDescripcion, o => o.Ignore());
         CreateMap<TerceroContacto, TerceroContactoDto>();
         CreateMap<TerceroSucursalEntrega, TerceroSucursalEntregaDto>();
         CreateMap<TerceroTransporte, TerceroTransporteDto>()
