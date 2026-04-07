@@ -53,7 +53,7 @@ public sealed class TerceroOperacionValidationService(IApplicationDbContext db)
         {
             var estadoGeneral = await db.EstadosPersonas
                 .AsNoTracking()
-                .Where(x => x.Id == tercero.EstadoPersonaId.Value && !x.IsDeleted)
+                .Where(x => x.Id == tercero.EstadoPersonaId.Value && x.DeletedAt == null)
                 .Select(x => new { x.Descripcion, x.Activo })
                 .FirstOrDefaultAsync(ct);
 
@@ -74,7 +74,7 @@ public sealed class TerceroOperacionValidationService(IApplicationDbContext db)
 
             var estado = await db.EstadosClientes
                 .AsNoTracking()
-                .Where(x => x.Id == tercero.EstadoClienteId.Value && !x.IsDeleted)
+                .Where(x => x.Id == tercero.EstadoClienteId.Value && x.DeletedAt == null)
                 .Select(x => new { x.Descripcion, x.Activo, x.Bloquea })
                 .FirstOrDefaultAsync(ct);
 
@@ -98,7 +98,7 @@ public sealed class TerceroOperacionValidationService(IApplicationDbContext db)
 
         var estadoProveedor = await db.EstadosProveedores
             .AsNoTracking()
-            .Where(x => x.Id == tercero.EstadoProveedorId.Value && !x.IsDeleted)
+            .Where(x => x.Id == tercero.EstadoProveedorId.Value && x.DeletedAt == null)
             .Select(x => new { x.Descripcion, x.Activo, x.Bloquea })
             .FirstOrDefaultAsync(ct);
 

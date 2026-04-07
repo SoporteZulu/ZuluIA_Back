@@ -22,7 +22,7 @@ internal static class TerceroRoleCatalogValidation
 
             var exists = await db.CategoriasClientes
                 .AsNoTracking()
-                .AnyAsync(x => x.Id == categoriaClienteId.Value && !x.IsDeleted, ct);
+                .AnyAsync(x => x.Id == categoriaClienteId.Value && x.DeletedAt == null, ct);
 
             if (!exists)
                 return "La categoría de cliente indicada no existe.";
@@ -35,7 +35,7 @@ internal static class TerceroRoleCatalogValidation
 
             var exists = await db.EstadosClientes
                 .AsNoTracking()
-                .AnyAsync(x => x.Id == estadoClienteId.Value && !x.IsDeleted, ct);
+                .AnyAsync(x => x.Id == estadoClienteId.Value && x.DeletedAt == null, ct);
 
             if (!exists)
                 return "El estado de cliente indicado no existe.";
@@ -48,7 +48,7 @@ internal static class TerceroRoleCatalogValidation
 
             var exists = await db.CategoriasProveedores
                 .AsNoTracking()
-                .AnyAsync(x => x.Id == categoriaProveedorId.Value && !x.IsDeleted, ct);
+                .AnyAsync(x => x.Id == categoriaProveedorId.Value && x.DeletedAt == null, ct);
 
             if (!exists)
                 return "La categoría de proveedor indicada no existe.";
@@ -61,7 +61,7 @@ internal static class TerceroRoleCatalogValidation
 
             var exists = await db.EstadosProveedores
                 .AsNoTracking()
-                .AnyAsync(x => x.Id == estadoProveedorId.Value && !x.IsDeleted, ct);
+                .AnyAsync(x => x.Id == estadoProveedorId.Value && x.DeletedAt == null, ct);
 
             if (!exists)
                 return "El estado de proveedor indicado no existe.";

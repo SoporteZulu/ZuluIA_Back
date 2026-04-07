@@ -149,7 +149,7 @@ public class GetTerceroByIdQueryHandler(
         {
             var estadoPersona = await db.EstadosPersonas
                 .AsNoTrackingSafe()
-                .Where(x => x.Id == tercero.EstadoPersonaId.Value && !x.IsDeleted)
+                .Where(x => x.Id == tercero.EstadoPersonaId.Value && x.DeletedAt == null)
                 .Select(x => new { x.Descripcion, x.Activo })
                 .FirstOrDefaultSafeAsync(ct);
 
