@@ -174,10 +174,14 @@ public class OrdenesPreparacionControllerTests
 
     private static OrdenesPreparacionController CreateController(IMediator mediator)
     {
+        var reporteExportacionService = new ZuluIA_Back.Application.Features.Reportes.Services.ReporteExportacionService();
+        var serviceProvider = Substitute.For<IServiceProvider>();
+        serviceProvider.GetService(typeof(ZuluIA_Back.Application.Features.Reportes.Services.ReporteExportacionService)).Returns(reporteExportacionService);
+
         return new OrdenesPreparacionController(
             mediator,
             Substitute.For<IApplicationDbContext>(),
-            new ZuluIA_Back.Application.Features.Reportes.Services.ReporteExportacionService())
+            serviceProvider)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

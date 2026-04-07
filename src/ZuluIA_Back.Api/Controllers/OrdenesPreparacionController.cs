@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.OrdenesPreparacion.Commands;
 using ZuluIA_Back.Application.Features.OrdenesPreparacion.Queries;
@@ -15,8 +16,10 @@ namespace ZuluIA_Back.Api.Controllers;
 /// Gestión de órdenes de preparación / picking para despacho de mercaderías.
 /// Equivale a frmOrdenDePreparacion / clsOrdenDePreparacion del sistema VB6.
 /// </summary>
-public class OrdenesPreparacionController(IMediator mediator, IApplicationDbContext db, ReporteExportacionService reporteExportacionService) : BaseController(mediator)
+public class OrdenesPreparacionController(IMediator mediator, IApplicationDbContext db, IServiceProvider serviceProvider) : BaseController(mediator)
 {
+    private ReporteExportacionService reporteExportacionService => serviceProvider.GetRequiredService<ReporteExportacionService>();
+
     /// <summary>
     /// Retorna las órdenes de preparación paginadas con filtros opcionales.
     /// </summary>

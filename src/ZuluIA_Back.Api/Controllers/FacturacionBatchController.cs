@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Api.Security;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Facturacion.Commands;
@@ -11,8 +12,11 @@ namespace ZuluIA_Back.Api.Controllers;
 
 [RequirePermission("FACTURACION.BATCH")]
 [AuditCriticalOperation("FACTURACION_BATCH")]
-public class FacturacionBatchController(IMediator mediator, IApplicationDbContext db, BatchSchedulerService schedulerService, OperacionesBatchSettingsService settingsService) : BaseController(mediator)
+public class FacturacionBatchController(IMediator mediator, IApplicationDbContext db, IServiceProvider serviceProvider) : BaseController(mediator)
 {
+    private BatchSchedulerService schedulerService => serviceProvider.GetRequiredService<BatchSchedulerService>();
+    private OperacionesBatchSettingsService settingsService => serviceProvider.GetRequiredService<OperacionesBatchSettingsService>();
+
     [HttpPost("masiva")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

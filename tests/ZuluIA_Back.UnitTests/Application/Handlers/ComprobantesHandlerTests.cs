@@ -169,7 +169,17 @@ public class EmitirComprobanteCommandHandlerTests
     private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
 
     private EmitirComprobanteCommandHandler Sut() =>
-        new(_comprobanteRepo, _periodoRepo, _stockService, _afipCae, _uow, _user, _db, new TerceroOperacionValidationService(_db), new ItemCommercialStockService(_db));
+        new(_comprobanteRepo, _periodoRepo, _uow, _user, _db, BuildServiceProvider());
+
+    private IServiceProvider BuildServiceProvider()
+    {
+        var provider = Substitute.For<IServiceProvider>();
+        provider.GetService(typeof(StockService)).Returns(_stockService);
+        provider.GetService(typeof(IAfipCaeComprobanteService)).Returns(_afipCae);
+        provider.GetService(typeof(TerceroOperacionValidationService)).Returns(new TerceroOperacionValidationService(_db));
+        provider.GetService(typeof(ItemCommercialStockService)).Returns(new ItemCommercialStockService(_db));
+        return provider;
+    }
 
     private static EmitirComprobanteCommand CmdValido() => new(
         null, 1, null, 1,

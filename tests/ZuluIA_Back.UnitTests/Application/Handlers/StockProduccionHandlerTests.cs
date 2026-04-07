@@ -283,7 +283,7 @@ public class CreateFormulaProduccionCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         await _repo.Received(1).AddAsync(Arg.Any<FormulaProduccion>(), Arg.Any<CancellationToken>());
-        await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _uow.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }
 
@@ -370,11 +370,14 @@ public class CancelarOrdenTrabajoCommandHandlerTests
 public class FinalizarOrdenTrabajoCommandHandlerTests
 {
     private readonly IOrdenTrabajoRepository _repo = Substitute.For<IOrdenTrabajoRepository>();
+    private readonly IFormulaProduccionRepository _formulaRepo = Substitute.For<IFormulaProduccionRepository>();
+    private readonly IRepository<OrdenTrabajoConsumo> _consumoRepo = Substitute.For<IRepository<OrdenTrabajoConsumo>>();
     private readonly ProduccionService _produccionService = Substitute.For<ProduccionService>(
         Substitute.For<IFormulaProduccionRepository>(),
         Substitute.For<StockService>(
             Substitute.For<IStockRepository>(),
-            Substitute.For<IMovimientoStockRepository>()));
+            Substitute.For<IMovimientoStockRepository>()),
+        Substitute.For<IRepository<OrdenTrabajoConsumo>>());
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
 

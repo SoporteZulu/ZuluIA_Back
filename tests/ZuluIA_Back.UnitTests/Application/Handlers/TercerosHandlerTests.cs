@@ -29,6 +29,23 @@ public class CreateTerceroCommandHandlerTests
     private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
     private CreateTerceroCommandHandler Sut() => new(_repo, _uow, _user, _db);
 
+    public CreateTerceroCommandHandlerTests()
+    {
+        _uow.ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task>>(), Arg.Any<CancellationToken>())
+            .Returns(call => ((Func<CancellationToken, Task>)call[0])(CancellationToken.None));
+        _db.CondicionesIva.Returns(MockDbSetHelper.CreateMockDbSet([BuildCondicionIva(1, 5, "Consumidor Final")]));
+        _db.TiposDocumento.Returns(MockDbSetHelper.CreateMockDbSet([BuildTipoDocumento(1, 80, "CUIT")]));
+        _db.EstadosCiviles.Returns(MockDbSetHelper.CreateMockDbSet<EstadoCivilCatalogo>());
+        _db.EstadosPersonas.Returns(MockDbSetHelper.CreateMockDbSet<EstadoPersonaCatalogo>());
+        _db.CategoriasClientes.Returns(MockDbSetHelper.CreateMockDbSet<CategoriaCliente>());
+        _db.EstadosClientes.Returns(MockDbSetHelper.CreateMockDbSet<EstadoCliente>());
+        _db.CategoriasProveedores.Returns(MockDbSetHelper.CreateMockDbSet<CategoriaProveedor>());
+        _db.EstadosProveedores.Returns(MockDbSetHelper.CreateMockDbSet<EstadoProveedor>());
+        _db.Provincias.Returns(MockDbSetHelper.CreateMockDbSet<Provincia>());
+        _db.Localidades.Returns(MockDbSetHelper.CreateMockDbSet<Localidad>());
+        _db.Barrios.Returns(MockDbSetHelper.CreateMockDbSet<Barrio>());
+    }
+
     private static CreateTerceroCommand ValidCommand() => new(
         Legajo: "CLI001", RazonSocial: "Empresa SA", NombreFantasia: null,
         TipoPersoneria: null, Nombre: null, Apellido: null, Tratamiento: null, Profesion: null,
@@ -86,7 +103,25 @@ public class CreateTerceroCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         await _repo.Received(1).AddAsync(Arg.Any<Tercero>(), Arg.Any<CancellationToken>());
-        await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _uow.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    private static CondicionIva BuildCondicionIva(long id, short codigo, string descripcion)
+    {
+        var entity = (CondicionIva)Activator.CreateInstance(typeof(CondicionIva), nonPublic: true)!;
+        typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(entity, id);
+        typeof(CondicionIva).GetProperty(nameof(CondicionIva.Codigo))!.SetValue(entity, codigo);
+        typeof(CondicionIva).GetProperty(nameof(CondicionIva.Descripcion))!.SetValue(entity, descripcion);
+        return entity;
+    }
+
+    private static TipoDocumento BuildTipoDocumento(long id, short codigo, string descripcion)
+    {
+        var entity = (TipoDocumento)Activator.CreateInstance(typeof(TipoDocumento), nonPublic: true)!;
+        typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(entity, id);
+        typeof(TipoDocumento).GetProperty(nameof(TipoDocumento.Codigo))!.SetValue(entity, codigo);
+        typeof(TipoDocumento).GetProperty(nameof(TipoDocumento.Descripcion))!.SetValue(entity, descripcion);
+        return entity;
     }
 }
 
@@ -99,6 +134,23 @@ public class UpdateTerceroCommandHandlerTests
     private readonly ICurrentUserService _user = Substitute.For<ICurrentUserService>();
     private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
     private UpdateTerceroCommandHandler Sut() => new(_repo, _uow, _user, _db);
+
+    public UpdateTerceroCommandHandlerTests()
+    {
+        _uow.ExecuteInTransactionAsync(Arg.Any<Func<CancellationToken, Task>>(), Arg.Any<CancellationToken>())
+            .Returns(call => ((Func<CancellationToken, Task>)call[0])(CancellationToken.None));
+        _db.CondicionesIva.Returns(MockDbSetHelper.CreateMockDbSet([BuildCondicionIva(1, 5, "Consumidor Final")]));
+        _db.TiposDocumento.Returns(MockDbSetHelper.CreateMockDbSet([BuildTipoDocumento(1, 80, "CUIT")]));
+        _db.EstadosCiviles.Returns(MockDbSetHelper.CreateMockDbSet<EstadoCivilCatalogo>());
+        _db.EstadosPersonas.Returns(MockDbSetHelper.CreateMockDbSet<EstadoPersonaCatalogo>());
+        _db.CategoriasClientes.Returns(MockDbSetHelper.CreateMockDbSet<CategoriaCliente>());
+        _db.EstadosClientes.Returns(MockDbSetHelper.CreateMockDbSet<EstadoCliente>());
+        _db.CategoriasProveedores.Returns(MockDbSetHelper.CreateMockDbSet<CategoriaProveedor>());
+        _db.EstadosProveedores.Returns(MockDbSetHelper.CreateMockDbSet<EstadoProveedor>());
+        _db.Provincias.Returns(MockDbSetHelper.CreateMockDbSet<Provincia>());
+        _db.Localidades.Returns(MockDbSetHelper.CreateMockDbSet<Localidad>());
+        _db.Barrios.Returns(MockDbSetHelper.CreateMockDbSet<Barrio>());
+    }
 
     [Fact]
     public async Task Handle_TerceroNoExiste_RetornaFailure()
@@ -126,7 +178,7 @@ public class UpdateTerceroCommandHandlerTests
         var result = await Sut().Handle(BuildCommand(1), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        _repo.Received(1).Update(Arg.Any<Tercero>());
+        tercero.RazonSocial.Should().Be("Empresa SA Updated");
         await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -148,6 +200,24 @@ public class UpdateTerceroCommandHandlerTests
         VendedorId: null, AplicaComisionVendedor: false, PctComisionVendedor: 0,
         Observacion: null, PerfilComercial: null, Domicilios: null, Contactos: null, SucursalesEntrega: null,
         Transportes: null, VentanasCobranza: null);
+
+    private static CondicionIva BuildCondicionIva(long id, short codigo, string descripcion)
+    {
+        var entity = (CondicionIva)Activator.CreateInstance(typeof(CondicionIva), nonPublic: true)!;
+        typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(entity, id);
+        typeof(CondicionIva).GetProperty(nameof(CondicionIva.Codigo))!.SetValue(entity, codigo);
+        typeof(CondicionIva).GetProperty(nameof(CondicionIva.Descripcion))!.SetValue(entity, descripcion);
+        return entity;
+    }
+
+    private static TipoDocumento BuildTipoDocumento(long id, short codigo, string descripcion)
+    {
+        var entity = (TipoDocumento)Activator.CreateInstance(typeof(TipoDocumento), nonPublic: true)!;
+        typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(entity, id);
+        typeof(TipoDocumento).GetProperty(nameof(TipoDocumento.Codigo))!.SetValue(entity, codigo);
+        typeof(TipoDocumento).GetProperty(nameof(TipoDocumento.Descripcion))!.SetValue(entity, descripcion);
+        return entity;
+    }
 }
 
 // ── DeleteTerceroCommandHandler ───────────────────────────────────────────────
@@ -462,6 +532,13 @@ public class GetTerceroByIdQueryHandlerTests
         _db.CondicionesIva.Returns(mockCondicionesIva72);
         var mockUsuarios73 = MockDbSetHelper.CreateMockDbSet<Usuario>();
         _db.Usuarios.Returns(mockUsuarios73);
+        _db.PersonasDomicilios.Returns(MockDbSetHelper.CreateMockDbSet<PersonaDomicilio>());
+        _db.Provincias.Returns(MockDbSetHelper.CreateMockDbSet<Provincia>());
+        _db.Localidades.Returns(MockDbSetHelper.CreateMockDbSet<Localidad>());
+        _db.TiposDomicilio.Returns(MockDbSetHelper.CreateMockDbSet<TipoDomicilioCatalogo>());
+        _db.TercerosPerfilesComerciales.Returns(MockDbSetHelper.CreateMockDbSet<TerceroPerfilComercial>());
+        _db.ZonasComerciales.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Comercial.ZonaComercial>());
+        _db.MediosContacto.Returns(MockDbSetHelper.CreateMockDbSet<MedioContacto>());
 
         var result = await Sut().Handle(new GetTerceroByIdQuery(1), CancellationToken.None);
 
@@ -526,9 +603,9 @@ public class GetClientesActivosQueryHandlerTests
     public async Task Handle_RetornaListaMapeada()
     {
         var clientes = (IReadOnlyList<Tercero>)Array.Empty<Tercero>();
-        var dtos = (IReadOnlyList<TerceroSelectorDto>)Array.Empty<TerceroSelectorDto>();
+        var dtos = new List<TerceroSelectorDto>();
         _repo.GetClientesActivosAsync(Arg.Any<long?>(), Arg.Any<CancellationToken>()).Returns(clientes);
-        _mapper.Map<IReadOnlyList<TerceroSelectorDto>>(clientes).Returns(dtos);
+        _mapper.Map<List<TerceroSelectorDto>>(clientes).Returns(dtos);
 
         var result = await Sut().Handle(new GetClientesActivosQuery(null), CancellationToken.None);
 
@@ -550,9 +627,9 @@ public class GetProveedoresActivosQueryHandlerTests
     public async Task Handle_RetornaListaMapeada()
     {
         var proveedores = (IReadOnlyList<Tercero>)Array.Empty<Tercero>();
-        var dtos = (IReadOnlyList<TerceroSelectorDto>)Array.Empty<TerceroSelectorDto>();
+        var dtos = new List<TerceroSelectorDto>();
         _repo.GetProveedoresActivosAsync(Arg.Any<long?>(), Arg.Any<CancellationToken>()).Returns(proveedores);
-        _mapper.Map<IReadOnlyList<TerceroSelectorDto>>(proveedores).Returns(dtos);
+        _mapper.Map<List<TerceroSelectorDto>>(proveedores).Returns(dtos);
 
         var result = await Sut().Handle(new GetProveedoresActivosQuery(null), CancellationToken.None);
 

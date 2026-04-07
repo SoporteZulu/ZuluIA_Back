@@ -102,7 +102,7 @@ public class CartaPorte : AuditableEntity
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nroCtg);
 
-        if (Estado is EstadoCartaPorte.Anulada or EstadoCartaPorte.Confirmada)
+        if (Estado is not EstadoCartaPorte.Pendiente and not EstadoCartaPorte.CtgSolicitado)
             throw new InvalidOperationException(
                 "La carta de porte no admite asignación de CTG en el estado actual.");
 

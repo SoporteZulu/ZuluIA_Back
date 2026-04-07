@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Interfaces;
@@ -16,8 +17,8 @@ public class UpdateTipoRetencionCommandHandler(
         CancellationToken ct)
     {
         var tipo = await db.TiposRetencion
-            .Include(x => x.Escalas)
-            .FirstOrDefaultAsync(x => x.Id == request.Id, ct);
+            .AsQueryableSafe()
+            .FirstOrDefaultSafeAsync(x => x.Id == request.Id, ct);
 
         if (tipo is null)
             return Result.Failure($"No se encontró el tipo de retención con ID {request.Id}.");
@@ -33,8 +34,6 @@ public class UpdateTipoRetencionCommandHandler(
 
         // Reemplazar escalas completamente
         tipo.RemoverEscalas();
-        db.EscalasRetencion.RemoveRange(
-            db.EscalasRetencion.Where(e => e.TipoRetencionId == request.Id));
 
         foreach (var e in request.Escalas)
             tipo.AgregarEscala(e.Descripcion, e.ImporteDesde, e.ImporteHasta, e.Porcentaje);

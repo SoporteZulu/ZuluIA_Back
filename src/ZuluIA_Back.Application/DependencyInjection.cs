@@ -87,6 +87,7 @@ public static class DependencyInjection
         services.AddScoped<TesoreriaService>();
         services.AddScoped<TerceroOperacionValidationService>();
         services.AddScoped<CircuitoVentasService>();
+        services.AddScoped<EmitirDocumentoVentaValidationService>();
         services.AddScoped<NotaCreditoValidationService>();
         services.AddScoped<NotaDebitoValidationService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();

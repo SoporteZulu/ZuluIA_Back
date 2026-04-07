@@ -32,13 +32,11 @@ public class CreatePresupuestoCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(0);
-        await _db.Presupuestos.Received(1).AddAsync(
-            Arg.Is<Presupuesto>(x =>
-                x.SucursalId == 1 &&
-                x.TerceroId == 2 &&
-                x.MonedaId == 1 &&
-                x.Estado == "PENDIENTE"),
-            Arg.Any<CancellationToken>());
+        presupuestos.Should().ContainSingle(x =>
+            x.SucursalId == 1 &&
+            x.TerceroId == 2 &&
+            x.MonedaId == 1 &&
+            x.Estado == "PENDIENTE");
         await _db.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -60,7 +58,7 @@ public class CreatePresupuestoCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        await _db.PresupuestosItems.Received(2).AddAsync(Arg.Any<PresupuestoItem>(), Arg.Any<CancellationToken>());
+        items.Should().HaveCount(2);
         await _db.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

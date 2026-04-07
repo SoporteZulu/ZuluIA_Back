@@ -310,8 +310,6 @@ public class StockControllerTests
     public async Task GetInventarioById_CuandoNoExiste_DevuelveNotFound()
     {
         var inventarios = MockDbSetHelper.CreateMockDbSet<InventarioConteo>();
-        inventarios.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<InventarioConteo?>((InventarioConteo?)null));
         var controller = CreateController(db: BuildDb(inventariosDbSet: inventarios));
 
         var result = await controller.GetInventarioById(7, CancellationToken.None);
@@ -325,8 +323,6 @@ public class StockControllerTests
     {
         var inventario = BuildInventario(7, 9, new DateTimeOffset(2026, 3, 21, 10, 0, 0, TimeSpan.Zero), null, 100);
         var inventarios = MockDbSetHelper.CreateMockDbSet(new[] { inventario });
-        inventarios.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<InventarioConteo?>(inventario));
         var controller = CreateController(db: BuildDb(inventariosDbSet: inventarios));
 
         var result = await controller.GetInventarioById(7, CancellationToken.None);

@@ -264,7 +264,14 @@ public class CreateLiquidacionSueldoCommandHandlerTests
     public async Task Handle_PeriodoNuevo_CreaLiquidacionYRetornaSuccess()
     {
         var dbSet = MockDbSetHelper.CreateMockDbSet(new List<LiquidacionSueldo>());
+        var empleado = Empleado.Crear(1, 1, "EMP001", "Analista", null, new DateOnly(2024, 1, 1), 100_000m, 1);
+        typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(empleado, 1L);
+
+        var moneda = (Moneda)Activator.CreateInstance(typeof(Moneda), nonPublic: true)!;
+        typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(moneda, 1L);
         _db.LiquidacionesSueldo.Returns(dbSet);
+        _db.Empleados.Returns(MockDbSetHelper.CreateMockDbSet([empleado]));
+        _db.Monedas.Returns(MockDbSetHelper.CreateMockDbSet([moneda]));
         _uow.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
 
         var result = await _handler.Handle(ComandoValido(), CancellationToken.None);
@@ -424,8 +431,7 @@ public class DesactivarTasaInteresCommandHandlerTests
     [Fact]
     public async Task Handle_TasaNoEncontrada_RetornaFailure()
     {
-        _db.TasasInteres.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<TasaInteres?>((TasaInteres?)null));
+        _db.TasasInteres.Returns(MockDbSetHelper.CreateMockDbSet<TasaInteres>());
 
         var result = await Sut().Handle(new DesactivarTasaInteresCommand(99, null), CancellationToken.None);
 
@@ -437,9 +443,8 @@ public class DesactivarTasaInteresCommandHandlerTests
     public async Task Handle_TasaExistente_LaDesactivaYPersiste()
     {
         var tasa = TasaInteres.Crear("Mora", 5m, new DateOnly(2026, 4, 1), null, null);
-
-        _db.TasasInteres.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<TasaInteres?>(tasa));
+        typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(tasa, 1L);
+        _db.TasasInteres.Returns(MockDbSetHelper.CreateMockDbSet([tasa]));
 
         var result = await Sut().Handle(new DesactivarTasaInteresCommand(1, null), CancellationToken.None);
 
@@ -458,8 +463,7 @@ public class ActivarTasaInteresCommandHandlerTests
     [Fact]
     public async Task Handle_TasaNoEncontrada_RetornaFailure()
     {
-        _db.TasasInteres.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<TasaInteres?>((TasaInteres?)null));
+        _db.TasasInteres.Returns(MockDbSetHelper.CreateMockDbSet<TasaInteres>());
 
         var result = await Sut().Handle(new ActivarTasaInteresCommand(99, null), CancellationToken.None);
 
@@ -471,10 +475,9 @@ public class ActivarTasaInteresCommandHandlerTests
     public async Task Handle_TasaExistente_LaActivaYPersiste()
     {
         var tasa = TasaInteres.Crear("Mora", 5m, new DateOnly(2026, 4, 1), null, null);
+        typeof(BaseEntity).GetProperty(nameof(BaseEntity.Id))!.SetValue(tasa, 1L);
         tasa.Desactivar(userId: null);
-
-        _db.TasasInteres.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<TasaInteres?>(tasa));
+        _db.TasasInteres.Returns(MockDbSetHelper.CreateMockDbSet([tasa]));
 
         var result = await Sut().Handle(new ActivarTasaInteresCommand(1, null), CancellationToken.None);
 

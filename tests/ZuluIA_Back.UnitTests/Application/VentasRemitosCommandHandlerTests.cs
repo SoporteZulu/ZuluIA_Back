@@ -5,6 +5,7 @@ using Xunit;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Ventas.Commands;
 using ZuluIA_Back.Application.Features.Ventas.Common;
+using ZuluIA_Back.Application.Features.Ventas.Services;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Entities.Items;
 using ZuluIA_Back.Domain.Entities.Referencia;
@@ -96,15 +97,16 @@ public class VentasRemitosCommandHandlerTests
         db.Comprobantes.Returns(MockDbSetHelper.CreateMockDbSet([comprobante]));
         db.ComprobantesItems.Returns(MockDbSetHelper.CreateMockDbSet([linea]));
 
+        var emitirValidationService = new EmitirDocumentoVentaValidationService(db, validationService, stockService);
+
         var handler = new EmitirDocumentoVentaCommandHandler(
             repo,
             db,
             uow,
             currentUser,
             null!,
-            validationService,
             sender,
-            stockService);
+            emitirValidationService);
 
         var result = await handler.Handle(
             new EmitirDocumentoVentaCommand(12L, OperacionStockVenta.Egreso, OperacionCuentaCorrienteVenta.Debito),

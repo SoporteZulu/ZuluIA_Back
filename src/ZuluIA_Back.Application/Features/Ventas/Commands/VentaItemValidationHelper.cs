@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Items.Services;
 using ZuluIA_Back.Domain.Entities.Items;
@@ -16,9 +17,9 @@ internal static class VentaItemValidationHelper
             return [];
 
         return await db.Items
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => itemIds.Contains(x.Id))
-            .ToDictionaryAsync(x => x.Id, ct);
+            .ToDictionarySafeAsync(x => x.Id, ct);
     }
 
     public static string? ValidateItemsVendibles(

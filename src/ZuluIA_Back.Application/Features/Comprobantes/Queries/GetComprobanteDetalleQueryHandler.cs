@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Comprobantes.DTOs;
 using ZuluIA_Back.Domain.Enums;
@@ -21,25 +22,25 @@ public class GetComprobanteDetalleQueryHandler(
         if (comp is null) return null;
 
         // Lookups paralelos
-        var terceroTask = db.Terceros.AsNoTracking()
+        var terceroTask = db.Terceros.AsNoTrackingSafe()
             .Where(x => x.Id == comp.TerceroId)
             .Select(x => new { x.RazonSocial, x.NroDocumento, x.Legajo })
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultSafeAsync(ct);
 
-        var tipoTask = db.TiposComprobante.AsNoTracking()
+        var tipoTask = db.TiposComprobante.AsNoTrackingSafe()
             .Where(x => x.Id == comp.TipoComprobanteId)
             .Select(x => new { x.Descripcion, x.Codigo })
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultSafeAsync(ct);
 
-        var monedaTask = db.Monedas.AsNoTracking()
+        var monedaTask = db.Monedas.AsNoTrackingSafe()
             .Where(x => x.Id == comp.MonedaId)
             .Select(x => new { x.Simbolo })
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultSafeAsync(ct);
 
-        var sucursalTask = db.Sucursales.AsNoTracking()
+        var sucursalTask = db.Sucursales.AsNoTrackingSafe()
             .Where(x => x.Id == comp.SucursalId)
             .Select(x => new { x.RazonSocial })
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultSafeAsync(ct);
 
         await Task.WhenAll(terceroTask, tipoTask, monedaTask, sucursalTask);
 
@@ -52,23 +53,23 @@ public class GetComprobanteDetalleQueryHandler(
         string? autorizadorNombre = null;
         if (comp.AutorizadorDevolucionId.HasValue)
         {
-            autorizadorNombre = await db.Usuarios.AsNoTracking()
+            autorizadorNombre = await db.Usuarios.AsNoTrackingSafe()
                 .Where(x => x.Id == comp.AutorizadorDevolucionId.Value)
                 .Select(x => x.NombreCompleto)
-                .FirstOrDefaultAsync(ct);
+                .FirstOrDefaultSafeAsync(ct);
         }
 
         // Condición IVA del tercero
         var condIva = await db.CondicionesIva
-            .AsNoTracking()
-            .Join(db.Terceros.AsNoTracking().Where(t => t.Id == comp.TerceroId),
+            .AsNoTrackingSafe()
+            .Join(db.Terceros.AsNoTrackingSafe().Where(t => t.Id == comp.TerceroId),
                 c => c.Id,
                 t => t.CondicionIvaId,
                 (c, _) => c.Descripcion)
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultSafeAsync(ct);
 
         var cot = await db.ComprobantesCot
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => x.ComprobanteId == comp.Id)
             .Select(x => new ComprobanteCotDto
             {
@@ -76,10 +77,10 @@ public class GetComprobanteDetalleQueryHandler(
                 FechaVigencia = x.FechaVigencia,
                 Descripcion = x.Descripcion
             })
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultSafeAsync(ct);
 
         var atributosRemito = await db.ComprobantesAtributos
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => x.ComprobanteId == comp.Id)
             .OrderBy(x => x.Clave)
             .Select(x => new ComprobanteAtributoDto
@@ -89,13 +90,13 @@ public class GetComprobanteDetalleQueryHandler(
                 Valor = x.Valor,
                 TipoDato = x.TipoDato
             })
-            .ToListAsync(ct);
+            .ToListSafeAsync(ct);
 
         var depositoOrigenDescripcion = comp.DepositoOrigenId.HasValue
-            ? await db.Depositos.AsNoTracking()
+            ? await db.Depositos.AsNoTrackingSafe()
                 .Where(x => x.Id == comp.DepositoOrigenId.Value)
                 .Select(x => x.Descripcion)
-                .FirstOrDefaultAsync(ct)
+                .FirstOrDefaultSafeAsync(ct)
             : null;
 
         // Ítems con descripciones
@@ -119,35 +120,35 @@ public class GetComprobanteDetalleQueryHandler(
             .Distinct()
             .ToList();
 
-        var items = await db.Items.AsNoTracking()
+        var items = await db.Items.AsNoTrackingSafe()
             .Where(x => itemIds.Contains(x.Id))
             .Select(x => new { x.Id, x.Codigo })
-            .ToDictionaryAsync(x => x.Id, ct);
+            .ToDictionarySafeAsync(x => x.Id, ct);
 
-        var depositos = await db.Depositos.AsNoTracking()
+        var depositos = await db.Depositos.AsNoTrackingSafe()
             .Where(x => depositoIds.Contains(x.Id))
             .Select(x => new { x.Id, x.Descripcion })
-            .ToDictionaryAsync(x => x.Id, ct);
+            .ToDictionarySafeAsync(x => x.Id, ct);
 
-        var unidades = await db.UnidadesMedida.AsNoTracking()
+        var unidades = await db.UnidadesMedida.AsNoTrackingSafe()
             .Where(x => unidadIds.Contains(x.Id))
             .Select(x => new { x.Id, x.Descripcion })
-            .ToDictionaryAsync(x => x.Id, ct);
+            .ToDictionarySafeAsync(x => x.Id, ct);
 
-        var tercerosRelacionados = await db.Terceros.AsNoTracking()
+        var tercerosRelacionados = await db.Terceros.AsNoTrackingSafe()
             .Where(x => terceroRelacionadoIds.Contains(x.Id))
             .Select(x => new { x.Id, x.RazonSocial, x.Legajo })
-            .ToDictionaryAsync(x => x.Id, ct);
+            .ToDictionarySafeAsync(x => x.Id, ct);
 
-        var usuarios = await db.Usuarios.AsNoTracking()
+        var usuarios = await db.Usuarios.AsNoTrackingSafe()
             .Where(x => usuarioIds.Contains(x.Id))
             .Select(x => new { x.Id, x.UserName, x.NombreCompleto })
-            .ToDictionaryAsync(x => x.Id, x => x.NombreCompleto ?? x.UserName, ct);
+            .ToDictionarySafeAsync(x => x.Id, x => x.NombreCompleto ?? x.UserName, ct);
 
         var comprobanteItemIds = comp.Items.Select(x => x.Id).ToList();
-        var atributosPorItem = await db.ComprobantesItemsAtributos.AsNoTracking()
+        var atributosPorItem = await db.ComprobantesItemsAtributos.AsNoTrackingSafe()
             .Where(x => comprobanteItemIds.Contains(x.ComprobanteItemId))
-            .Join(db.AtributosComerciales.AsNoTracking(),
+            .Join(db.AtributosComerciales.AsNoTrackingSafe(),
                 a => a.AtributoComercialId,
                 d => d.Id,
                 (a, d) => new
@@ -159,7 +160,7 @@ public class GetComprobanteDetalleQueryHandler(
                     d.Descripcion,
                     a.Valor
                 })
-            .ToListAsync(ct);
+            .ToListSafeAsync(ct);
 
         var atributosLookup = atributosPorItem
             .GroupBy(x => x.ComprobanteItemId)
@@ -178,30 +179,30 @@ public class GetComprobanteDetalleQueryHandler(
         var imputaciones = await imputRepo.GetByComprobanteDestinoAsync(comp.Id, true, ct);
         var origenIds = imputaciones.Select(x => x.ComprobanteOrigenId).ToList();
 
-        var numerosOrigen = await db.Comprobantes.AsNoTracking()
+        var numerosOrigen = await db.Comprobantes.AsNoTrackingSafe()
             .Where(x => origenIds.Contains(x.Id))
             .Select(x => new { x.Id, x.Numero.Prefijo, x.Numero.Numero })
-            .ToDictionaryAsync(x => x.Id, ct);
+            .ToDictionarySafeAsync(x => x.Id, ct);
 
         var motivoDebito = comp.MotivoDebitoId.HasValue
-            ? await db.MotivosDebito.AsNoTracking()
+            ? await db.MotivosDebito.AsNoTrackingSafe()
                 .Where(x => x.Id == comp.MotivoDebitoId.Value)
                 .Select(x => new { x.Descripcion, x.EsFiscal })
-                .FirstOrDefaultAsync(ct)
+                .FirstOrDefaultSafeAsync(ct)
             : null;
 
         var comprobanteOrigen = comp.ComprobanteOrigenId.HasValue
-            ? await db.Comprobantes.AsNoTracking()
+            ? await db.Comprobantes.AsNoTrackingSafe()
                 .Where(x => x.Id == comp.ComprobanteOrigenId.Value)
                 .Select(x => new { x.Id, x.Fecha, x.TipoComprobanteId, x.Numero.Prefijo, x.Numero.Numero })
-                .FirstOrDefaultAsync(ct)
+                .FirstOrDefaultSafeAsync(ct)
             : null;
 
         var tipoComprobanteOrigen = comprobanteOrigen is not null
-            ? await db.TiposComprobante.AsNoTracking()
+            ? await db.TiposComprobante.AsNoTrackingSafe()
                 .Where(x => x.Id == comprobanteOrigen.TipoComprobanteId)
                 .Select(x => x.Descripcion)
-                .FirstOrDefaultAsync(ct)
+                .FirstOrDefaultSafeAsync(ct)
             : null;
 
         string? vendedorNombre = null;

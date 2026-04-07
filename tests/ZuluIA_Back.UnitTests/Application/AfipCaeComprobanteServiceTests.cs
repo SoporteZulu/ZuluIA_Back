@@ -44,16 +44,16 @@ public class AfipCaeComprobanteServiceTests
 
         result.IsSuccess.Should().BeTrue();
         comprobante.Cae.Should().Be("12345678901234");
-        _auditoria.Received(1).Add(Arg.Is<AuditoriaComprobante>(x =>
+        _auditoria.Should().ContainSingle(x =>
             x.ComprobanteId == 10 &&
             x.Accion == AccionAuditoria.AfipSolicitud &&
             x.DetalleCambio != null &&
-            x.DetalleCambio.Contains("request=")));
-        _auditoria.Received(1).Add(Arg.Is<AuditoriaComprobante>(x =>
+            x.DetalleCambio.Contains("request="));
+        _auditoria.Should().ContainSingle(x =>
             x.ComprobanteId == 10 &&
             x.Accion == AccionAuditoria.CaeAsignado &&
             x.DetalleCambio != null &&
-            x.DetalleCambio.Contains("response=")));
+            x.DetalleCambio.Contains("response="));
         await _db.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -69,13 +69,13 @@ public class AfipCaeComprobanteServiceTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be("AFIP rechazo la solicitud");
-        _auditoria.Received(1).Add(Arg.Is<AuditoriaComprobante>(x =>
-            x.ComprobanteId == 10 && x.Accion == AccionAuditoria.AfipSolicitud));
-        _auditoria.Received(1).Add(Arg.Is<AuditoriaComprobante>(x =>
+        _auditoria.Should().ContainSingle(x =>
+            x.ComprobanteId == 10 && x.Accion == AccionAuditoria.AfipSolicitud);
+        _auditoria.Should().ContainSingle(x =>
             x.ComprobanteId == 10 &&
             x.Accion == AccionAuditoria.AfipError &&
             x.DetalleCambio != null &&
-            x.DetalleCambio.Contains("AFIP rechazo la solicitud")));
+            x.DetalleCambio.Contains("AFIP rechazo la solicitud"));
         await _db.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

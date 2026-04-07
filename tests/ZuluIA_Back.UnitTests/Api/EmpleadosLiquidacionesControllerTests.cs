@@ -25,7 +25,7 @@ public class EmpleadosLiquidacionesControllerTests
     public async Task Egresar_CuandoNoExiste_DevuelveNotFoundConMensajeNormalizado()
     {
         var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<EgresarEmpleadoCommand>(), Arg.Any<CancellationToken>())
+        mediator.Send(Arg.Any<CambiarEstadoEmpleadoCommand>(), Arg.Any<CancellationToken>())
             .Returns(Result.Failure("No se encontro el empleado con ID 7."));
         var controller = CreateController(mediator);
 
@@ -39,7 +39,7 @@ public class EmpleadosLiquidacionesControllerTests
     public async Task Egresar_CuandoTieneExito_DevuelveOkConMensaje()
     {
         var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<EgresarEmpleadoCommand>(), Arg.Any<CancellationToken>())
+        mediator.Send(Arg.Any<CambiarEstadoEmpleadoCommand>(), Arg.Any<CancellationToken>())
             .Returns(Result.Success());
         var controller = CreateController(mediator);
 
@@ -162,12 +162,15 @@ public class EmpleadosLiquidacionesControllerTests
             tesoreriaService,
             new ReporteExportacionService(),
             currentUser);
+        var reporteExportacionService = new ReporteExportacionService();
+        var serviceProvider = Substitute.For<IServiceProvider>();
+        serviceProvider.GetService(typeof(RrhhService)).Returns(rrhhService);
+        serviceProvider.GetService(typeof(ReporteExportacionService)).Returns(reporteExportacionService);
         var controller = new EmpleadosController(
             mediator,
             repo ?? Substitute.For<IEmpleadoRepository>(),
             dbInstance,
-            rrhhService,
-            new ReporteExportacionService())
+            serviceProvider)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

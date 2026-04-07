@@ -5,6 +5,7 @@ using ZuluIA_Back.Application.Features.Comprobantes.Commands;
 using ZuluIA_Back.Application.Features.Integraciones.DTOs;
 using ZuluIA_Back.Application.Features.Integraciones.Services;
 using ZuluIA_Back.Application.Features.PuntoVenta.Enums;
+using ZuluIA_Back.Domain.Entities.Facturacion;
 using ZuluIA_Back.Domain.Entities.PuntoVenta;
 using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Interfaces;

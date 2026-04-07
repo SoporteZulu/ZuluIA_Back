@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Api.Security;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Integraciones.Commands;
@@ -14,8 +15,17 @@ namespace ZuluIA_Back.Api.Controllers;
 
 [RequirePermission("INTEGRACIONES.OPERAR")]
 [AuditCriticalOperation("INTEGRACIONES_OPERATIVAS")]
-public class IntegracionesController(IMediator mediator, IApplicationDbContext db, ImportacionArchivoService importacionArchivoService, ArchivoTabularParserService parserService, ReporteExportacionService reporteExportacionService, ExternalIntegrationProviderSettingsService providerSettingsService, ExternalIntegrationCertificationService certificationService, ExternalFiscalPrecheckService fiscalPrecheckService, ExternalFiscalReadinessService fiscalReadinessService, ExternalProviderErrorCatalogService errorCatalogService) : BaseController(mediator)
+public class IntegracionesController(IMediator mediator, IApplicationDbContext db, IServiceProvider serviceProvider) : BaseController(mediator)
 {
+    private ImportacionArchivoService importacionArchivoService => serviceProvider.GetRequiredService<ImportacionArchivoService>();
+    private ArchivoTabularParserService parserService => serviceProvider.GetRequiredService<ArchivoTabularParserService>();
+    private ReporteExportacionService reporteExportacionService => serviceProvider.GetRequiredService<ReporteExportacionService>();
+    private ExternalIntegrationProviderSettingsService providerSettingsService => serviceProvider.GetRequiredService<ExternalIntegrationProviderSettingsService>();
+    private ExternalIntegrationCertificationService certificationService => serviceProvider.GetRequiredService<ExternalIntegrationCertificationService>();
+    private ExternalFiscalPrecheckService fiscalPrecheckService => serviceProvider.GetRequiredService<ExternalFiscalPrecheckService>();
+    private ExternalFiscalReadinessService fiscalReadinessService => serviceProvider.GetRequiredService<ExternalFiscalReadinessService>();
+    private ExternalProviderErrorCatalogService errorCatalogService => serviceProvider.GetRequiredService<ExternalProviderErrorCatalogService>();
+
     [HttpGet("importar/layouts")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult GetImportLayouts([FromServices] ArchivoImportLayoutProfileService layoutProfileService)

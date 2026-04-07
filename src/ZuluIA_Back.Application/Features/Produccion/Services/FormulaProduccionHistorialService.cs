@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Entities.Produccion;
 using ZuluIA_Back.Domain.Interfaces;
@@ -13,10 +14,9 @@ public class FormulaProduccionHistorialService(
 {
     public async Task RegistrarSnapshotAsync(FormulaProduccion formula, string? motivo, CancellationToken ct = default)
     {
-        var ultimaVersion = await db.FormulasProduccionHistorial.AsNoTracking()
+        var ultimaVersion = await db.FormulasProduccionHistorial.AsNoTrackingSafe()
             .Where(x => x.FormulaId == formula.Id)
-            .Select(x => (int?)x.Version)
-            .MaxAsync(ct) ?? 0;
+            .MaxSafeAsync(x => (int?)x.Version, ct) ?? 0;
 
         var snapshot = JsonSerializer.Serialize(new
         {

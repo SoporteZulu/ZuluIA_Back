@@ -44,8 +44,6 @@ public class GruposEconomicosControllerTests
         var mediator = Substitute.For<IMediator>();
         var db = Substitute.For<IApplicationDbContext>();
         var grupos = MockDbSetHelper.CreateMockDbSet(Array.Empty<GrupoEconomico>());
-        grupos.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<GrupoEconomico?>((GrupoEconomico?)null));
         db.GrupoEconomicos.Returns(grupos);
         var controller = CreateController(mediator, db);
 

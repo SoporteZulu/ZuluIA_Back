@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Api.Security;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Integraciones.Services;
@@ -21,14 +22,16 @@ public class OperacionesController(
     IMediator mediator,
     IApplicationDbContext db,
     ISeguridadRepository seguridadRepo,
-    OperacionesBatchSettingsService batchSettingsService,
-    ExternalIntegrationProviderSettingsService providerSettingsService,
-    GoLiveOperativoReadinessService goLiveOperativoReadinessService,
-    FiscalHardwareDiagnosticService fiscalHardwareDiagnosticService,
-    EndpointDataSource endpointDataSource,
-    ZuluAppReplacementCertificationService zuluAppReplacementCertificationService,
-    ReporteExportacionService reporteExportacionService) : BaseController(mediator)
+    IServiceProvider serviceProvider,
+    EndpointDataSource endpointDataSource) : BaseController(mediator)
 {
+    private OperacionesBatchSettingsService batchSettingsService => serviceProvider.GetRequiredService<OperacionesBatchSettingsService>();
+    private ExternalIntegrationProviderSettingsService providerSettingsService => serviceProvider.GetRequiredService<ExternalIntegrationProviderSettingsService>();
+    private GoLiveOperativoReadinessService goLiveOperativoReadinessService => serviceProvider.GetRequiredService<GoLiveOperativoReadinessService>();
+    private FiscalHardwareDiagnosticService fiscalHardwareDiagnosticService => serviceProvider.GetRequiredService<FiscalHardwareDiagnosticService>();
+    private ZuluAppReplacementCertificationService zuluAppReplacementCertificationService => serviceProvider.GetRequiredService<ZuluAppReplacementCertificationService>();
+    private ReporteExportacionService reporteExportacionService => serviceProvider.GetRequiredService<ReporteExportacionService>();
+
     [HttpGet("resumen-transversal")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetResumenTransversal(CancellationToken ct)

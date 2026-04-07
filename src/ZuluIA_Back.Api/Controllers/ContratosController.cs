@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Contratos.Commands;
 using ZuluIA_Back.Application.Features.Contratos.Services;
@@ -10,8 +11,11 @@ using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Api.Controllers;
 
-public class ContratosController(IMediator mediator, IApplicationDbContext db, ContratosService contratosService, ReporteExportacionService reporteExportacionService) : BaseController(mediator)
+public class ContratosController(IMediator mediator, IApplicationDbContext db, IServiceProvider serviceProvider) : BaseController(mediator)
 {
+    private ContratosService contratosService => serviceProvider.GetRequiredService<ContratosService>();
+    private ReporteExportacionService reporteExportacionService => serviceProvider.GetRequiredService<ReporteExportacionService>();
+
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] long? terceroId = null, [FromQuery] long? sucursalId = null, [FromQuery] string? estado = null, [FromQuery] string? codigo = null, [FromQuery] bool soloVigentes = false, CancellationToken ct = default)

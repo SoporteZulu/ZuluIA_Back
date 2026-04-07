@@ -16,5 +16,10 @@ public class ChequeMappingProfile : Profile
             .ForMember(d => d.MonedaSimbolo, o => o.Ignore())
             .ForMember(d => d.ChequeraDescripcion, o => o.Ignore())
             .ForMember(d => d.ComprobanteOrigenNumero, o => o.Ignore());
+
+        CreateMap<Cheque, ChequePropio>()
+            .IncludeBase<Cheque, ChequeDto>()
+            .ForMember(d => d.BancoDescripcion, o => o.Ignore())
+            .ForMember(d => d.NroCuenta, o => o.Ignore());
     }
 }

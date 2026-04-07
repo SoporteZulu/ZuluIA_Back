@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Terceros;
@@ -53,10 +54,10 @@ public class CreateTerceroCommandHandler(
         if (command.EstadoCivilId.HasValue)
         {
             estadoCivilDescripcion = await db.EstadosCiviles
-                .AsNoTracking()
+                .AsNoTrackingSafe()
                 .Where(x => x.Id == command.EstadoCivilId.Value && x.DeletedAt == null && x.Activo)
                 .Select(x => x.Descripcion)
-                .FirstOrDefaultAsync(ct);
+                .FirstOrDefaultSafeAsync(ct);
 
             if (string.IsNullOrWhiteSpace(estadoCivilDescripcion))
                 return Result.Failure<long>("El estado civil indicado no existe o está inactivo.");
@@ -65,8 +66,8 @@ public class CreateTerceroCommandHandler(
         if (command.EstadoPersonaId.HasValue)
         {
             var estadoPersonaActivo = await db.EstadosPersonas
-                .AsNoTracking()
-                .AnyAsync(x => x.Id == command.EstadoPersonaId.Value && x.DeletedAt == null && x.Activo, ct);
+                .AsNoTrackingSafe()
+                .AnySafeAsync(x => x.Id == command.EstadoPersonaId.Value && x.DeletedAt == null && x.Activo, ct);
 
             if (!estadoPersonaActivo)
                 return Result.Failure<long>("El estado general indicado no existe o está inactivo.");

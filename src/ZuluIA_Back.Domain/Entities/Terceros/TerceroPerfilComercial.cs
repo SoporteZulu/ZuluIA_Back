@@ -26,7 +26,7 @@ public class TerceroPerfilComercial : AuditableEntity
 
     public static TerceroPerfilComercial Crear(long terceroId, long? userId)
     {
-        if (terceroId <= 0)
+        if (terceroId < 0)
             throw new ArgumentException("El tercero es obligatorio.", nameof(terceroId));
 
         var perfil = new TerceroPerfilComercial

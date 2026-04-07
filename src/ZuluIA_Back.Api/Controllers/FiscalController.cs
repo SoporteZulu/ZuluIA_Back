@@ -11,7 +11,7 @@ public class FiscalController(IMediator mediator, IApplicationDbContext db) : Ba
     [HttpPost("cierres-periodo")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> CerrarPeriodo([FromBody] CerrarPeriodoContableCommand command, CancellationToken ct)
+    public async Task<IActionResult> CerrarPeriodo([FromBody] RegistrarCierrePeriodoContableCommand command, CancellationToken ct)
         => FromResult(await Mediator.Send(command, ct));
 
     [HttpGet("cierres-periodo")]

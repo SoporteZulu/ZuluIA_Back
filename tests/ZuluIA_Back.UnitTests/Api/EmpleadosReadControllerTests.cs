@@ -149,12 +149,15 @@ public class EmpleadosReadControllerTests
             tesoreriaService,
             new ReporteExportacionService(),
             currentUser);
+        var reporteExportacionService = new ReporteExportacionService();
+        var serviceProvider = Substitute.For<IServiceProvider>();
+        serviceProvider.GetService(typeof(RrhhService)).Returns(rrhhService);
+        serviceProvider.GetService(typeof(ReporteExportacionService)).Returns(reporteExportacionService);
         var controller = new EmpleadosController(
             mediator,
             repo ?? Substitute.For<IEmpleadoRepository>(),
             dbInstance,
-            rrhhService,
-            new ReporteExportacionService())
+            serviceProvider)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

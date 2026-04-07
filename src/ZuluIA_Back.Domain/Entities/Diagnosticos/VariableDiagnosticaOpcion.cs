@@ -1,6 +1,6 @@
 using ZuluIA_Back.Domain.Common;
 
-namespace ZuluIA_Back.Domain.Entities.Diagnosticos;
+namespace ZuluIA_Back.Domain.Entities.Configuracion;
 
 public class VariableDiagnosticaOpcion : BaseEntity
 {

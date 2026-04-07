@@ -604,7 +604,7 @@ public class ParaguaySifenComprobanteServiceTests
         comprobante.SifenCdc.Should().Be("CDC-10");
         comprobante.SifenNumeroLote.Should().Be("LOTE-10");
         comprobante.SifenFechaRespuesta.Should().Be(new DateTimeOffset(2026, 3, 20, 18, 0, 0, TimeSpan.Zero));
-        _historial.Received(1).Add(Arg.Is<HistorialSifenComprobante>(x =>
+        _historial.Should().ContainSingle(x =>
             x.ComprobanteId == 10
             && x.EstadoSifen == ZuluIA_Back.Domain.Enums.EstadoSifenParaguay.Aceptado
             && x.Aceptado
@@ -613,9 +613,9 @@ public class ParaguaySifenComprobanteServiceTests
             && x.TrackingId == "SIFEN-10"
             && x.Cdc == "CDC-10"
             && x.NumeroLote == "LOTE-10"
-            && x.EstadoRespuesta == "accepted"));
-        _auditoria.Received(1).Add(Arg.Is<AuditoriaComprobante>(x => x.ComprobanteId == 10 && x.Accion == ZuluIA_Back.Domain.Enums.AccionAuditoria.SifenSolicitud));
-        _auditoria.Received(1).Add(Arg.Is<AuditoriaComprobante>(x => x.ComprobanteId == 10 && x.Accion == ZuluIA_Back.Domain.Enums.AccionAuditoria.SifenAprobado));
+            && x.EstadoRespuesta == "accepted");
+        _auditoria.Should().ContainSingle(x => x.ComprobanteId == 10 && x.Accion == ZuluIA_Back.Domain.Enums.AccionAuditoria.SifenSolicitud);
+        _auditoria.Should().ContainSingle(x => x.ComprobanteId == 10 && x.Accion == ZuluIA_Back.Domain.Enums.AccionAuditoria.SifenAprobado);
     }
 
     [Fact]
@@ -664,15 +664,15 @@ public class ParaguaySifenComprobanteServiceTests
         comprobante.EstadoSifen.Should().Be(ZuluIA_Back.Domain.Enums.EstadoSifenParaguay.Error);
         comprobante.SifenMensajeRespuesta.Should().Be("SIFEN timeout");
         comprobante.SifenFechaRespuesta.Should().NotBeNull();
-        _historial.Received(1).Add(Arg.Is<HistorialSifenComprobante>(x =>
+        _historial.Should().ContainSingle(x =>
             x.ComprobanteId == 10
             && x.EstadoSifen == ZuluIA_Back.Domain.Enums.EstadoSifenParaguay.Error
             && !x.Aceptado
             && x.MensajeRespuesta == "SIFEN timeout"
             && x.EstadoRespuesta == "error"
-            && x.Detalle == "SIFEN timeout"));
-        _auditoria.Received(1).Add(Arg.Is<AuditoriaComprobante>(x => x.ComprobanteId == 10 && x.Accion == ZuluIA_Back.Domain.Enums.AccionAuditoria.SifenSolicitud));
-        _auditoria.Received(1).Add(Arg.Is<AuditoriaComprobante>(x => x.ComprobanteId == 10 && x.Accion == ZuluIA_Back.Domain.Enums.AccionAuditoria.SifenError));
+            && x.Detalle == "SIFEN timeout");
+        _auditoria.Should().ContainSingle(x => x.ComprobanteId == 10 && x.Accion == ZuluIA_Back.Domain.Enums.AccionAuditoria.SifenSolicitud);
+        _auditoria.Should().ContainSingle(x => x.ComprobanteId == 10 && x.Accion == ZuluIA_Back.Domain.Enums.AccionAuditoria.SifenError);
         await _db.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -703,11 +703,11 @@ public class ParaguaySifenComprobanteServiceTests
 
         result.IsSuccess.Should().BeTrue();
         comprobante.EstadoSifen.Should().Be(ZuluIA_Back.Domain.Enums.EstadoSifenParaguay.Aceptado);
-        _auditoria.Received(1).Add(Arg.Is<AuditoriaComprobante>(x => x.ComprobanteId == 10 && x.Accion == ZuluIA_Back.Domain.Enums.AccionAuditoria.SifenConsulta));
-        _historial.Received(1).Add(Arg.Is<HistorialSifenComprobante>(x =>
+        _auditoria.Should().ContainSingle(x => x.ComprobanteId == 10 && x.Accion == ZuluIA_Back.Domain.Enums.AccionAuditoria.SifenConsulta);
+        _historial.Should().ContainSingle(x =>
             x.ComprobanteId == 10
             && x.EstadoSifen == ZuluIA_Back.Domain.Enums.EstadoSifenParaguay.Aceptado
-            && x.EstadoRespuesta == "approved"));
+            && x.EstadoRespuesta == "approved");
     }
 
     [Fact]

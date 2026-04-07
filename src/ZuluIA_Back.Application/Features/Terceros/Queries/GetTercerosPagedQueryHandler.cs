@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using MediatR;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Features.Terceros.DTOs;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Interfaces;
@@ -108,8 +109,9 @@ public class GetTercerosPagedQueryHandler(
 
         Dictionary<long, string> sucursales = sucursalIds.Count > 0
             ? await db.Sucursales
+                .AsQueryableSafe()
                 .Where(x => sucursalIds.Contains(x.Id) && x.DeletedAt == null)
-                .ToDictionaryAsync(x => x.Id, x => x.RazonSocial, ct)
+                .ToDictionarySafeAsync(x => x.Id, x => x.RazonSocial, ct)
             : [];
 
         var tercerosIds = paged.Items
@@ -119,8 +121,9 @@ public class GetTercerosPagedQueryHandler(
 
         Dictionary<long, (decimal? LimiteSaldo, DateOnly? VigenciaSaldoDesde, DateOnly? VigenciaSaldoHasta)> perfilesCuentaCorriente = tercerosIds.Count > 0
             ? await db.TercerosPerfilesComerciales
+                .AsQueryableSafe()
                 .Where(x => tercerosIds.Contains(x.TerceroId) && x.DeletedAt == null)
-                .ToDictionaryAsync(
+                .ToDictionarySafeAsync(
                     x => x.TerceroId,
                     x => (x.SaldoMaximoVigente, x.VigenciaSaldoDesde, x.VigenciaSaldoHasta),
                     ct)
@@ -128,12 +131,13 @@ public class GetTercerosPagedQueryHandler(
 
         var sucursalesEntrega = tercerosIds.Count > 0
             ? await db.TercerosSucursalesEntrega
+                .AsQueryableSafe()
                 .Where(x => tercerosIds.Contains(x.TerceroId) && x.DeletedAt == null)
                 .OrderByDescending(x => x.Principal)
                 .ThenBy(x => x.Orden)
                 .ThenBy(x => x.Descripcion)
                 .Select(x => new { x.TerceroId, x.Descripcion, x.Principal })
-                .ToListAsync(ct)
+                .ToListSafeAsync(ct)
             : [];
 
         var sucursalesEntregaPorTercero = sucursalesEntrega
@@ -162,14 +166,16 @@ public class GetTercerosPagedQueryHandler(
 
         Dictionary<long, UsuarioClienteResumen> usuariosCliente = usuarioIds.Count > 0
             ? await db.Usuarios
+                .AsQueryableSafe()
                 .Where(x => usuarioIds.Contains(x.Id))
-                .ToDictionaryAsync(x => x.Id, x => new UsuarioClienteResumen(x.UserName, x.Activo && x.DeletedAt == null), ct)
+                .ToDictionarySafeAsync(x => x.Id, x => new UsuarioClienteResumen(x.UserName, x.Activo && x.DeletedAt == null), ct)
             : [];
 
         Dictionary<long, UsuarioComercialResumen> usuariosComerciales = usuariosComercialesIds.Count > 0
             ? await db.Usuarios
+                .AsQueryableSafe()
                 .Where(x => usuariosComercialesIds.Contains(x.Id))
-                .ToDictionaryAsync(x => x.Id, x => new UsuarioComercialResumen(x.UserName, x.NombreCompleto ?? x.UserName), ct)
+                .ToDictionarySafeAsync(x => x.Id, x => new UsuarioComercialResumen(x.UserName, x.NombreCompleto ?? x.UserName), ct)
             : [];
 
         Dictionary<long, string?> usuariosClienteGrupo = usuarioIds.Count > 0

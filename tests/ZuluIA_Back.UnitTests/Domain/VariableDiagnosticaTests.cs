@@ -1,6 +1,6 @@
 using FluentAssertions;
 using Xunit;
-using ZuluIA_Back.Domain.Entities.Diagnosticos;
+using ZuluIA_Back.Domain.Entities.Configuracion;
 using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.UnitTests.Domain;

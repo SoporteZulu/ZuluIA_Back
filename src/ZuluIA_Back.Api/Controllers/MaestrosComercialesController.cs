@@ -1,12 +1,14 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Comercial.DTOs;
 using ZuluIA_Back.Application.Features.Reportes.Enums;
 using ZuluIA_Back.Application.Features.Reportes.Services;
 using ZuluIA_Back.Application.Features.Reportes.DTOs;
 using ZuluIA_Back.Domain.Entities.Comercial;
+using ZuluIA_Back.Domain.Entities.Items;
 using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Interfaces;
 
@@ -22,9 +24,11 @@ public class MaestrosComercialesController(
     IRepository<MaestroAuxiliarComercial> auxiliaresRepo,
     IRepository<AtributoComercial> atributosRepo,
     ICurrentUserService currentUser,
-    ReporteExportacionService reporteExportacionService)
+    IServiceProvider serviceProvider)
     : BaseController(mediator)
 {
+    private ReporteExportacionService reporteExportacionService => serviceProvider.GetRequiredService<ReporteExportacionService>();
+
     [HttpGet("/api/maestros-comerciales/marcas")]
     public async Task<IActionResult> GetMarcas([FromQuery] string? search = null, [FromQuery] bool? activo = null, CancellationToken ct = default)
         => new OkObjectResult((await AplicarFiltrosMarcas(db.MarcasComerciales.AsNoTracking(), search, activo).OrderBy(x => x.Descripcion).ToListAsync(ct)).Select(MapCatalogo));

@@ -5,12 +5,12 @@ using ZuluIA_Back.Application.Features.Comprobantes.DTOs;
 
 namespace ZuluIA_Back.Application.Features.Comprobantes.Queries;
 
-public record GetMotivosDebitoQuery(bool SoloActivos = true) : IRequest<IReadOnlyList<MotivoDebitoDto>>;
+public record GetMotivosDebitoComprobantesQuery(bool SoloActivos = true) : IRequest<IReadOnlyList<MotivoDebitoDto>>;
 
-public class GetMotivosDebitoQueryHandler(IApplicationDbContext db)
-    : IRequestHandler<GetMotivosDebitoQuery, IReadOnlyList<MotivoDebitoDto>>
+public class GetMotivosDebitoComprobantesQueryHandler(IApplicationDbContext db)
+    : IRequestHandler<GetMotivosDebitoComprobantesQuery, IReadOnlyList<MotivoDebitoDto>>
 {
-    public async Task<IReadOnlyList<MotivoDebitoDto>> Handle(GetMotivosDebitoQuery request, CancellationToken ct)
+    public async Task<IReadOnlyList<MotivoDebitoDto>> Handle(GetMotivosDebitoComprobantesQuery request, CancellationToken ct)
     {
         var query = db.MotivosDebito.AsNoTracking();
 

@@ -27,7 +27,7 @@ public class UpdateItemCommandHandler(
 
         try
         {
-            Dictionary<long, Domain.Entities.Comercial.AtributoComercial>? atributosComerciales = null;
+            Dictionary<long, AtributoComercial>? atributosComerciales = null;
             List<long>? componenteIds = null;
             if (request.AtributosComerciales is { Count: > 0 })
             {

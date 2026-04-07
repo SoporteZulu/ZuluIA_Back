@@ -6,7 +6,19 @@ public class CreateCartaPorteCommandValidator : AbstractValidator<CreateCartaPor
 {
     public CreateCartaPorteCommandValidator()
     {
-        RuleFor(x => x.CuitRemitente).NotEmpty().MaximumLength(20);
-        RuleFor(x => x.CuitDestinatario).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.CuitRemitente)
+            .NotEmpty()
+            .Length(11)
+            .Matches("^[0-9]+$");
+
+        RuleFor(x => x.CuitDestinatario)
+            .NotEmpty()
+            .Length(11)
+            .Matches("^[0-9]+$");
+
+        RuleFor(x => x.CuitTransportista)
+            .Length(11)
+            .Matches("^[0-9]+$")
+            .When(x => !string.IsNullOrWhiteSpace(x.CuitTransportista));
     }
 }

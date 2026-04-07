@@ -262,8 +262,6 @@ public class SucursalesControllerTests
         var mediator = Substitute.For<IMediator>();
         var db = Substitute.For<IApplicationDbContext>();
         var areas = MockDbSetHelper.CreateMockDbSet<Area>(Array.Empty<Area>());
-        areas.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<Area?>((Area?)null));
         db.Areas.Returns(areas);
         var controller = CreateController(mediator, db);
 
@@ -280,8 +278,6 @@ public class SucursalesControllerTests
         var db = Substitute.For<IApplicationDbContext>();
         var area = BuildArea(7, "Ventas", "VEN", 2);
         var areas = MockDbSetHelper.CreateMockDbSet(new[] { area });
-        areas.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<Area?>(area));
         db.Areas.Returns(areas);
         var controller = CreateController(mediator, db);
 
@@ -657,7 +653,8 @@ public class SucursalesControllerTests
 
         var created = result.Should().BeOfType<CreatedAtActionResult>().Subject;
         created.ActionName.Should().Be(nameof(SucursalesController.GetMediosContacto));
-        AssertAnonymousProperty(created.RouteValues!, "id", 7L);
+        created.RouteValues.Should().NotBeNull();
+        created.RouteValues!["id"].Should().Be(7L);
         AssertAnonymousProperty(created.Value!, "Id", 41L);
         await mediator.Received(1).Send(
             Arg.Is<AddSucursalMedioContactoCommand>(c =>

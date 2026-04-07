@@ -1,12 +1,14 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Comercial.DTOs;
 using ZuluIA_Back.Application.Features.Reportes.DTOs;
 using ZuluIA_Back.Application.Features.Reportes.Enums;
 using ZuluIA_Back.Application.Features.Reportes.Services;
 using ZuluIA_Back.Domain.Entities.Comercial;
+using ZuluIA_Back.Domain.Entities.Items;
 using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Api.Controllers;
@@ -17,9 +19,11 @@ public class RemitosAtributosController(
     IApplicationDbContext db,
     IRepository<ComprobanteItemAtributoComercial> repo,
     ICurrentUserService currentUser,
-    ReporteExportacionService reporteExportacionService)
+    IServiceProvider serviceProvider)
     : BaseController(mediator)
 {
+    private ReporteExportacionService reporteExportacionService => serviceProvider.GetRequiredService<ReporteExportacionService>();
+
     [HttpGet("/api/remitos-atributos/comprobantes/{comprobanteId:long}")]
     public async Task<IActionResult> GetByComprobante(long comprobanteId, CancellationToken ct)
     {

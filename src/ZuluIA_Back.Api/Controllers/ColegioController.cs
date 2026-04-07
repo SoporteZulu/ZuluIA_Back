@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Colegio.Commands;
 using ZuluIA_Back.Application.Features.Colegio.Services;
@@ -9,8 +10,11 @@ using ZuluIA_Back.Application.Features.Reportes.Services;
 
 namespace ZuluIA_Back.Api.Controllers;
 
-public class ColegioController(IMediator mediator, IApplicationDbContext db, ColegioService colegioService, ReporteExportacionService reporteExportacionService) : BaseController(mediator)
+public class ColegioController(IMediator mediator, IApplicationDbContext db, IServiceProvider serviceProvider) : BaseController(mediator)
 {
+    private ColegioService colegioService => serviceProvider.GetRequiredService<ColegioService>();
+    private ReporteExportacionService reporteExportacionService => serviceProvider.GetRequiredService<ReporteExportacionService>();
+
     [HttpGet("planes-generales")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPlanesGenerales([FromQuery] long? sucursalId = null, CancellationToken ct = default)

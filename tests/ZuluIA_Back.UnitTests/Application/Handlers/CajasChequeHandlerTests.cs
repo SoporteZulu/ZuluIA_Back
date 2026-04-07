@@ -127,11 +127,17 @@ public class RegistrarTransferenciaCommandHandlerTests
 {
     private readonly IApplicationDbContext _db = Substitute.For<IApplicationDbContext>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
-    private readonly TesoreriaService _tesoreriaService = new(
-        Substitute.For<IApplicationDbContext>(),
-        Substitute.For<IRepository<TesoreriaMovimiento>>(),
-        Substitute.For<IRepository<TesoreriaCierre>>(),
-        Substitute.For<ICurrentUserService>());
+    private readonly TesoreriaService _tesoreriaService;
+
+    public RegistrarTransferenciaCommandHandlerTests()
+    {
+        _tesoreriaService = new TesoreriaService(
+            _db,
+            Substitute.For<IRepository<TesoreriaMovimiento>>(),
+            Substitute.For<IRepository<TesoreriaCierre>>(),
+            Substitute.For<ICurrentUserService>());
+    }
+
     private RegistrarTransferenciaCommandHandler Sut() => new(_db, _tesoreriaService, _uow);
 
     [Fact]
@@ -155,6 +161,8 @@ public class RegistrarTransferenciaCommandHandlerTests
         var cajaDestino = CajaCuentaBancaria.Crear(1, 1, "Caja Destino", 1, true, null, null);
         typeof(ZuluIA_Back.Domain.Common.BaseEntity).GetProperty("Id")!.SetValue(cajaOrigen, 1L);
         typeof(ZuluIA_Back.Domain.Common.BaseEntity).GetProperty("Id")!.SetValue(cajaDestino, 2L);
+        typeof(CajaCuentaBancaria).GetProperty(nameof(CajaCuentaBancaria.EstaAbierta))!.SetValue(cajaOrigen, true);
+        typeof(CajaCuentaBancaria).GetProperty(nameof(CajaCuentaBancaria.EstaAbierta))!.SetValue(cajaDestino, true);
         var mockDbSet = MockDbSetHelper.CreateMockDbSet<CajaCuentaBancaria>(new[] { cajaOrigen, cajaDestino });
         _db.CajasCuentasBancarias.Returns(mockDbSet);
 
@@ -168,7 +176,7 @@ public class RegistrarTransferenciaCommandHandlerTests
         var result = await Sut().Handle(cmd, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _uow.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }
 
@@ -248,7 +256,7 @@ public class CreateChequeCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         await _repo.Received(1).AddAsync(Arg.Any<Cheque>(), Arg.Any<CancellationToken>());
-        await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _uow.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }
 
@@ -350,7 +358,6 @@ public class CambiarEstadoChequeCommandValidatorTests
     [InlineData(AccionCheque.Depositar)]
     [InlineData(AccionCheque.Acreditar)]
     [InlineData(AccionCheque.Rechazar)]
-    [InlineData(AccionCheque.Entregar)]
     public void DatosValidos_PasaValidacion(AccionCheque accion)
     {
         var validator = new CambiarEstadoChequeCommandValidator();

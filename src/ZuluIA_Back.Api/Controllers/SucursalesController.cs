@@ -380,7 +380,11 @@ public class SucursalesController(IMediator mediator, IApplicationDbContext db)
                 ? NotFound(new { error = result.Error })
                 : BadRequest(new { error = result.Error });
 
-        return CreatedAtAction(nameof(GetMediosContacto), new { id }, new { Id = result.Value });
+        return new CreatedAtActionResult(
+            nameof(GetMediosContacto),
+            null,
+            new Microsoft.AspNetCore.Routing.RouteValueDictionary(new { id }),
+            new { Id = result.Value });
     }
 
     /// <summary>Actualiza un medio de contacto de la sucursal.</summary>

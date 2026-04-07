@@ -241,10 +241,8 @@ public class Cheque : AuditableEntity
             throw new InvalidOperationException(
                 $"No se puede rechazar un cheque en estado {Estado}.");
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(conceptoRechazo);
-
         Estado          = EstadoCheque.Rechazado;
-        ConceptoRechazo = conceptoRechazo?.Trim();
+        ConceptoRechazo = string.IsNullOrWhiteSpace(conceptoRechazo) ? null : conceptoRechazo.Trim();
         Observacion     = observacion?.Trim();
         SetUpdated(userId);
     }
@@ -270,7 +268,7 @@ public class Cheque : AuditableEntity
         if (Estado != EstadoCheque.Cartera)
             throw new InvalidOperationException(
                 $"Solo se pueden entregar cheques en estado Cartera. Estado actual: {Estado}.");
-        if (!terceroId.HasValue || terceroId <= 0)
+        if (terceroId.HasValue && terceroId <= 0)
             throw new InvalidOperationException("Debe indicar el tercero destinatario del cheque.");
 
         TerceroId   = terceroId;

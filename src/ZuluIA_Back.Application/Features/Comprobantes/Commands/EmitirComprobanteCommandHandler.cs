@@ -1,10 +1,11 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Application.Common.Interfaces;
-using ZuluIA_Back.Application.Features.Items.Services;
-using ZuluIA_Back.Application.Features.Terceros.Services;
 using ZuluIA_Back.Application.Features.Comprobantes.Services;
 using ZuluIA_Back.Application.Features.Facturacion.Services;
+using ZuluIA_Back.Application.Features.Items.Services;
+using ZuluIA_Back.Application.Features.Terceros.Services;
 using ZuluIA_Back.Application.Features.Ventas.Commands;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
@@ -17,15 +18,17 @@ namespace ZuluIA_Back.Application.Features.Comprobantes.Commands;
 public class EmitirComprobanteCommandHandler(
     IComprobanteRepository comprobanteRepo,
     IPeriodoIvaRepository periodoRepo,
-    StockService stockService,
-    IAfipCaeComprobanteService afipCaeComprobanteService,
     IUnitOfWork uow,
     ICurrentUserService currentUser,
     IApplicationDbContext db,
-    TerceroOperacionValidationService terceroOperacionValidationService,
-    ItemCommercialStockService itemCommercialStockService)
+    IServiceProvider serviceProvider)
     : IRequestHandler<EmitirComprobanteCommand, Result<long>>
 {
+    private StockService stockService => serviceProvider.GetRequiredService<StockService>();
+    private IAfipCaeComprobanteService afipCaeComprobanteService => serviceProvider.GetRequiredService<IAfipCaeComprobanteService>();
+    private TerceroOperacionValidationService terceroOperacionValidationService => serviceProvider.GetRequiredService<TerceroOperacionValidationService>();
+    private ItemCommercialStockService itemCommercialStockService => serviceProvider.GetRequiredService<ItemCommercialStockService>();
+
     public async Task<Result<long>> Handle(
         EmitirComprobanteCommand request,
         CancellationToken ct)
@@ -64,6 +67,15 @@ public class EmitirComprobanteCommandHandler(
                     x => x.Key,
                     x => x.Sum(v => Math.Max(0m, v.Cantidad - v.CantidadBonificada)));
 
+            var descuentoValidationError = await ClienteDescuentoMaximoValidator.ValidateAsync(
+                db,
+                request.TerceroId,
+                request.Items.Select(x => x.DescuentoPct),
+                ct);
+
+            if (descuentoValidationError is not null)
+                return Result.Failure<long>(descuentoValidationError);
+
             var itemsById = await VentaItemValidationHelper.LoadItemsByIdAsync(db, cantidadesSolicitadas.Keys.ToList(), ct);
 
             var itemValidationError = VentaItemValidationHelper.ValidateItemsVendibles(itemsById, cantidadesSolicitadas);
@@ -82,15 +94,6 @@ public class EmitirComprobanteCommandHandler(
                 if (stockValidationError is not null)
                     return Result.Failure<long>(stockValidationError);
             }
-
-            var descuentoValidationError = await ClienteDescuentoMaximoValidator.ValidateAsync(
-                db,
-                request.TerceroId,
-                request.Items.Select(x => x.DescuentoPct),
-                ct);
-
-            if (descuentoValidationError is not null)
-                return Result.Failure<long>(descuentoValidationError);
         }
 
         if (tipoComp.EsCompra)

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Enums;
 
@@ -17,19 +18,19 @@ internal static class TerceroFiscalRules
         CancellationToken ct)
     {
         var condicionIvaCodigo = await db.CondicionesIva
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => x.Id == condicionIvaId)
             .Select(x => (short?)x.Codigo)
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultSafeAsync(ct);
 
         if (!condicionIvaCodigo.HasValue)
             return "La condición fiscal seleccionada no existe.";
 
         var tipoDocumentoCodigo = await db.TiposDocumento
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => x.Id == tipoDocumentoId)
             .Select(x => (short?)x.Codigo)
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultSafeAsync(ct);
 
         if (!tipoDocumentoCodigo.HasValue)
             return "El tipo de documento seleccionado no existe.";

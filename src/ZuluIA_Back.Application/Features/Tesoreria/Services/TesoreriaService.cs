@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Entities.Finanzas;
 using ZuluIA_Back.Domain.Enums;
@@ -231,8 +232,8 @@ public class TesoreriaService(
     private async Task ValidarCajaOperableAsync(long cajaCuentaId, CancellationToken ct)
     {
         var caja = await db.CajasCuentasBancarias
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Id == cajaCuentaId && !x.IsDeleted, ct)
+            .AsNoTrackingSafe()
+            .FirstOrDefaultSafeAsync(x => x.Id == cajaCuentaId && !x.IsDeleted, ct)
             ?? throw new InvalidOperationException($"No se encontró la caja/cuenta ID {cajaCuentaId}.");
 
         if (!caja.Activa)

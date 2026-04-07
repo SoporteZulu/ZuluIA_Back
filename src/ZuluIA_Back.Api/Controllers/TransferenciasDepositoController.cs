@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Reportes.DTOs;
 using ZuluIA_Back.Application.Features.Reportes.Enums;
@@ -9,8 +10,10 @@ using ZuluIA_Back.Application.Features.TransferenciasDeposito.Commands;
 
 namespace ZuluIA_Back.Api.Controllers;
 
-public class TransferenciasDepositoController(IMediator mediator, IApplicationDbContext db, ReporteExportacionService reporteExportacionService) : BaseController(mediator)
+public class TransferenciasDepositoController(IMediator mediator, IApplicationDbContext db, IServiceProvider serviceProvider) : BaseController(mediator)
 {
+    private ReporteExportacionService reporteExportacionService => serviceProvider.GetRequiredService<ReporteExportacionService>();
+
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] long? sucursalId = null, [FromQuery] long? ordenPreparacionId = null, [FromQuery] string? estado = null, CancellationToken ct = default)

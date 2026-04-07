@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Finanzas;
@@ -27,8 +28,9 @@ public class AnularPagoCommandHandler(
             repo.Update(pago);
 
             var movimientos = await db.TesoreriaMovimientos
+                .AsQueryableSafe()
                 .Where(x => x.ReferenciaTipo == "PAGO" && x.ReferenciaId == pago.Id && !x.Anulado)
-                .ToListAsync(ct);
+                .ToListSafeAsync(ct);
 
             foreach (var movimiento in movimientos)
                 movimiento.Anular(currentUser.UserId);

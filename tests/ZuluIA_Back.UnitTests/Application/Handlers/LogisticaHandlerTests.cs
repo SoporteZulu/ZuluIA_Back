@@ -26,6 +26,7 @@ public class CreateOrdenEmpaqueCommandHandlerTests
     {
         var ordenes = MockDbSetHelper.CreateMockDbSet<LogisticaOrdenEmpaque>();
         _db.OrdenesEmpaquesLogistica.Returns(ordenes);
+        _db.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
 
         var command = new CreateOrdenEmpaqueCommand(
             1,
@@ -50,7 +51,7 @@ public class CreateOrdenEmpaqueCommandHandlerTests
         var result = await Sut().Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        _db.OrdenesEmpaquesLogistica.Received(1).Add(Arg.Any<LogisticaOrdenEmpaque>());
+        ordenes.Should().ContainSingle();
         await _db.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
 using ZuluIA_Back.Application.Common.Interfaces;
@@ -10,6 +11,7 @@ using ZuluIA_Back.Domain.Entities.Referencia;
 using ZuluIA_Back.Domain.Entities.Stock;
 using ZuluIA_Back.Domain.Entities.Terceros;
 using ZuluIA_Back.Domain.Interfaces;
+using ZuluIA_Back.Domain.Services;
 using ZuluIA_Back.UnitTests.Helpers;
 
 namespace ZuluIA_Back.UnitTests.Application;
@@ -27,6 +29,11 @@ public class EmitirComprobanteCommandHandlerTests
         var db = Substitute.For<IApplicationDbContext>();
         var validationService = new TerceroOperacionValidationService(db);
         var itemCommercialStockService = new ItemCommercialStockService(db);
+        var serviceProvider = Substitute.For<IServiceProvider>();
+        serviceProvider.GetService(typeof(TerceroOperacionValidationService)).Returns(validationService);
+        serviceProvider.GetService(typeof(ItemCommercialStockService)).Returns(itemCommercialStockService);
+        serviceProvider.GetService(typeof(IAfipCaeComprobanteService)).Returns(afip);
+        serviceProvider.GetService(typeof(StockService)).Returns((StockService)null!);
 
         periodoRepo.EstaAbiertoPeriodoAsync(1L, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns(true);
 
@@ -45,13 +52,10 @@ public class EmitirComprobanteCommandHandlerTests
         var handler = new EmitirComprobanteCommandHandler(
             repo,
             periodoRepo,
-            null!,
-            afip,
             uow,
             currentUser,
             db,
-            validationService,
-            itemCommercialStockService);
+            serviceProvider);
 
         var result = await handler.Handle(CreateCommand(90L, 100L), CancellationToken.None);
 
@@ -71,6 +75,11 @@ public class EmitirComprobanteCommandHandlerTests
         var db = Substitute.For<IApplicationDbContext>();
         var validationService = new TerceroOperacionValidationService(db);
         var itemCommercialStockService = new ItemCommercialStockService(db);
+        var serviceProvider = Substitute.For<IServiceProvider>();
+        serviceProvider.GetService(typeof(TerceroOperacionValidationService)).Returns(validationService);
+        serviceProvider.GetService(typeof(ItemCommercialStockService)).Returns(itemCommercialStockService);
+        serviceProvider.GetService(typeof(IAfipCaeComprobanteService)).Returns(afip);
+        serviceProvider.GetService(typeof(StockService)).Returns((StockService)null!);
 
         periodoRepo.EstaAbiertoPeriodoAsync(1L, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns(true);
 
@@ -92,13 +101,10 @@ public class EmitirComprobanteCommandHandlerTests
         var handler = new EmitirComprobanteCommandHandler(
             repo,
             periodoRepo,
-            null!,
-            afip,
             uow,
             currentUser,
             db,
-            validationService,
-            itemCommercialStockService);
+            serviceProvider);
 
         var result = await handler.Handle(CreateCommand(91L, 101L, cantidad: 2m), CancellationToken.None);
 

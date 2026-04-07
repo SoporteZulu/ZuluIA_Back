@@ -34,13 +34,17 @@ public class CreateChequeCommandValidator : AbstractValidator<CreateChequeComman
         RuleFor(x => x.Titular)
             .NotEmpty()
             .When(x => x.Tipo == TipoCheque.Tercero)
-            .WithMessage("El titular es obligatorio para cheques de terceros.")
-            .MaximumLength(200).WithMessage("El titular no puede exceder 200 caracteres.");
+            .WithMessage("El titular es obligatorio para cheques de terceros.");
+        RuleFor(x => x.Titular)
+            .MaximumLength(200)
+            .When(x => !string.IsNullOrWhiteSpace(x.Titular))
+            .WithMessage("El titular no puede exceder 200 caracteres.");
         
         RuleFor(x => x.ChequeraId)
             .NotNull()
             .When(x => x.Tipo == TipoCheque.Propio)
-            .WithMessage("La chequera es obligatoria para cheques propios.")
+            .WithMessage("La chequera es obligatoria para cheques propios.");
+        RuleFor(x => x.ChequeraId)
             .GreaterThan(0)
             .When(x => x.Tipo == TipoCheque.Propio && x.ChequeraId.HasValue)
             .WithMessage("La chequera debe ser válida.");

@@ -32,7 +32,7 @@ public class AsignarRetencionAPersonaCommandHandlerTests
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        _db.RetencionesPorPersona.Received(1).Add(Arg.Any<RetencionXPersona>());
+        dbSet.Should().ContainSingle();
         await _uow.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

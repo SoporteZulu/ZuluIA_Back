@@ -23,7 +23,9 @@ public class UpsertTerceroUsuarioClienteCommandValidator : AbstractValidator<Ups
             .When(x => !string.IsNullOrWhiteSpace(x.Password));
 
         RuleFor(x => x)
-            .Must(x => string.IsNullOrWhiteSpace(x.Password) == string.IsNullOrWhiteSpace(x.ConfirmPassword) || string.Equals(x.Password, x.ConfirmPassword, StringComparison.Ordinal))
+            .Must(x =>
+                (string.IsNullOrWhiteSpace(x.Password) && string.IsNullOrWhiteSpace(x.ConfirmPassword))
+                || string.Equals(x.Password, x.ConfirmPassword, StringComparison.Ordinal))
             .WithMessage("La contraseña y su confirmación deben coincidir.");
     }
 }

@@ -33,13 +33,15 @@ public class UpdateTerceroCommandValidator
 
         RuleFor(x => x.Nombre)
             .NotEmpty().When(IsFisica)
-            .WithMessage("Debe ingresar el nombre para una persona física.")
+            .WithMessage("Debe ingresar el nombre para una persona física.");
+        RuleFor(x => x.Nombre)
             .MaximumLength(150).When(x => !string.IsNullOrWhiteSpace(x.Nombre))
             .WithMessage("El nombre no puede superar los 150 caracteres.");
 
         RuleFor(x => x.Apellido)
             .NotEmpty().When(IsFisica)
-            .WithMessage("Debe ingresar el apellido para una persona física.")
+            .WithMessage("Debe ingresar el apellido para una persona física.");
+        RuleFor(x => x.Apellido)
             .MaximumLength(150).When(x => !string.IsNullOrWhiteSpace(x.Apellido))
             .WithMessage("El apellido no puede superar los 150 caracteres.");
 

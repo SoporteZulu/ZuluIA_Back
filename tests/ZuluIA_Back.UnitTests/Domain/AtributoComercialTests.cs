@@ -1,6 +1,6 @@
 using FluentAssertions;
 using Xunit;
-using ZuluIA_Back.Domain.Entities.Comercial;
+using ZuluIA_Back.Domain.Entities.Items;
 using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.UnitTests.Domain;

@@ -1,13 +1,16 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Application.Features.Reportes.Commands;
 using ZuluIA_Back.Application.Features.Reportes.Enums;
 using ZuluIA_Back.Application.Features.Reportes.Services;
 
 namespace ZuluIA_Back.Api.Controllers;
 
-public class ReportesController(IMediator mediator, ReportesService reportesService) : BaseController(mediator)
+public class ReportesController(IMediator mediator, IServiceProvider serviceProvider) : BaseController(mediator)
 {
+    private ReportesService reportesService => serviceProvider.GetRequiredService<ReportesService>();
+
     [HttpGet("remitos")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRemitos([FromQuery] long? sucursalId, [FromQuery] DateOnly desde, [FromQuery] DateOnly hasta, [FromQuery] bool? esVenta, CancellationToken ct)

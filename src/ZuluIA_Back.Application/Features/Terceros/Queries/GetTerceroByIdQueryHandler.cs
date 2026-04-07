@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Features.Terceros.DTOs;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Common;
@@ -104,10 +105,10 @@ public class GetTerceroByIdQueryHandler(
         if (tercero.EstadoPersonaId.HasValue)
         {
             dto.EstadoPersonaDescripcion = await db.EstadosPersonas
-                .AsNoTracking()
+                .AsNoTrackingSafe()
                 .Where(x => x.Id == tercero.EstadoPersonaId.Value)
                 .Select(x => x.Descripcion)
-                .FirstOrDefaultAsync(ct);
+                .FirstOrDefaultSafeAsync(ct);
         }
 
         // Moneda (opcional)
@@ -147,10 +148,10 @@ public class GetTerceroByIdQueryHandler(
         if (tercero.EstadoPersonaId.HasValue)
         {
             var estadoPersona = await db.EstadosPersonas
-                .AsNoTracking()
+                .AsNoTrackingSafe()
                 .Where(x => x.Id == tercero.EstadoPersonaId.Value && !x.IsDeleted)
                 .Select(x => new { x.Descripcion, x.Activo })
-                .FirstOrDefaultAsync(ct);
+                .FirstOrDefaultSafeAsync(ct);
 
             estadoPersonaDescripcion = estadoPersona?.Descripcion;
             estadoPersonaActivo = estadoPersona?.Activo;
@@ -190,8 +191,8 @@ public class GetTerceroByIdQueryHandler(
         dto.EstadoVisibleBloquea = estadoOperativo.Bloquea;
 
         var perfil = await db.TercerosPerfilesComerciales
-            .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.TerceroId == tercero.Id && x.DeletedAt == null, ct);
+            .AsNoTrackingSafe()
+            .FirstOrDefaultSafeAsync(x => x.TerceroId == tercero.Id && x.DeletedAt == null, ct);
 
         if (perfil is not null)
         {
@@ -200,10 +201,10 @@ public class GetTerceroByIdQueryHandler(
             if (perfil.ZonaComercialId.HasValue)
             {
                 dto.PerfilComercial.ZonaComercialDescripcion = await db.ZonasComerciales
-                    .AsNoTracking()
+                    .AsNoTrackingSafe()
                     .Where(x => x.Id == perfil.ZonaComercialId.Value)
                     .Select(x => x.Descripcion)
-                    .FirstOrDefaultAsync(ct);
+                    .FirstOrDefaultSafeAsync(ct);
             }
 
             dto.CuentaCorriente = TerceroCuentaCorrienteReadModelLoader.Load(tercero, perfil);
@@ -220,48 +221,48 @@ public class GetTerceroByIdQueryHandler(
         }
 
         var domicilios = await db.PersonasDomicilios
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => x.PersonaId == tercero.Id)
             .OrderByDescending(x => x.EsDefecto)
             .ThenBy(x => x.Orden)
             .ThenBy(x => x.Calle)
-            .ToListAsync(ct);
+            .ToListSafeAsync(ct);
 
-        var domiciliosDto = mapper.Map<List<TerceroDomicilioDto>>(domicilios);
+        var domiciliosDto = mapper.Map<List<TerceroDomicilioDto>>(domicilios) ?? [];
         await TerceroDomicilioReadModelLoader.LoadDescripcionesAsync(db, domiciliosDto, ct);
         dto.Domicilios = domiciliosDto;
 
         var contactos = await db.TercerosContactos
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => x.TerceroId == tercero.Id && x.DeletedAt == null)
             .OrderByDescending(x => x.Principal)
             .ThenBy(x => x.Orden)
             .ThenBy(x => x.Nombre)
-            .ToListAsync(ct);
+            .ToListSafeAsync(ct);
 
-        dto.Contactos = mapper.Map<IReadOnlyList<TerceroContactoDto>>(contactos);
+        dto.Contactos = mapper.Map<IReadOnlyList<TerceroContactoDto>>(contactos) ?? [];
 
         var sucursalesEntrega = await db.TercerosSucursalesEntrega
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => x.TerceroId == tercero.Id && x.DeletedAt == null)
             .OrderByDescending(x => x.Principal)
             .ThenBy(x => x.Orden)
             .ThenBy(x => x.Descripcion)
-            .ToListAsync(ct);
+            .ToListSafeAsync(ct);
 
-        dto.SucursalesEntrega = mapper.Map<IReadOnlyList<TerceroSucursalEntregaDto>>(sucursalesEntrega);
+        dto.SucursalesEntrega = mapper.Map<IReadOnlyList<TerceroSucursalEntregaDto>>(sucursalesEntrega) ?? [];
         dto.SucursalEntregaPrincipal = dto.SucursalesEntrega.FirstOrDefault();
         dto.RequiereDefinirEntrega = tercero.EsCliente && dto.SucursalEntregaPrincipal is null;
 
         var transportes = await db.TercerosTransportes
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => x.TerceroId == tercero.Id && x.DeletedAt == null)
             .OrderByDescending(x => x.Principal)
             .ThenBy(x => x.Orden)
             .ThenBy(x => x.Nombre)
-            .ToListAsync(ct);
+            .ToListSafeAsync(ct);
 
-        var transportesDto = mapper.Map<List<TerceroTransporteDto>>(transportes);
+        var transportesDto = mapper.Map<List<TerceroTransporteDto>>(transportes) ?? [];
         var transportistaIds = transportes
             .Where(x => x.TransportistaId.HasValue)
             .Select(x => x.TransportistaId!.Value)
@@ -271,10 +272,10 @@ public class GetTerceroByIdQueryHandler(
         if (transportistaIds.Count > 0)
         {
             var nombresTransportistas = await db.Transportistas
-                .AsNoTracking()
+                .AsNoTrackingSafe()
                 .Where(x => transportistaIds.Contains(x.Id))
-                .Join(db.Terceros.AsNoTracking(), t => t.TerceroId, ter => ter.Id, (t, ter) => new { t.Id, ter.RazonSocial })
-                .ToDictionaryAsync(x => x.Id, x => x.RazonSocial, ct);
+                .Join(db.Terceros.AsNoTrackingSafe(), t => t.TerceroId, ter => ter.Id, (t, ter) => new { t.Id, ter.RazonSocial })
+                .ToDictionarySafeAsync(x => x.Id, x => x.RazonSocial, ct);
 
             for (var i = 0; i < transportesDto.Count; i++)
             {
@@ -287,14 +288,14 @@ public class GetTerceroByIdQueryHandler(
         dto.Transportes = transportesDto;
 
         var ventanasCobranza = await db.TercerosVentanasCobranza
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => x.TerceroId == tercero.Id && x.DeletedAt == null)
             .OrderByDescending(x => x.Principal)
             .ThenBy(x => x.Orden)
             .ThenBy(x => x.Dia)
-            .ToListAsync(ct);
+            .ToListSafeAsync(ct);
 
-        dto.VentanasCobranza = mapper.Map<IReadOnlyList<TerceroVentanaCobranzaDto>>(ventanasCobranza);
+        dto.VentanasCobranza = mapper.Map<IReadOnlyList<TerceroVentanaCobranzaDto>>(ventanasCobranza) ?? [];
 
 
         // ── 4. Resolver descripciones del Domicilio ───────────────────────────
@@ -310,10 +311,10 @@ public class GetTerceroByIdQueryHandler(
         if (tercero.Domicilio.LocalidadId.HasValue)
         {
             var localidad = await db.Localidades
-                .AsNoTracking()
+                .AsNoTrackingSafe()
                 .Where(x => x.Id == tercero.Domicilio.LocalidadId.Value)
                 .Select(x => new { x.Descripcion, x.ProvinciaId })
-                .FirstOrDefaultAsync(ct);
+                .FirstOrDefaultSafeAsync(ct);
             dto.Domicilio.LocalidadDescripcion = localidad?.Descripcion;
 
             if (!dto.Domicilio.ProvinciaId.HasValue && localidad is not null)
@@ -369,10 +370,14 @@ public class GetTerceroByIdQueryHandler(
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
+        var parametros = db.PlanCuentasParametros.AsNoTrackingSafe();
+        var cuentas = db.PlanCuentas.AsNoTrackingSafe();
+        var ejercicios = db.Ejercicios.AsNoTrackingSafe();
+
         var cuentasActivas =
-            from parametro in db.PlanCuentasParametros.AsNoTracking()
-            join cuenta in db.PlanCuentas.AsNoTracking() on parametro.CuentaId equals cuenta.Id
-            join ejercicio in db.Ejercicios.AsNoTracking() on parametro.EjercicioId equals ejercicio.Id
+            from parametro in parametros
+            join cuenta in cuentas on parametro.CuentaId equals cuenta.Id
+            join ejercicio in ejercicios on parametro.EjercicioId equals ejercicio.Id
             where parametro.IdRegistro == tercero.Id
                 && parametro.Tabla == "personas"
                 && ejercicio.FechaInicio <= today
@@ -389,12 +394,12 @@ public class GetTerceroByIdQueryHandler(
         {
             var cuentaPorSucursal = await (
                 from cuenta in cuentasActivas
-                join ejercicioSucursal in db.EjercicioSucursales.AsNoTracking() on cuenta.EjercicioId equals ejercicioSucursal.EjercicioId
+                join ejercicioSucursal in db.EjercicioSucursales.AsNoTrackingSafe() on cuenta.EjercicioId equals ejercicioSucursal.EjercicioId
                 where ejercicioSucursal.SucursalId == tercero.SucursalId.Value
                     && ejercicioSucursal.UsaContabilidad
                 orderby cuenta.CodigoCuenta
                 select new CuentaContableInfo(cuenta.CuentaId, cuenta.CodigoCuenta, cuenta.Denominacion))
-                .FirstOrDefaultAsync(ct);
+                .FirstOrDefaultSafeAsync(ct);
 
             if (cuentaPorSucursal is not null)
                 return cuentaPorSucursal;
@@ -403,7 +408,7 @@ public class GetTerceroByIdQueryHandler(
         return await cuentasActivas
             .OrderBy(x => x.CodigoCuenta)
             .Select(x => new CuentaContableInfo(x.CuentaId, x.CodigoCuenta, x.Denominacion))
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultSafeAsync(ct);
     }
 
     // ─── Helper: construir dirección formateada ───────────────────────────────

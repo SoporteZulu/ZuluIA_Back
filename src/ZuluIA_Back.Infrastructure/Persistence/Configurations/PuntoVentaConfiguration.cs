@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using ZuluIA_Back.Domain.Entities.Facturacion;
 using ZuluIA_Back.Domain.Entities.PuntoVenta;
 using ZuluIA_Back.Domain.Enums;
 

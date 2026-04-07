@@ -1,7 +1,7 @@
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Enums;
 
-namespace ZuluIA_Back.Domain.Entities.Diagnosticos;
+namespace ZuluIA_Back.Domain.Entities.Configuracion;
 
 public class VariableDiagnostica : AuditableEntity
 {

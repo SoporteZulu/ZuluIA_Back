@@ -565,46 +565,13 @@ public class VariablesControllerTests
     }
 
     private static DbSet<Aspecto> BuildAspectosDbSet(IEnumerable<Aspecto> items)
-    {
-        var dbSet = MockDbSetHelper.CreateMockDbSet(items.ToArray());
-        dbSet.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(callInfo =>
-            {
-                var keys = callInfo.Arg<object[]>();
-                var id = (long)keys[0];
-                var item = dbSet.FirstOrDefault(x => x.Id == id);
-                return new ValueTask<Aspecto?>(item);
-            });
-        return dbSet;
-    }
+        => MockDbSetHelper.CreateMockDbSet(items.ToArray());
 
     private static DbSet<Variable> BuildVariablesDbSet(IEnumerable<Variable> items)
-    {
-        var dbSet = MockDbSetHelper.CreateMockDbSet(items.ToArray());
-        dbSet.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(callInfo =>
-            {
-                var keys = callInfo.Arg<object[]>();
-                var id = (long)keys[0];
-                var item = dbSet.FirstOrDefault(x => x.Id == id);
-                return new ValueTask<Variable?>(item);
-            });
-        return dbSet;
-    }
+        => MockDbSetHelper.CreateMockDbSet(items.ToArray());
 
     private static DbSet<OpcionVariable> BuildOpcionesDbSet(IEnumerable<OpcionVariable> items)
-    {
-        var dbSet = MockDbSetHelper.CreateMockDbSet(items.ToArray());
-        dbSet.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(callInfo =>
-            {
-                var keys = callInfo.Arg<object[]>();
-                var id = (long)keys[0];
-                var item = dbSet.FirstOrDefault(x => x.Id == id);
-                return new ValueTask<OpcionVariable?>(item);
-            });
-        return dbSet;
-    }
+        => MockDbSetHelper.CreateMockDbSet(items.ToArray());
 
     private static DbSet<VariableDetalle> BuildVariablesDetalleDbSet(IEnumerable<VariableDetalle> items)
     {

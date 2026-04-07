@@ -93,6 +93,7 @@ public interface IApplicationDbContext
 
     // Sucursales y Configuración
     DbSet<Sucursal> Sucursales { get; }
+    DbSet<Perfil> Perfiles { get; }
     DbSet<Area> Areas { get; }
     DbSet<TipoComprobanteSucursal> TiposComprobantesSucursal { get; }
     DbSet<SucursalDomicilio> SucursalesDomicilio { get; }

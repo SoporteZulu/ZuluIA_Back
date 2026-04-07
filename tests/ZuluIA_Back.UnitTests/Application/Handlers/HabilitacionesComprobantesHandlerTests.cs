@@ -35,12 +35,12 @@ public class CreateHabilitacionComprobanteCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(0);
-        habilitaciones.Received(1).Add(Arg.Is<HabilitacionComprobante>(x =>
+        habilitaciones.Should().ContainSingle(x =>
             x.ComprobanteId == 12 &&
             x.SucursalId == 3 &&
             x.TipoDocumento == "COMPROBANTE" &&
             x.MotivoBloqueo == "retencion" &&
-            x.Estado == EstadoHabilitacion.Pendiente));
+            x.Estado == EstadoHabilitacion.Pendiente);
         await _db.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

@@ -48,6 +48,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 
     // ─── Sucursales y Configuración ───────────────────────────────────────────
     public DbSet<Sucursal> Sucursales => Set<Sucursal>();
+    public DbSet<Perfil> Perfiles => Set<Perfil>();
     public DbSet<Area> Areas => Set<Area>();
     public DbSet<TipoComprobanteSucursal> TiposComprobantesSucursal => Set<TipoComprobanteSucursal>();
     public DbSet<SucursalDomicilio> SucursalesDomicilio => Set<SucursalDomicilio>();

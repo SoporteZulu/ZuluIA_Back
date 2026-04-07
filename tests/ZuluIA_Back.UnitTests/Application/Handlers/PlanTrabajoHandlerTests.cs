@@ -23,6 +23,8 @@ public class CrearPlanTrabajoCommandHandlerTests
     [Fact]
     public async Task Handle_ComandoValido_CreaPlanYRetornaId()
     {
+        var planes = MockDbSetHelper.CreateMockDbSet<PlanTrabajo>();
+        _db.PlanesTrabajo.Returns(planes);
         _db.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
 
         var command = new CrearPlanTrabajoCommand(
@@ -38,10 +40,10 @@ public class CrearPlanTrabajoCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(0);
-        _db.PlanesTrabajo.Received(1).Add(Arg.Is<PlanTrabajo>(p =>
+        planes.Should().ContainSingle(p =>
             p.Nombre == "Plan marzo" &&
             p.SucursalId == 1 &&
-            p.Periodo == 202603));
+            p.Periodo == 202603);
         await _db.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }
@@ -114,8 +116,6 @@ public class CerrarPlanTrabajoCommandHandlerTests
     public async Task Handle_PlanNoExiste_RetornaFailure()
     {
         var planes = MockDbSetHelper.CreateMockDbSet<PlanTrabajo>();
-        planes.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<PlanTrabajo?>((PlanTrabajo?)null));
         _db.PlanesTrabajo.Returns(planes);
 
         var result = await _handler.Handle(new CerrarPlanTrabajoCommand(55, 1), CancellationToken.None);
@@ -129,8 +129,6 @@ public class CerrarPlanTrabajoCommandHandlerTests
     {
         var plan = PlanTrabajoTestHelper.CrearPlan();
         var planes = MockDbSetHelper.CreateMockDbSet(new[] { plan });
-        planes.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<PlanTrabajo?>(plan));
         _db.PlanesTrabajo.Returns(planes);
         _db.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
 
@@ -147,8 +145,6 @@ public class CerrarPlanTrabajoCommandHandlerTests
         var plan = PlanTrabajoTestHelper.CrearPlan();
         plan.Cerrar(1);
         var planes = MockDbSetHelper.CreateMockDbSet(new[] { plan });
-        planes.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<PlanTrabajo?>(plan));
         _db.PlanesTrabajo.Returns(planes);
 
         var result = await _handler.Handle(new CerrarPlanTrabajoCommand(plan.Id, 1), CancellationToken.None);
@@ -173,8 +169,6 @@ public class AnularPlanTrabajoCommandHandlerTests
     public async Task Handle_PlanNoExiste_RetornaFailure()
     {
         var planes = MockDbSetHelper.CreateMockDbSet<PlanTrabajo>();
-        planes.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<PlanTrabajo?>((PlanTrabajo?)null));
         _db.PlanesTrabajo.Returns(planes);
 
         var result = await _handler.Handle(new AnularPlanTrabajoCommand(55, 1), CancellationToken.None);
@@ -188,8 +182,6 @@ public class AnularPlanTrabajoCommandHandlerTests
     {
         var plan = PlanTrabajoTestHelper.CrearPlan();
         var planes = MockDbSetHelper.CreateMockDbSet(new[] { plan });
-        planes.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<PlanTrabajo?>(plan));
         _db.PlanesTrabajo.Returns(planes);
         _db.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(1);
 
@@ -206,8 +198,6 @@ public class AnularPlanTrabajoCommandHandlerTests
         var plan = PlanTrabajoTestHelper.CrearPlan();
         plan.Anular(1);
         var planes = MockDbSetHelper.CreateMockDbSet(new[] { plan });
-        planes.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<PlanTrabajo?>(plan));
         _db.PlanesTrabajo.Returns(planes);
 
         var result = await _handler.Handle(new AnularPlanTrabajoCommand(plan.Id, 1), CancellationToken.None);

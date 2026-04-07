@@ -5,6 +5,7 @@ using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Comprobantes.Commands;
 using ZuluIA_Back.Application.Features.PuntoVenta.Commands;
 using ZuluIA_Back.Application.Features.PuntoVenta.Enums;
+using ZuluIA_Back.Domain.Entities.Facturacion;
 using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Api.Controllers;

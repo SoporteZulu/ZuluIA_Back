@@ -9,6 +9,7 @@ using ZuluIA_Back.Domain.Entities.BI;
 using ZuluIA_Back.Domain.Entities.Colegio;
 using ZuluIA_Back.Domain.Entities.Comercial;
 using ZuluIA_Back.Domain.Entities.Compras;
+using ZuluIA_Back.Domain.Entities.Configuracion;
 using ZuluIA_Back.Domain.Entities.Contratos;
 using ZuluIA_Back.Domain.Entities.Contabilidad;
 using ZuluIA_Back.Domain.Entities.Diagnosticos;

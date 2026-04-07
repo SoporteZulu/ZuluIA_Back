@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Terceros.DTOs;
 
@@ -34,23 +35,23 @@ internal static class TerceroDomicilioReadModelLoader
 
         var provincias = provinciaIds.Count > 0
             ? await db.Provincias
-                .AsNoTracking()
+                .AsNoTrackingSafe()
                 .Where(x => provinciaIds.Contains(x.Id))
-                .ToDictionaryAsync(x => x.Id, x => x.Descripcion, ct)
+                .ToDictionarySafeAsync(x => x.Id, x => x.Descripcion, ct)
             : [];
 
         var localidades = localidadIds.Count > 0
             ? await db.Localidades
-                .AsNoTracking()
+                .AsNoTrackingSafe()
                 .Where(x => localidadIds.Contains(x.Id))
-                .ToDictionaryAsync(x => x.Id, x => x.Descripcion, ct)
+                .ToDictionarySafeAsync(x => x.Id, x => x.Descripcion, ct)
             : [];
 
         var tiposDomicilio = tiposDomicilioIds.Count > 0
             ? await db.TiposDomicilio
-                .AsNoTracking()
+                .AsNoTrackingSafe()
                 .Where(x => tiposDomicilioIds.Contains(x.Id))
-                .ToDictionaryAsync(x => x.Id, x => x.Descripcion, ct)
+                .ToDictionarySafeAsync(x => x.Id, x => x.Descripcion, ct)
             : [];
 
         foreach (var domicilio in domicilios)

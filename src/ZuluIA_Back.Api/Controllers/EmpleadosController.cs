@@ -1,6 +1,8 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Reportes.Enums;
 using ZuluIA_Back.Application.Features.Reportes.Services;
@@ -16,10 +18,12 @@ public class EmpleadosController(
     IMediator mediator,
     IEmpleadoRepository repo,
     IApplicationDbContext db,
-    RrhhService rrhhService,
-    ReporteExportacionService reporteExportacionService)
+    IServiceProvider serviceProvider)
     : BaseController(mediator)
 {
+    private RrhhService rrhhService => serviceProvider.GetRequiredService<RrhhService>();
+    private ReporteExportacionService reporteExportacionService => serviceProvider.GetRequiredService<ReporteExportacionService>();
+
     /// <summary>
     /// Retorna empleados paginados con filtros opcionales.
     /// </summary>
@@ -94,17 +98,21 @@ public class EmpleadosController(
         if (emp is null)
             return NotFound(new { error = $"No se encontró el empleado con ID {id}." });
 
-        var tercero = await db.Terceros.AsNoTracking()
+        var tercero = await db.Terceros.AsNoTrackingSafe()
             .Where(x => x.Id == emp.TerceroId)
             .Select(x => new { x.RazonSocial, x.NroDocumento })
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultSafeAsync(ct);
 
-        var moneda = await db.Monedas.AsNoTracking()
+        var moneda = await db.Monedas.AsNoTrackingSafe()
             .Where(x => x.Id == emp.MonedaId)
             .Select(x => new { x.Simbolo })
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultSafeAsync(ct);
 
-        var liquidaciones = await db.LiquidacionesSueldo.AsNoTracking()
+        var monedaSimbolo = moneda?.Simbolo ?? "$";
+        var terceroRazonSocial = tercero?.RazonSocial ?? "—";
+        var terceroCuit = tercero?.NroDocumento ?? "—";
+
+        var liquidaciones = await db.LiquidacionesSueldo.AsNoTrackingSafe()
             .Where(x => x.EmpleadoId == id)
             .OrderByDescending(x => x.Anio)
             .ThenByDescending(x => x.Mes)
@@ -114,7 +122,7 @@ public class EmpleadosController(
                 Id              = x.Id,
                 EmpleadoId      = x.EmpleadoId,
                 EmpleadoLegajo  = emp.Legajo,
-                EmpleadoNombre  = tercero!.RazonSocial,
+                EmpleadoNombre  = terceroRazonSocial,
                 SucursalId      = x.SucursalId,
                 Anio            = x.Anio,
                 Mes             = x.Mes,
@@ -124,7 +132,7 @@ public class EmpleadosController(
                 TotalDescuentos = x.TotalDescuentos,
                 Neto            = x.Neto,
                 MonedaId        = x.MonedaId,
-                MonedaSimbolo   = moneda!.Simbolo,
+                MonedaSimbolo   = monedaSimbolo,
                 Pagada          = x.Pagada,
                 ImporteImputado = x.ImporteImputado,
                 SaldoPendiente  = x.Neto - x.ImporteImputado,
@@ -133,27 +141,42 @@ public class EmpleadosController(
                 Observacion     = x.Observacion,
                 CreatedAt       = x.CreatedAt
             })
-            .ToListAsync(ct);
+            .ToListSafeAsync(ct);
+
+        var empleado = new EmpleadoDto
+        {
+            Id                 = emp.Id,
+            TerceroId          = emp.TerceroId,
+            TerceroRazonSocial = terceroRazonSocial,
+            TerceroCuit        = terceroCuit,
+            SucursalId         = emp.SucursalId,
+            Legajo             = emp.Legajo,
+            Cargo              = emp.Cargo,
+            Area               = emp.Area,
+            FechaIngreso       = emp.FechaIngreso,
+            FechaEgreso        = emp.FechaEgreso,
+            SueldoBasico       = emp.SueldoBasico,
+            MonedaId           = emp.MonedaId,
+            MonedaSimbolo      = monedaSimbolo,
+            Estado             = emp.Estado.ToString().ToUpperInvariant()
+        };
 
         return Ok(new
         {
-            Empleado = new EmpleadoDto
-            {
-                Id                 = emp.Id,
-                TerceroId          = emp.TerceroId,
-                TerceroRazonSocial = tercero?.RazonSocial  ?? "—",
-                TerceroCuit        = tercero?.NroDocumento ?? "—",
-                SucursalId         = emp.SucursalId,
-                Legajo             = emp.Legajo,
-                Cargo              = emp.Cargo,
-                Area               = emp.Area,
-                FechaIngreso       = emp.FechaIngreso,
-                FechaEgreso        = emp.FechaEgreso,
-                SueldoBasico       = emp.SueldoBasico,
-                MonedaId           = emp.MonedaId,
-                MonedaSimbolo      = moneda?.Simbolo ?? "$",
-                Estado             = emp.Estado.ToString().ToUpperInvariant()
-            },
+            empleado.Id,
+            empleado.TerceroId,
+            empleado.TerceroRazonSocial,
+            empleado.TerceroCuit,
+            empleado.SucursalId,
+            empleado.Legajo,
+            empleado.Cargo,
+            empleado.Area,
+            empleado.FechaIngreso,
+            empleado.FechaEgreso,
+            empleado.SueldoBasico,
+            empleado.MonedaId,
+            empleado.MonedaSimbolo,
+            empleado.Estado,
             Liquidaciones = liquidaciones
         });
     }
@@ -194,7 +217,21 @@ public class EmpleadosController(
         long id,
         [FromBody] EgresarEmpleadoRequest request,
         CancellationToken ct)
-        => FromResult(await Mediator.Send(new CambiarEstadoEmpleadoCommand(id, EstadoEmpleado.Inactivo, request.FechaEgreso), ct));
+    {
+        var result = await Mediator.Send(new CambiarEstadoEmpleadoCommand(id, EstadoEmpleado.Inactivo, request.FechaEgreso), ct);
+        if (result is null)
+            return BadRequest(new { error = "No se pudo procesar el egreso del empleado." });
+
+        if (result.IsFailure)
+        {
+            var error = result.Error?.Replace("encontro", "encontró", StringComparison.OrdinalIgnoreCase) ?? "No se pudo registrar el egreso del empleado.";
+            return error.Contains("No se encontró", StringComparison.OrdinalIgnoreCase)
+                ? NotFound(new { error })
+                : BadRequest(new { error });
+        }
+
+        return Ok(new { message = "Egreso registrado correctamente." });
+    }
 
     [HttpPost("{id:long}/suspender")]
     [ProducesResponseType(StatusCodes.Status200OK)]

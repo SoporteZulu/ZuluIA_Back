@@ -22,6 +22,7 @@ public class GetTerceroDomiciliosQueryHandlerTests
         var mapper = mapperConfig.CreateMapper();
 
         var tercero = Tercero.Crear("CLI001", "Empresa SA", 1, "30-11111111-1", 1, true, false, false, null, null);
+        typeof(Tercero).GetProperty(nameof(Tercero.Id))!.SetValue(tercero, 1L);
         var tipoDomicilio = CreateTipoDomicilio(1, "Legal");
         var provincia = CreateProvincia(2, "Cordoba");
         var localidad = CreateLocalidad(5, provincia.Id, "Capital");

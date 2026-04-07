@@ -34,12 +34,12 @@ public class RegistrarAuditoriaComprobanteCommandHandlerTests
             CancellationToken.None);
 
         result.Should().Be(Unit.Value);
-        auditorias.Received(1).Add(Arg.Is<AuditoriaComprobante>(x =>
+        auditorias.Should().ContainSingle(x =>
             x.ComprobanteId == 25 &&
             x.UsuarioId == 7 &&
             x.Accion == AccionAuditoria.AfipSolicitud &&
             x.DetalleCambio == "solicitud enviada" &&
-            x.IpOrigen == "127.0.0.1"));
+            x.IpOrigen == "127.0.0.1");
         await _db.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

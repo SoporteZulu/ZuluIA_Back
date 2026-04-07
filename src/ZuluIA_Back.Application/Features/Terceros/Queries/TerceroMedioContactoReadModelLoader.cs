@@ -1,6 +1,7 @@
 using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Terceros.DTOs;
 
@@ -27,12 +28,12 @@ internal static class TerceroMedioContactoReadModelLoader
         try
         {
             medios = await db.MediosContacto
-                .AsNoTracking()
+                .AsNoTrackingSafe()
                 .Where(x => x.PersonaId == terceroId)
                 .OrderByDescending(x => x.EsDefecto)
                 .ThenBy(x => x.Orden)
                 .ThenBy(x => x.Id)
-                .ToListAsync(ct);
+                .ToListSafeAsync(ct);
         }
         catch (DbException ex) when (IsMissingRelation(ex))
         {

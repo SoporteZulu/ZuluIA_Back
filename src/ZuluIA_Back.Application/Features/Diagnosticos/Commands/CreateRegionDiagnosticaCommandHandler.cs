@@ -2,7 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Common;
-using ZuluIA_Back.Domain.Entities.Diagnosticos;
+using ZuluIA_Back.Domain.Entities.Geografia;
 using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Application.Features.Diagnosticos.Commands;

@@ -159,7 +159,9 @@ public class TercerosController(IMediator mediator) : BaseController(mediator)
     public async Task<IActionResult> GetUsuarioCliente(long id, CancellationToken ct)
     {
         var result = await Mediator.Send(new GetTerceroUsuarioClienteQuery(id), ct);
-        return FromResult(result);
+        return result.IsSuccess
+            ? Ok(result)
+            : BadRequest(new { error = result.Error });
     }
 
     /// <summary>
@@ -579,7 +581,9 @@ public class TercerosController(IMediator mediator) : BaseController(mediator)
     public async Task<IActionResult> RemoveUsuarioCliente(long id, CancellationToken ct)
     {
         var result = await Mediator.Send(new RemoveTerceroUsuarioClienteCommand(id), ct);
-        return FromResult(result);
+        return result.IsSuccess
+            ? Ok(result)
+            : BadRequest(new { error = result.Error });
     }
 
     /// <summary>
@@ -599,7 +603,9 @@ public class TercerosController(IMediator mediator) : BaseController(mediator)
             return BadRequest(new { error = "El Id de la URL no coincide con el del body." });
 
         var result = await Mediator.Send(command, ct);
-        return FromResult(result);
+        return result.IsSuccess
+            ? Ok(result)
+            : BadRequest(new { error = result.Error });
     }
 
     /// <summary>
@@ -619,7 +625,9 @@ public class TercerosController(IMediator mediator) : BaseController(mediator)
             return BadRequest(new { error = "El Id de la URL no coincide con el del body." });
 
         var result = await Mediator.Send(command, ct);
-        return FromResult(result);
+        return result.IsSuccess
+            ? Ok(result)
+            : BadRequest(new { error = result.Error });
     }
 
     /// <summary>

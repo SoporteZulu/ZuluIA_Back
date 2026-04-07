@@ -35,11 +35,11 @@ public class CreateAutorizacionComprobanteCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(0);
-        autorizaciones.Received(1).Add(Arg.Is<AutorizacionComprobante>(x =>
+        autorizaciones.Should().ContainSingle(x =>
             x.ComprobanteId == 10 &&
             x.SucursalId == 2 &&
             x.TipoOperacion == "VENTA" &&
-            x.Estado == EstadoAutorizacion.Pendiente));
+            x.Estado == EstadoAutorizacion.Pendiente);
         await _db.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

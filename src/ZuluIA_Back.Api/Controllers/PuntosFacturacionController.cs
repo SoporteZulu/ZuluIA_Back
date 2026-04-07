@@ -86,14 +86,13 @@ public class PuntosFacturacionController(IMediator mediator, IApplicationDbConte
         [FromBody] UpdatePuntoFacturacionRequest request,
         CancellationToken ct)
     {
-        var punto = await db.PuntosFacturacion
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
-
-        if (punto is null)
-            return NotFound(new { error = $"No se encontró el punto de facturación con ID {id}." });
-
-        punto.Actualizar(request.TipoId, request.Descripcion, null);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new UpdatePuntoFacturacionCommand(id, request.TipoId, request.Descripcion ?? string.Empty), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("no se encontro", StringComparison.OrdinalIgnoreCase) == true
+                || result.Error?.Contains("no se encontró", StringComparison.OrdinalIgnoreCase) == true
+                || result.Error?.Contains("no encontrado", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Punto de facturación actualizado correctamente." });
     }
@@ -106,14 +105,13 @@ public class PuntosFacturacionController(IMediator mediator, IApplicationDbConte
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(long id, CancellationToken ct)
     {
-        var punto = await db.PuntosFacturacion
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
-
-        if (punto is null)
-            return NotFound(new { error = $"No se encontró el punto de facturación con ID {id}." });
-
-        punto.Desactivar(null);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new DeletePuntoFacturacionCommand(id), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("no se encontro", StringComparison.OrdinalIgnoreCase) == true
+                || result.Error?.Contains("no se encontró", StringComparison.OrdinalIgnoreCase) == true
+                || result.Error?.Contains("no encontrado", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Punto de facturación desactivado correctamente." });
     }

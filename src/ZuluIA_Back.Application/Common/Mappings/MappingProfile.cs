@@ -52,15 +52,6 @@ public class MappingProfile : Profile
             .ForMember(d => d.CajaDescripcion,      o => o.Ignore())
             .ForMember(d => d.FormaPagoDescripcion, o => o.Ignore())
             .ForMember(d => d.MonedaSimbolo,        o => o.Ignore());
-        CreateMap<Cheque, ChequeDto>()
-            .ForMember(d => d.Estado, o => o.MapFrom(s => s.Estado.ToString().ToUpperInvariant()))
-            .ForMember(d => d.Tipo, o => o.MapFrom(s => s.Tipo.ToString().ToUpperInvariant()))
-            .ForMember(d => d.CajaDescripcion, o => o.Ignore())
-            .ForMember(d => d.TerceroRazonSocial, o => o.Ignore())
-            .ForMember(d => d.MonedaSimbolo, o => o.Ignore())
-            .ForMember(d => d.ChequeraDescripcion, o => o.Ignore())
-            .ForMember(d => d.ComprobanteOrigenNumero, o => o.Ignore());
-
         // ─── Contabilidad ─────────────────────────────────────────────────────
         CreateMap<Asiento, AsientoDto>()
             .ForMember(d => d.Estado,               o => o.MapFrom(s => s.Estado.ToString()))

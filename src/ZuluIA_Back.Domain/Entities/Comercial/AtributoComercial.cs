@@ -1,7 +1,7 @@
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Enums;
 
-namespace ZuluIA_Back.Domain.Entities.Comercial;
+namespace ZuluIA_Back.Domain.Entities.Items;
 
 public class AtributoComercial : AuditableEntity
 {

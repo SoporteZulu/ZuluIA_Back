@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Diagnosticos.Commands;
+using ZuluIA_Back.Domain.Entities.Configuracion;
+using ZuluIA_Back.Domain.Entities.Geografia;
 
 namespace ZuluIA_Back.Api.Controllers;
 

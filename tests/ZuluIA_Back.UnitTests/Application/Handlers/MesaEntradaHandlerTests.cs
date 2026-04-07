@@ -40,13 +40,13 @@ public class CreateMesaEntradaCommandHandlerTests
         var result = await _handler.Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        _db.MesasEntrada.Received(1).Add(Arg.Is<MesaEntrada>(x =>
+        mesas.Should().ContainSingle(x =>
             x.SucursalId == 1 &&
             x.TipoId == 2 &&
             x.TerceroId == 3 &&
             x.NroDocumento == "DOC-001" &&
             x.Asunto == "Alta de proveedor" &&
-            x.EstadoFlow == EstadoMesaEntrada.Pendiente));
+            x.EstadoFlow == EstadoMesaEntrada.Pendiente);
         await _db.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

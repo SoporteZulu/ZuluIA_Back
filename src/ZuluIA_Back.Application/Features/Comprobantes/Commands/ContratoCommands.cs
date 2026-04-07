@@ -20,7 +20,7 @@ public record CreateContratoDetalleInput(
     int Corte,
     string? Dominio);
 
-public record CreateContratoCommand(
+public record CreateContratoComprobanteCommand(
     long TerceroId,
     long? SucursalTerceroId,
     long? VendedorId,
@@ -38,7 +38,7 @@ public record CreateContratoCommand(
     string? Observacion,
     IReadOnlyCollection<CreateContratoDetalleInput> Detalles) : IRequest<Result<long>>;
 
-public record UpdateContratoCommand(
+public record UpdateContratoComprobanteCommand(
     long Id,
     long? VendedorId,
     int? CondicionVentaId,
@@ -56,10 +56,10 @@ public record AnularContratoResult(long Id, string Estado);
 
 public record RegistrarFacturacionContratoResult(long Id, int CuotasRestantes, string Estado);
 
-public class CreateContratoCommandHandler(IApplicationDbContext db)
-    : IRequestHandler<CreateContratoCommand, Result<long>>
+public class CreateContratoComprobanteCommandHandler(IApplicationDbContext db)
+    : IRequestHandler<CreateContratoComprobanteCommand, Result<long>>
 {
-    public async Task<Result<long>> Handle(CreateContratoCommand request, CancellationToken ct)
+    public async Task<Result<long>> Handle(CreateContratoComprobanteCommand request, CancellationToken ct)
     {
         var sucursalId = request.SucursalTerceroId ?? 0;
         if (sucursalId <= 0)
@@ -95,10 +95,10 @@ public class CreateContratoCommandHandler(IApplicationDbContext db)
     }
 }
 
-public class UpdateContratoCommandHandler(IApplicationDbContext db)
-    : IRequestHandler<UpdateContratoCommand, Result>
+public class UpdateContratoComprobanteCommandHandler(IApplicationDbContext db)
+    : IRequestHandler<UpdateContratoComprobanteCommand, Result>
 {
-    public async Task<Result> Handle(UpdateContratoCommand request, CancellationToken ct)
+    public async Task<Result> Handle(UpdateContratoComprobanteCommand request, CancellationToken ct)
     {
         var entity = await db.Contratos.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
         if (entity is null)
@@ -175,9 +175,9 @@ public class CreateContratoDetalleInputValidator : AbstractValidator<CreateContr
     }
 }
 
-public class CreateContratoCommandValidator : AbstractValidator<CreateContratoCommand>
+public class CreateContratoComprobanteCommandValidator : AbstractValidator<CreateContratoComprobanteCommand>
 {
-    public CreateContratoCommandValidator()
+    public CreateContratoComprobanteCommandValidator()
     {
         RuleFor(x => x.TerceroId).GreaterThan(0);
         RuleFor(x => x.Cotizacion).GreaterThan(0);
@@ -189,9 +189,9 @@ public class CreateContratoCommandValidator : AbstractValidator<CreateContratoCo
     }
 }
 
-public class UpdateContratoCommandValidator : AbstractValidator<UpdateContratoCommand>
+public class UpdateContratoComprobanteCommandValidator : AbstractValidator<UpdateContratoComprobanteCommand>
 {
-    public UpdateContratoCommandValidator()
+    public UpdateContratoComprobanteCommandValidator()
     {
         RuleFor(x => x.Id).GreaterThan(0);
         RuleFor(x => x.PeriodoMeses).GreaterThan(0);

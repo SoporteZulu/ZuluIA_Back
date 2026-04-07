@@ -1,6 +1,6 @@
 using FluentAssertions;
 using Xunit;
-using ZuluIA_Back.Domain.Entities.PuntoVenta;
+using ZuluIA_Back.Domain.Entities.Facturacion;
 
 namespace ZuluIA_Back.UnitTests.Domain;
 

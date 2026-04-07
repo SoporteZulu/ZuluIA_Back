@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Produccion.Commands;
 using ZuluIA_Back.Application.Features.Produccion.Queries;
@@ -12,10 +13,12 @@ namespace ZuluIA_Back.Api.Controllers;
 public class FormulasProduccionController(
     IMediator mediator,
     IFormulaProduccionRepository repo,
-    FormulaProduccionHistorialService historialService,
+    IServiceProvider serviceProvider,
     IApplicationDbContext db)
     : BaseController(mediator)
 {
+    private FormulaProduccionHistorialService historialService => serviceProvider.GetRequiredService<FormulaProduccionHistorialService>();
+
     /// <summary>
     /// Retorna todas las fórmulas de producción.
     /// </summary>

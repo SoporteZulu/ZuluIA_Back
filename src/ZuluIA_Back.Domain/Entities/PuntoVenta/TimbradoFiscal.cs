@@ -1,6 +1,6 @@
 using ZuluIA_Back.Domain.Common;
 
-namespace ZuluIA_Back.Domain.Entities.PuntoVenta;
+namespace ZuluIA_Back.Domain.Entities.Facturacion;
 
 public class TimbradoFiscal : AuditableEntity
 {

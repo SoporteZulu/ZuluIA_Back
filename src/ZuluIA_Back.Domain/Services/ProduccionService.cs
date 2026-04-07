@@ -18,7 +18,7 @@ public class ProduccionService(
     /// Ejecuta el consumo de ingredientes y el ingreso del producto terminado
     /// al finalizar una orden de trabajo.
     /// </summary>
-    public async Task EjecutarProduccionAsync(
+    public virtual async Task EjecutarProduccionAsync(
         OrdenTrabajo ot,
         decimal? cantidadProducida,
         IReadOnlyDictionary<long, decimal>? consumosPersonalizados,
@@ -78,7 +78,7 @@ public class ProduccionService(
             ct);
     }
 
-    public async Task AjustarSegunFormulaAsync(
+    public virtual async Task AjustarSegunFormulaAsync(
         long formulaId,
         long depositoOrigenId,
         long depositoDestinoId,

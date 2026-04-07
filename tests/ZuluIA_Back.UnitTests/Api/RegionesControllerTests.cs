@@ -68,8 +68,6 @@ public class RegionesControllerTests
         var mediator = Substitute.For<IMediator>();
         var db = Substitute.For<IApplicationDbContext>();
         var regiones = MockDbSetHelper.CreateMockDbSet(Array.Empty<Region>());
-        regiones.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(new ValueTask<Region?>((Region?)null));
         db.Regiones.Returns(regiones);
         var controller = CreateController(mediator, db);
 
@@ -88,14 +86,6 @@ public class RegionesControllerTests
         {
             BuildRegion(7, "A", "Alfa", null, 1, 0, "A", true, "Obs")
         });
-        regiones.FindAsync(Arg.Any<object[]>(), Arg.Any<CancellationToken>())
-            .Returns(callInfo =>
-            {
-                var keys = callInfo.Arg<object[]>();
-                var id = (long)keys[0];
-                var region = regiones.FirstOrDefault(x => x.Id == id);
-                return new ValueTask<Region?>(region);
-            });
         db.Regiones.Returns(regiones);
         var controller = CreateController(mediator, db);
 

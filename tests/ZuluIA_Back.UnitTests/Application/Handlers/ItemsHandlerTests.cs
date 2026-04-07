@@ -442,7 +442,7 @@ public class GetItemByIdQueryHandlerTests
         _db.ListaPreciosItems.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Precios.ListaPreciosItem>());
         _db.ListasPrecios.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Precios.ListaPrecios>());
         _db.ItemsAtributosComerciales.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Comercial.ItemAtributoComercial>());
-        _db.AtributosComerciales.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Comercial.AtributoComercial>());
+        _db.AtributosComerciales.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Items.AtributoComercial>());
         _db.ItemsComponentes.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Items.ItemComponente>());
         _db.Items.Returns(MockDbSetHelper.CreateMockDbSet<Item>([item]));
         _db.Stock.Returns(MockDbSetHelper.CreateMockDbSet<ZuluIA_Back.Domain.Entities.Stock.StockItem>());

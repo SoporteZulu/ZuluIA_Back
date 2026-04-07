@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZuluIA_Back.Api.Security;
 using ZuluIA_Back.Application.Features.Facturacion.Queries;
 using ZuluIA_Back.Application.Features.Impresion.Commands;
@@ -15,13 +16,15 @@ namespace ZuluIA_Back.Api.Controllers;
 [AuditCriticalOperation("IMPRESION_OPERATIVA")]
 public class ImpresionController(
     IMediator mediator,
-    ImpresionDocumentosService impresionDocumentosService,
-    ImpresionSpoolService spoolService,
-    FiscalHardwareDiagnosticService fiscalHardwareDiagnosticService,
-    OperacionesBatchSettingsService settingsService,
+    IServiceProvider serviceProvider,
     IApplicationDbContext db)
     : BaseController(mediator)
 {
+    private ImpresionDocumentosService impresionDocumentosService => serviceProvider.GetRequiredService<ImpresionDocumentosService>();
+    private ImpresionSpoolService spoolService => serviceProvider.GetRequiredService<ImpresionSpoolService>();
+    private FiscalHardwareDiagnosticService fiscalHardwareDiagnosticService => serviceProvider.GetRequiredService<FiscalHardwareDiagnosticService>();
+    private OperacionesBatchSettingsService settingsService => serviceProvider.GetRequiredService<OperacionesBatchSettingsService>();
+
     [HttpGet("comprobantes/{id:long}/pdf")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

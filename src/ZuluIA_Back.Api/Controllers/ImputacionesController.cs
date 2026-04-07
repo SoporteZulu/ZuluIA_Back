@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Comprobantes.Commands;
 using ZuluIA_Back.Application.Features.Comprobantes.DTOs;
@@ -34,7 +35,7 @@ public class ImputacionesController(
             .ToList();
 
         var numeros = await db.Comprobantes
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => destinoIds.Contains(x.Id))
             .Select(x => new
             {
@@ -43,14 +44,14 @@ public class ImputacionesController(
                 x.Numero.Prefijo,
                 x.Numero.Numero
             })
-            .ToDictionaryAsync(x => x.Id, ct);
+            .ToDictionarySafeAsync(x => x.Id, ct);
 
         var tipoIds = numeros.Values.Select(x => x.TipoComprobanteId).Distinct().ToList();
         var tipos = await db.TiposComprobante
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => tipoIds.Contains(x.Id))
             .Select(x => new { x.Id, x.Descripcion })
-            .ToDictionaryAsync(x => x.Id, x => x.Descripcion, ct);
+            .ToDictionarySafeAsync(x => x.Id, x => x.Descripcion, ct);
 
         if (tipoComprobanteDestinoId.HasValue)
             imputaciones = imputaciones
@@ -58,16 +59,17 @@ public class ImputacionesController(
                 .ToList();
 
         var origen = await db.Comprobantes
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => x.Id == comprobanteId)
             .Select(x => new { x.Numero.Prefijo, x.Numero.Numero, x.TipoComprobanteId })
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultSafeAsync(ct);
 
         var tipoOrigen = origen is not null
-            ? await db.TiposComprobante.AsNoTracking()
+            ? await db.TiposComprobante
+                .AsNoTrackingSafe()
                 .Where(x => x.Id == origen.TipoComprobanteId)
                 .Select(x => x.Descripcion)
-                .FirstOrDefaultAsync(ct)
+                .FirstOrDefaultSafeAsync(ct)
             : null;
 
         var dtos = imputaciones.Select(i => new ImputacionDto
@@ -120,17 +122,17 @@ public class ImputacionesController(
             .ToList();
 
         var numeros = await db.Comprobantes
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => origenIds.Contains(x.Id))
             .Select(x => new { x.Id, x.TipoComprobanteId, x.Numero.Prefijo, x.Numero.Numero })
-            .ToDictionaryAsync(x => x.Id, ct);
+            .ToDictionarySafeAsync(x => x.Id, ct);
 
         var tipoIds = numeros.Values.Select(x => x.TipoComprobanteId).Distinct().ToList();
         var tipos = await db.TiposComprobante
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => tipoIds.Contains(x.Id))
             .Select(x => new { x.Id, x.Descripcion })
-            .ToDictionaryAsync(x => x.Id, x => x.Descripcion, ct);
+            .ToDictionarySafeAsync(x => x.Id, x => x.Descripcion, ct);
 
         if (tipoComprobanteOrigenId.HasValue)
             imputaciones = imputaciones
@@ -138,16 +140,17 @@ public class ImputacionesController(
                 .ToList();
 
         var destino = await db.Comprobantes
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => x.Id == comprobanteId)
             .Select(x => new { x.Numero.Prefijo, x.Numero.Numero, x.TipoComprobanteId })
-            .FirstOrDefaultAsync(ct);
+            .FirstOrDefaultSafeAsync(ct);
 
         var tipoDestino = destino is not null
-            ? await db.TiposComprobante.AsNoTracking()
+            ? await db.TiposComprobante
+                .AsNoTrackingSafe()
                 .Where(x => x.Id == destino.TipoComprobanteId)
                 .Select(x => x.Descripcion)
-                .FirstOrDefaultAsync(ct)
+                .FirstOrDefaultSafeAsync(ct)
             : null;
 
         var dtos = imputaciones.Select(i => new ImputacionDto
@@ -195,17 +198,17 @@ public class ImputacionesController(
             .ToList();
 
         var comprobantes = await db.Comprobantes
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => relacionadosIds.Contains(x.Id))
             .Select(x => new { x.Id, x.TipoComprobanteId, x.Numero.Prefijo, x.Numero.Numero })
-            .ToDictionaryAsync(x => x.Id, ct);
+            .ToDictionarySafeAsync(x => x.Id, ct);
 
         var tipoIds = comprobantes.Values.Select(x => x.TipoComprobanteId).Distinct().ToList();
         var tipos = await db.TiposComprobante
-            .AsNoTracking()
+            .AsNoTrackingSafe()
             .Where(x => tipoIds.Contains(x.Id))
             .Select(x => new { x.Id, x.Descripcion })
-            .ToDictionaryAsync(x => x.Id, x => x.Descripcion, ct);
+            .ToDictionarySafeAsync(x => x.Id, x => x.Descripcion, ct);
 
         var dtos = historial
             .Where(x => !tipoComprobanteRelacionadoId.HasValue ||

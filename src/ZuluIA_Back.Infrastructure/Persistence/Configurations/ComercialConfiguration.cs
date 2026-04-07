@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ZuluIA_Back.Domain.Entities.Comercial;
+using ZuluIA_Back.Domain.Entities.Items;
 using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Infrastructure.Persistence.Configurations;
