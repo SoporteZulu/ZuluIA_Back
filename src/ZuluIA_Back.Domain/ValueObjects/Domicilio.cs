@@ -9,6 +9,7 @@ public sealed class Domicilio : ValueObject
     public string? Piso { get; }
     public string? Dpto { get; }
     public string? CodigoPostal { get; }
+    public long? ProvinciaId { get; }
     public long? LocalidadId { get; }
     public long? BarrioId { get; }
 
@@ -21,13 +22,15 @@ public sealed class Domicilio : ValueObject
         string? dpto,
         string? codigoPostal,
         long? localidadId,
-        long? barrioId)
+        long? barrioId,
+        long? provinciaId = null)
     {
         Calle        = calle;
         Nro          = nro;
         Piso         = piso;
         Dpto         = dpto;
         CodigoPostal = codigoPostal;
+        ProvinciaId  = provinciaId;
         LocalidadId  = localidadId;
         BarrioId     = barrioId;
     }
@@ -39,7 +42,8 @@ public sealed class Domicilio : ValueObject
     string? dpto,
     string? codigoPostal,
     long? localidadId,
-    long? barrioId)
+    long? barrioId,
+    long? provinciaId = null)
     {
         return new Domicilio(
             calle,
@@ -48,11 +52,12 @@ public sealed class Domicilio : ValueObject
             dpto,
             codigoPostal,
             localidadId,
-            barrioId
+            barrioId,
+            provinciaId
         );
     }
 
-    public static Domicilio Vacio() => new(null, null, null, null, null, null, null);
+    public static Domicilio Vacio() => new(null, null, null, null, null, null, null, null);
 
     public string Completo =>
         string.Join(" ", new[] { Calle, Nro, Piso, Dpto }
@@ -65,6 +70,7 @@ public sealed class Domicilio : ValueObject
         yield return Piso;
         yield return Dpto;
         yield return CodigoPostal;
+        yield return ProvinciaId;
         yield return LocalidadId;
         yield return BarrioId;
     }

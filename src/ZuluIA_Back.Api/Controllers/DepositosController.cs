@@ -80,30 +80,12 @@ public class DepositosController(IMediator mediator, IApplicationDbContext db)
         [FromBody] UpdateDepositoRequest request,
         CancellationToken ct)
     {
-        var deposito = await db.Depositos
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
+        var result = await Mediator.Send(new UpdateDepositoCommand(id, request.Descripcion, request.EsDefault), ct);
 
-        if (deposito is null)
-            return NotFound(new { error = $"No se encontró el depósito con ID {id}." });
-
-        // Si se quiere marcar como default, quitar el default actual de la sucursal
-        if (request.EsDefault && !deposito.EsDefault)
-        {
-            var defaultActual = await db.Depositos
-                .Where(x => x.SucursalId == deposito.SucursalId &&
-                            x.EsDefault  == true                 &&
-                            x.Id         != id)
-                .FirstOrDefaultAsync(ct);
-
-            if (defaultActual is not null)
-            {
-                defaultActual.UnsetDefault();
-                db.Depositos.Update(defaultActual);
-            }
-        }
-
-        deposito.Actualizar(request.Descripcion, request.EsDefault);
-        await db.SaveChangesAsync(ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("No se encontró", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Depósito actualizado correctamente." });
     }
@@ -117,32 +99,35 @@ public class DepositosController(IMediator mediator, IApplicationDbContext db)
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(long id, CancellationToken ct)
     {
-        var deposito = await db.Depositos
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
+        var result = await Mediator.Send(new DeleteDepositoCommand(id), ct);
 
-        if (deposito is null)
-            return NotFound(new { error = $"No se encontró el depósito con ID {id}." });
+        if (result.IsFailure)
+        {
+            if (result.Error?.Contains("No se encontró", StringComparison.OrdinalIgnoreCase) == true)
+                return NotFound(new { error = result.Error });
 
-        if (deposito.EsDefault)
-            return Conflict(new
-            {
-                error = "No se puede desactivar el depósito por defecto. Asigne otro depósito como default primero."
-            });
+            if (result.Error?.Contains("No se puede desactivar", StringComparison.OrdinalIgnoreCase) == true)
+                return Conflict(new { error = result.Error });
 
-        // Verificar stock activo
-        var tieneStock = await db.Stock
-            .AnyAsync(x => x.DepositoId == id && x.Cantidad > 0, ct);
-
-        if (tieneStock)
-            return Conflict(new
-            {
-                error = "No se puede desactivar un depósito que tiene stock disponible."
-            });
-
-        deposito.Desactivar();
-        await db.SaveChangesAsync(ct);
+            return BadRequest(new { error = result.Error });
+        }
 
         return Ok(new { mensaje = "Depósito desactivado correctamente." });
+    }
+
+    /// <summary>
+    /// Reactiva un depósito desactivado.
+    /// </summary>
+    [HttpPatch("{id:long}/activar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Activar(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new ActivateDepositoCommand(id), ct);
+        if (result.IsFailure)
+            return NotFound(new { error = result.Error });
+
+        return Ok(new { mensaje = "Depósito activado correctamente." });
     }
 }
 

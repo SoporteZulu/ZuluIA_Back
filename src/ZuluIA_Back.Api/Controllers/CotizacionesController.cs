@@ -60,4 +60,32 @@ public class CotizacionesController(IMediator mediator) : BaseController(mediato
             ? Ok(new { id = result.Value, mensaje = "Cotización registrada correctamente." })
             : BadRequest(new { error = result.Error });
     }
+
+    /// <summary>
+    /// Importa o actualiza cotizaciones en lote para una moneda.
+    /// Reutiliza la misma lógica de upsert por fecha que el alta individual.
+    /// </summary>
+    [HttpPost("importar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Importar(
+        [FromBody] ImportarCotizacionesRequest request,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new ImportarCotizacionesCommand(
+                request.MonedaId,
+                request.Items.Select(x => new ImportarCotizacionItemInput(x.Fecha, x.Cotizacion)).ToList()),
+            ct);
+
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : BadRequest(new { error = result.Error });
+    }
 }
+
+public record ImportarCotizacionItemRequest(DateOnly Fecha, decimal Cotizacion);
+
+public record ImportarCotizacionesRequest(
+    long MonedaId,
+    List<ImportarCotizacionItemRequest> Items);

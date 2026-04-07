@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Terceros.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Enums;
@@ -12,7 +13,8 @@ public class ConvertirPresupuestoCommandHandler(
     IComprobanteRepository comprobanteRepo,
     IApplicationDbContext db,
     IUnitOfWork uow,
-    ICurrentUserService currentUser)
+    ICurrentUserService currentUser,
+    TerceroOperacionValidationService terceroOperacionValidationService)
     : IRequestHandler<ConvertirPresupuestoCommand, Result<long>>
 {
     public async Task<Result<long>> Handle(
@@ -40,6 +42,20 @@ public class ConvertirPresupuestoCommandHandler(
 
         if (tipoDestino is null)
             return Result.Failure<long>($"No se encontró el tipo de comprobante ID {request.TipoComprobanteDestinoId}.");
+
+        if (tipoDestino.EsVenta)
+        {
+            var validationError = await terceroOperacionValidationService.ValidateClienteAsync(presupuesto.TerceroId, ct);
+            if (validationError is not null)
+                return Result.Failure<long>(validationError);
+        }
+
+        if (tipoDestino.EsCompra)
+        {
+            var validationError = await terceroOperacionValidationService.ValidateProveedorAsync(presupuesto.TerceroId, ct);
+            if (validationError is not null)
+                return Result.Failure<long>(validationError);
+        }
 
         // 3. Calcular número del nuevo comprobante
         short prefijo = 1;

@@ -93,6 +93,11 @@ public class UnidadMedidaConfiguration : IEntityTypeConfiguration<UnidadMedida>
         builder.Property(x => x.Id).HasColumnName("id").UseIdentityColumn();
         builder.Property(x => x.Codigo).HasColumnName("codigo").HasMaxLength(10).IsRequired();
         builder.Property(x => x.Descripcion).HasColumnName("descripcion").HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Disminutivo).HasColumnName("disminutivo").HasMaxLength(10);
+        builder.Property(x => x.Multiplicador).HasColumnName("multiplicador").HasPrecision(18, 6).HasDefaultValue(1m);
+        builder.Property(x => x.EsUnidadBase).HasColumnName("es_unidad_base").HasDefaultValue(true);
+        builder.Property(x => x.UnidadBaseId).HasColumnName("unidad_base_id");
+        builder.Property(x => x.Activa).HasColumnName("activa").HasDefaultValue(true);
         builder.HasIndex(x => x.Codigo).IsUnique();
     }
 }
@@ -118,5 +123,14 @@ public class CategoriaTerceroConfiguration : IEntityTypeConfiguration<CategoriaT
         builder.Property(x => x.Id).HasColumnName("id").UseIdentityColumn();
         builder.Property(x => x.Descripcion).HasColumnName("descripcion").HasMaxLength(100).IsRequired();
         builder.Property(x => x.EsImportador).HasColumnName("es_importador").HasDefaultValue(false);
+        builder.Property(x => x.TipoPersonaId).HasColumnName("tipo_persona_id");
+        builder.Property(x => x.EsSistema).HasColumnName("es_sistema").HasDefaultValue(false);
+        builder.Property(x => x.CuentaContableDefectoId).HasColumnName("cuenta_contable_defecto_id");
+        builder.Property(x => x.FechaReferencia).HasColumnName("fecha_referencia");
+        builder.Property(x => x.DiasFrecuenciaActualizacion).HasColumnName("dias_frecuencia_actualizacion").HasDefaultValue(0);
+        builder.Property(x => x.DiasVencimiento).HasColumnName("dias_vencimiento").HasDefaultValue(0);
+        builder.Property(x => x.DiasFinanciacion).HasColumnName("dias_financiacion").HasDefaultValue(0);
+        builder.Property(x => x.TasaInteresDiaria).HasColumnName("tasa_interes_diaria").HasPrecision(10, 6).HasDefaultValue(0m);
+        builder.Property(x => x.CobrarInteres).HasColumnName("cobrar_interes").HasDefaultValue(false);
     }
 }

@@ -22,6 +22,15 @@ public class CedulonConfiguration : IEntityTypeConfiguration<Cedulon>
         builder.Property(x => x.PlanPagoId)
                .HasColumnName("plan_pago_id");
 
+        builder.Property(x => x.PlanGeneralColegioId)
+               .HasColumnName("plan_general_colegio_id");
+
+        builder.Property(x => x.LoteColegioId)
+               .HasColumnName("lote_colegio_id");
+
+        builder.Property(x => x.ComprobanteId)
+               .HasColumnName("comprobante_id");
+
         builder.Property(x => x.NroCedulon)
                .HasColumnName("nro_cedulon")
                .HasMaxLength(50).IsRequired();
@@ -58,5 +67,7 @@ public class CedulonConfiguration : IEntityTypeConfiguration<Cedulon>
         builder.HasIndex(x => x.TerceroId);
         builder.HasIndex(x => x.Estado);
         builder.HasIndex(x => x.FechaVencimiento);
+        builder.HasIndex(x => x.LoteColegioId);
+        builder.HasIndex(x => x.PlanGeneralColegioId);
     }
 }

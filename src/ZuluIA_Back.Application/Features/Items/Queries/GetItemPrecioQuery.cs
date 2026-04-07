@@ -11,5 +11,8 @@ public record GetItemPrecioQuery(
     long ItemId,
     long? ListaPreciosId,
     long? MonedaId,
-    DateOnly? Fecha)
+    DateOnly? Fecha,
+    long? TerceroId = null,
+    long? CanalVentaId = null,
+    long? VendedorId = null)
     : IRequest<ItemPrecioDto?>;

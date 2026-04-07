@@ -20,7 +20,9 @@ public class CartaPorteController(IMediator mediator, IApplicationDbContext db)
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         [FromQuery] long? comprobanteId = null,
+        [FromQuery] long? transportistaId = null,
         [FromQuery] string? estado = null,
+        [FromQuery] bool? soloConErrorCtg = null,
         [FromQuery] DateOnly? desde = null,
         [FromQuery] DateOnly? hasta = null,
         CancellationToken ct = default)
@@ -35,8 +37,14 @@ public class CartaPorteController(IMediator mediator, IApplicationDbContext db)
         if (comprobanteId.HasValue)
             query = query.Where(x => x.ComprobanteId == comprobanteId.Value);
 
+        if (transportistaId.HasValue)
+            query = query.Where(x => x.TransportistaId == transportistaId.Value);
+
         if (estadoEnum.HasValue)
             query = query.Where(x => x.Estado == estadoEnum.Value);
+
+        if (soloConErrorCtg == true)
+            query = query.Where(x => x.UltimoErrorCtg != null);
 
         if (desde.HasValue)
             query = query.Where(x => x.FechaEmision >= desde.Value);
@@ -54,11 +62,16 @@ public class CartaPorteController(IMediator mediator, IApplicationDbContext db)
             {
                 Id               = x.Id,
                 ComprobanteId    = x.ComprobanteId,
+                OrdenCargaId     = x.OrdenCargaId,
+                TransportistaId  = x.TransportistaId,
                 NroCtg           = x.NroCtg,
                 CuitRemitente    = x.CuitRemitente,
                 CuitDestinatario = x.CuitDestinatario,
                 CuitTransportista = x.CuitTransportista,
                 FechaEmision     = x.FechaEmision,
+                FechaSolicitudCtg = x.FechaSolicitudCtg,
+                IntentosCtg      = x.IntentosCtg,
+                UltimoErrorCtg   = x.UltimoErrorCtg,
                 Estado           = x.Estado.ToString().ToUpperInvariant(),
                 Observacion      = x.Observacion,
                 CreatedAt        = x.CreatedAt,
@@ -91,11 +104,16 @@ public class CartaPorteController(IMediator mediator, IApplicationDbContext db)
             {
                 Id                = x.Id,
                 ComprobanteId     = x.ComprobanteId,
+                OrdenCargaId      = x.OrdenCargaId,
+                TransportistaId   = x.TransportistaId,
                 NroCtg            = x.NroCtg,
                 CuitRemitente     = x.CuitRemitente,
                 CuitDestinatario  = x.CuitDestinatario,
                 CuitTransportista = x.CuitTransportista,
                 FechaEmision      = x.FechaEmision,
+                FechaSolicitudCtg = x.FechaSolicitudCtg,
+                IntentosCtg       = x.IntentosCtg,
+                UltimoErrorCtg    = x.UltimoErrorCtg,
                 Estado            = x.Estado.ToString().ToUpperInvariant(),
                 Observacion       = x.Observacion,
                 CreatedAt         = x.CreatedAt,
@@ -138,6 +156,88 @@ public class CartaPorteController(IMediator mediator, IApplicationDbContext db)
         return FromResult(result);
     }
 
+    [HttpPost("{id:long}/orden-carga")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CrearOrdenCarga(long id, [FromBody] CrearOrdenCargaRequest request, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new CrearOrdenCargaCommand(id, request.TransportistaId, request.FechaCarga, request.Origen, request.Destino, request.Patente, request.Observacion),
+            ct);
+
+        return FromResult(result);
+    }
+
+    [HttpGet("{id:long}/orden-carga")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetOrdenCarga(long id, CancellationToken ct)
+    {
+        var orden = await db.OrdenesCarga.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.CartaPorteId == id, ct);
+
+        if (orden is null)
+            return NotFound(new { error = $"No se encontró orden de carga para la carta de porte ID {id}." });
+
+        string? transportista = null;
+        if (orden.TransportistaId.HasValue)
+        {
+            transportista = await db.Terceros.AsNoTracking()
+                .Join(db.Transportistas.AsNoTracking().Where(t => t.Id == orden.TransportistaId.Value),
+                    tercero => tercero.Id,
+                    t => t.TerceroId,
+                    (tercero, _) => tercero.RazonSocial)
+                .FirstOrDefaultAsync(ct);
+        }
+
+        return Ok(new OrdenCargaDto
+        {
+            Id = orden.Id,
+            CartaPorteId = orden.CartaPorteId,
+            TransportistaId = orden.TransportistaId,
+            TransportistaRazonSocial = transportista,
+            FechaCarga = orden.FechaCarga,
+            Origen = orden.Origen,
+            Destino = orden.Destino,
+            Patente = orden.Patente,
+            Confirmada = orden.Confirmada,
+            Observacion = orden.Observacion
+        });
+    }
+
+    [HttpPost("{id:long}/ctg/solicitar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SolicitarCtg(long id, [FromBody] SolicitarCtgRequest request, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new SolicitarCtgCartaPorteCommand(id, request.FechaSolicitud, request.Observacion),
+            ct);
+
+        return FromResult(result);
+    }
+
+    [HttpPost("{id:long}/ctg/reintentar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ReintentarCtg(long id, [FromBody] SolicitarCtgRequest request, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new SolicitarCtgCartaPorteCommand(id, request.FechaSolicitud, request.Observacion, true),
+            ct);
+
+        return FromResult(result);
+    }
+
+    [HttpPost("{id:long}/ctg/consultar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ConsultarCtg(long id, [FromBody] ConsultarCtgRequest request, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new ConsultarCtgCartaPorteCommand(id, request.FechaConsulta, request.NroCtg, request.Error, request.Observacion),
+            ct);
+
+        return FromResult(result);
+    }
+
     /// <summary>
     /// Confirma una carta de porte activa.
     /// </summary>
@@ -147,16 +247,11 @@ public class CartaPorteController(IMediator mediator, IApplicationDbContext db)
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Confirmar(long id, CancellationToken ct)
     {
-        var carta = await db.CartasPorte
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
+        var result = await Mediator.Send(
+            new ConfirmarCartaPorteCommand(id, DateOnly.FromDateTime(DateTime.Today), null),
+            ct);
 
-        if (carta is null)
-            return NotFound(new { error = $"No se encontró la carta de porte con ID {id}." });
-
-        carta.Confirmar(null);
-        await db.SaveChangesAsync(ct);
-
-        return Ok(new { mensaje = "Carta de porte confirmada correctamente." });
+        return FromResult(result);
     }
 
     /// <summary>
@@ -171,18 +266,44 @@ public class CartaPorteController(IMediator mediator, IApplicationDbContext db)
         [FromBody] AnularCartaPorteRequest request,
         CancellationToken ct)
     {
-        var carta = await db.CartasPorte
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
+        var result = await Mediator.Send(
+            new AnularCartaPorteWorkflowCommand(id, request.Fecha ?? DateOnly.FromDateTime(DateTime.Today), request.Observacion),
+            ct);
 
-        if (carta is null)
-            return NotFound(new { error = $"No se encontró la carta de porte con ID {id}." });
+        return FromResult(result);
+    }
 
-        carta.Anular(request.Observacion, null);
-        await db.SaveChangesAsync(ct);
+    [HttpGet("{id:long}/historial")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetHistorial(long id, CancellationToken ct)
+    {
+        var eventos = await db.CartasPorteEventos.AsNoTracking()
+            .Where(x => x.CartaPorteId == id)
+            .OrderByDescending(x => x.FechaEvento)
+            .ThenByDescending(x => x.Id)
+            .Select(x => new CartaPorteEventoDto
+            {
+                Id = x.Id,
+                CartaPorteId = x.CartaPorteId,
+                OrdenCargaId = x.OrdenCargaId,
+                TipoEvento = x.TipoEvento.ToString().ToUpperInvariant(),
+                EstadoAnterior = x.EstadoAnterior.HasValue ? x.EstadoAnterior.Value.ToString().ToUpperInvariant() : null,
+                EstadoNuevo = x.EstadoNuevo.ToString().ToUpperInvariant(),
+                FechaEvento = x.FechaEvento,
+                Mensaje = x.Mensaje,
+                NroCtg = x.NroCtg,
+                IntentoCtg = x.IntentoCtg,
+                CreatedAt = x.CreatedAt,
+                CreatedBy = x.CreatedBy
+            })
+            .ToListAsync(ct);
 
-        return Ok(new { mensaje = "Carta de porte anulada correctamente." });
+        return Ok(eventos);
     }
 }
 
 public record AsignarCtgRequest(string NroCtg);
-public record AnularCartaPorteRequest(string? Observacion);
+public record CrearOrdenCargaRequest(long? TransportistaId, DateOnly FechaCarga, string Origen, string Destino, string? Patente, string? Observacion);
+public record SolicitarCtgRequest(DateOnly FechaSolicitud, string? Observacion);
+public record ConsultarCtgRequest(DateOnly FechaConsulta, string? NroCtg, string? Error, string? Observacion);
+public record AnularCartaPorteRequest(DateOnly? Fecha, string? Observacion);

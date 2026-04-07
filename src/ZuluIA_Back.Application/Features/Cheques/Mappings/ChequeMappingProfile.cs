@@ -9,6 +9,17 @@ public class ChequeMappingProfile : Profile
     public ChequeMappingProfile()
     {
         CreateMap<Cheque, ChequeDto>()
-            .ForMember(d => d.Estado, o => o.MapFrom(s => s.Estado.ToString().ToUpperInvariant()));
+            .ForMember(d => d.Estado, o => o.MapFrom(s => s.Estado.ToString().ToUpperInvariant()))
+            .ForMember(d => d.Tipo, o => o.MapFrom(s => s.Tipo.ToString().ToUpperInvariant()))
+            .ForMember(d => d.CajaDescripcion, o => o.Ignore())
+            .ForMember(d => d.TerceroRazonSocial, o => o.Ignore())
+            .ForMember(d => d.MonedaSimbolo, o => o.Ignore())
+            .ForMember(d => d.ChequeraDescripcion, o => o.Ignore())
+            .ForMember(d => d.ComprobanteOrigenNumero, o => o.Ignore());
+
+        CreateMap<Cheque, ChequePropio>()
+            .IncludeBase<Cheque, ChequeDto>()
+            .ForMember(d => d.BancoDescripcion, o => o.Ignore())
+            .ForMember(d => d.NroCuenta, o => o.Ignore());
     }
 }

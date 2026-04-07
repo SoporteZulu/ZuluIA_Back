@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Facturacion.Commands;
+using ZuluIA_Back.Application.Features.Facturacion.DTOs;
 using ZuluIA_Back.Application.Features.Facturacion.Queries;
 
 namespace ZuluIA_Back.Api.Controllers;
@@ -85,14 +86,13 @@ public class PuntosFacturacionController(IMediator mediator, IApplicationDbConte
         [FromBody] UpdatePuntoFacturacionRequest request,
         CancellationToken ct)
     {
-        var punto = await db.PuntosFacturacion
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
-
-        if (punto is null)
-            return NotFound(new { error = $"No se encontró el punto de facturación con ID {id}." });
-
-        punto.Actualizar(request.TipoId, request.Descripcion, null);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new UpdatePuntoFacturacionCommand(id, request.TipoId, request.Descripcion ?? string.Empty), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("no se encontro", StringComparison.OrdinalIgnoreCase) == true
+                || result.Error?.Contains("no se encontró", StringComparison.OrdinalIgnoreCase) == true
+                || result.Error?.Contains("no encontrado", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Punto de facturación actualizado correctamente." });
     }
@@ -105,17 +105,60 @@ public class PuntosFacturacionController(IMediator mediator, IApplicationDbConte
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(long id, CancellationToken ct)
     {
-        var punto = await db.PuntosFacturacion
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
-
-        if (punto is null)
-            return NotFound(new { error = $"No se encontró el punto de facturación con ID {id}." });
-
-        punto.Desactivar(null);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new DeletePuntoFacturacionCommand(id), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("no se encontro", StringComparison.OrdinalIgnoreCase) == true
+                || result.Error?.Contains("no se encontró", StringComparison.OrdinalIgnoreCase) == true
+                || result.Error?.Contains("no encontrado", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Punto de facturación desactivado correctamente." });
+    }
+
+    [HttpGet("{id:long}/afip")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetAfipConfiguracion(long id, CancellationToken ct)
+    {
+        var config = await db.AfipWsfeConfiguraciones.AsNoTracking()
+            .Where(x => x.PuntoFacturacionId == id)
+            .Select(x => new AfipWsfeConfiguracionDto
+            {
+                Id = x.Id,
+                SucursalId = x.SucursalId,
+                PuntoFacturacionId = x.PuntoFacturacionId,
+                Habilitado = x.Habilitado,
+                Produccion = x.Produccion,
+                UsaCaeaPorDefecto = x.UsaCaeaPorDefecto,
+                CuitEmisor = x.CuitEmisor,
+                CertificadoAlias = x.CertificadoAlias,
+                Observacion = x.Observacion
+            })
+            .FirstOrDefaultAsync(ct);
+
+        return OkOrNotFound(config);
+    }
+
+    [HttpPut("{id:long}/afip")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpsertAfipConfiguracion(long id, [FromBody] UpsertAfipWsfeConfiguracionRequest request, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new UpsertAfipWsfeConfiguracionCommand(
+                id,
+                request.Habilitado,
+                request.Produccion,
+                request.UsaCaeaPorDefecto,
+                request.CuitEmisor,
+                request.CertificadoAlias,
+                request.Observacion),
+            ct);
+
+        return FromResult(result);
     }
 }
 
 public record UpdatePuntoFacturacionRequest(long TipoId, string? Descripcion);
+public record UpsertAfipWsfeConfiguracionRequest(bool Habilitado, bool Produccion, bool UsaCaeaPorDefecto, string CuitEmisor, string? CertificadoAlias, string? Observacion);

@@ -20,4 +20,13 @@ public class Pais : AuditableEntity
             Descripcion = descripcion.Trim()
         };
     }
+
+    public void Actualizar(string codigo, string descripcion)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(codigo);
+        ArgumentException.ThrowIfNullOrWhiteSpace(descripcion);
+
+        Codigo = codigo.ToUpperInvariant().Trim();
+        Descripcion = descripcion.Trim();
+    }
 }

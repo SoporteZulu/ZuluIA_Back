@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Tesoreria.Services;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Finanzas;
+using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Interfaces;
 using ZuluIA_Back.Domain.Services;
 
@@ -12,6 +14,7 @@ public class RegistrarCobroCommandHandler(
     IComprobanteRepository comprobanteRepo,
     IImputacionRepository imputacionRepo,
     CuentaCorrienteService ctaCteService,
+    TesoreriaService tesoreriaService,
     IUnitOfWork uow,
     ICurrentUserService currentUser)
     : IRequestHandler<RegistrarCobroCommand, Result<long>>
@@ -33,6 +36,16 @@ public class RegistrarCobroCommandHandler(
             request.MonedaId,
             request.Cotizacion,
             request.Observacion,
+            null,
+            null,
+            null,
+            currentUser.UserId,
+            null,
+            TipoCobro.Administrativo,
+            null,
+            null,
+            null,
+            null,
             currentUser.UserId);
 
         // 3. Agregar medios
@@ -49,6 +62,7 @@ public class RegistrarCobroCommandHandler(
         }
 
         await cobroRepo.AddAsync(cobro, ct);
+        await uow.SaveChangesAsync(ct);
 
         // 4. Imputar comprobantes
         foreach (var comp in request.ComprobantesAImputar)
@@ -83,6 +97,24 @@ public class RegistrarCobroCommandHandler(
                 null,
                 request.Fecha,
                 $"Cobro #{cobro.Id}",
+                ct);
+        }
+
+        foreach (var medio in request.Medios)
+        {
+            await tesoreriaService.RegistrarMovimientoAsync(
+                request.SucursalId,
+                medio.CajaId,
+                request.Fecha,
+                TipoOperacionTesoreria.CobroVentanilla,
+                SentidoMovimientoTesoreria.Ingreso,
+                medio.Importe,
+                medio.MonedaId,
+                medio.Cotizacion,
+                request.TerceroId,
+                "COBRO",
+                cobro.Id,
+                request.Observacion,
                 ct);
         }
 

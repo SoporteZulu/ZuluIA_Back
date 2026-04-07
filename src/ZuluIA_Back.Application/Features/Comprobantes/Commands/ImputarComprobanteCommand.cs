@@ -7,5 +7,7 @@ public record ImputarComprobanteCommand(
     long ComprobanteOrigenId,
     long ComprobanteDestinoId,
     decimal Importe,
-    DateOnly Fecha
+    DateOnly Fecha,
+    long? TipoComprobanteOrigenId = null,
+    long? TipoComprobanteDestinoId = null
 ) : IRequest<Result<long>>;

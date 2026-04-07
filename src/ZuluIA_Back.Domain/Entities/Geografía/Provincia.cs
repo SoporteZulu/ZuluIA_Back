@@ -24,4 +24,14 @@ public class Provincia : AuditableEntity
             Descripcion = descripcion.Trim()
         };
     }
+
+    public void Actualizar(long paisId, string codigo, string descripcion)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(codigo);
+        ArgumentException.ThrowIfNullOrWhiteSpace(descripcion);
+
+        PaisId = paisId;
+        Codigo = codigo.ToUpperInvariant().Trim();
+        Descripcion = descripcion.Trim();
+    }
 }

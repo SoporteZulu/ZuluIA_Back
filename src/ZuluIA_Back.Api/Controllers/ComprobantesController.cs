@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Comprobantes.Commands;
 using ZuluIA_Back.Application.Features.Comprobantes.Queries;
+using ZuluIA_Back.Application.Features.Facturacion.Commands;
+using ZuluIA_Back.Application.Features.Facturacion.DTOs;
+using ZuluIA_Back.Application.Features.Ventas.Commands;
 using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Api.Controllers;
@@ -54,6 +57,27 @@ public class ComprobantesController(IMediator mediator, IApplicationDbContext db
         var result = await Mediator.Send(
             new GetComprobanteDetalleQuery(id), ct);
         return OkOrNotFound(result);
+    }
+
+    /// <summary>
+    /// Reemplaza los atributos de cabecera de un remito.
+    /// Se usa semántica completa de replace para mantener paridad con formularios legacy.
+    /// </summary>
+    [HttpPut("{id:long}/remito/atributos")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ReplaceRemitoAtributos(
+        long id,
+        [FromBody] ReplaceRemitoAtributosRequest request,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new ReplaceRemitoAtributosCommand(
+                id,
+                request.Atributos.Select(x => new RemitoAtributoInput(x.Clave, x.Valor, x.TipoDato)).ToList().AsReadOnly()),
+            ct);
+
+        return FromResult(result);
     }
 
     /// <summary>
@@ -137,6 +161,147 @@ public class ComprobantesController(IMediator mediator, IApplicationDbContext db
     }
 
     /// <summary>
+    /// Retorna los estados logísticos disponibles para remitos.
+    /// </summary>
+    [HttpGet("remitos/estados-logisticos")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public IActionResult GetEstadosLogisticosRemito()
+    {
+        var estados = Enum.GetValues<EstadoLogisticoRemito>()
+            .Select(e => new
+            {
+                valor = e.ToString().ToUpperInvariant(),
+                descripcion = e.ToString()
+            });
+
+        return Ok(estados);
+    }
+
+    /// <summary>
+    /// Retorna remitos paginados con filtros operativos compatibles con zuluApp.
+    /// </summary>
+    [HttpGet("remitos")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRemitos(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] long? sucursalId = null,
+        [FromQuery] DateOnly? fechaDesde = null,
+        [FromQuery] DateOnly? fechaHasta = null,
+        [FromQuery] short? prefijo = null,
+        [FromQuery] long? numero = null,
+        [FromQuery] string? terceroLegajo = null,
+        [FromQuery] string? terceroDenominacionSocial = null,
+        [FromQuery] string? cotNumero = null,
+        [FromQuery] DateOnly? cotFechaDesde = null,
+        [FromQuery] DateOnly? cotFechaHasta = null,
+        [FromQuery] long? depositoId = null,
+        [FromQuery] string? estado = null,
+        [FromQuery] string? estadoLogistico = null,
+        [FromQuery] bool? esValorizado = null,
+        CancellationToken ct = default)
+    {
+        EstadoComprobante? estadoEnum = null;
+        if (!string.IsNullOrWhiteSpace(estado) && Enum.TryParse<EstadoComprobante>(estado, true, out var estadoParseado))
+            estadoEnum = estadoParseado;
+
+        EstadoLogisticoRemito? estadoLogisticoEnum = null;
+        if (!string.IsNullOrWhiteSpace(estadoLogistico) && Enum.TryParse<EstadoLogisticoRemito>(estadoLogistico, true, out var estadoLogisticoParseado))
+            estadoLogisticoEnum = estadoLogisticoParseado;
+
+        var result = await Mediator.Send(
+            new ZuluIA_Back.Application.Features.Ventas.Queries.GetRemitosPagedQuery(
+                page,
+                pageSize,
+                sucursalId,
+                fechaDesde,
+                fechaHasta,
+                prefijo,
+                numero,
+                terceroLegajo,
+                terceroDenominacionSocial,
+                cotNumero,
+                cotFechaDesde,
+                cotFechaHasta,
+                depositoId,
+                estadoEnum,
+                estadoLogisticoEnum,
+                esValorizado),
+            ct);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Retorna las notas de débito de venta con filtros operativos.
+    /// </summary>
+    [HttpGet("notas-debito")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetNotasDebito(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] long? sucursalId = null,
+        [FromQuery] long? terceroId = null,
+        [FromQuery] string? estado = null,
+        [FromQuery] DateOnly? desde = null,
+        [FromQuery] DateOnly? hasta = null,
+        [FromQuery] long? motivoDebitoId = null,
+        [FromQuery] long? comprobanteOrigenId = null,
+        CancellationToken ct = default)
+    {
+        EstadoComprobante? estadoEnum = null;
+        if (!string.IsNullOrWhiteSpace(estado)
+            && Enum.TryParse<EstadoComprobante>(estado, true, out var parsed))
+        {
+            estadoEnum = parsed;
+        }
+
+        var result = await Mediator.Send(
+            new ZuluIA_Back.Application.Features.Ventas.Queries.GetNotasDebitoPagedQuery(
+                page,
+                pageSize,
+                sucursalId,
+                terceroId,
+                null,
+                estadoEnum,
+                desde,
+                hasta,
+                comprobanteOrigenId,
+                motivoDebitoId),
+            ct);
+
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Retorna el catálogo de motivos de débito disponible para ventas.
+    /// </summary>
+    [HttpGet("notas-debito/motivos")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMotivosDebito(
+        [FromQuery] bool soloActivos = true,
+        CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(new ZuluIA_Back.Application.Features.Ventas.Queries.GetMotivosDebitoQuery(soloActivos), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Crea una nota de débito de venta en estado borrador.
+    /// </summary>
+    [HttpPost("notas-debito")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CrearNotaDebito(
+        [FromBody] RegistrarNotaDebitoVentaCommand command,
+        CancellationToken ct)
+    {
+        var result = await Mediator.Send(command, ct);
+        return CreatedFromResult(result, "GetComprobanteById",
+            new { id = result.IsSuccess ? result.Value : 0 });
+    }
+
+    /// <summary>
     /// Emite un nuevo comprobante.
     /// Valida período IVA, calcula totales y afecta stock si corresponde.
     /// </summary>
@@ -174,6 +339,60 @@ public class ComprobantesController(IMediator mediator, IApplicationDbContext db
         await db.SaveChangesAsync(ct);
 
         return Ok(new { mensaje = "CAE asignado correctamente." });
+    }
+
+    [HttpPost("{id:long}/afip/cae")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SolicitarCaeAfip(long id, CancellationToken ct)
+        => FromResult(await Mediator.Send(new AutorizarComprobanteAfipWsfeCommand(id, false), ct));
+
+    [HttpPost("{id:long}/afip/caea")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SolicitarCaeaAfip(long id, CancellationToken ct)
+        => FromResult(await Mediator.Send(new AutorizarComprobanteAfipWsfeCommand(id, true), ct));
+
+    [HttpGet("{id:long}/afip")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ConsultarAfip(long id, CancellationToken ct)
+        => FromResult(await Mediator.Send(new ConsultarComprobanteAfipWsfeCommand(id), ct));
+
+    [HttpPost("{id:long}/afip/refresh")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RefreshAfip(long id, CancellationToken ct)
+        => FromResult(await Mediator.Send(new RefreshEstadoAfipWsfeCommand(id), ct));
+
+    [HttpGet("{id:long}/afip/auditoria")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAuditoriaAfip(long id, CancellationToken ct)
+    {
+        var items = await db.AfipWsfeAudits.AsNoTracking()
+            .Where(x => x.ComprobanteId == id)
+            .OrderByDescending(x => x.FechaOperacion)
+            .ThenByDescending(x => x.Id)
+            .Select(x => new AfipWsfeAuditDto
+            {
+                Id = x.Id,
+                ComprobanteId = x.ComprobanteId,
+                SucursalId = x.SucursalId,
+                PuntoFacturacionId = x.PuntoFacturacionId,
+                Operacion = x.Operacion.ToString().ToUpperInvariant(),
+                Exitoso = x.Exitoso,
+                RequestPayload = x.RequestPayload,
+                ResponsePayload = x.ResponsePayload,
+                MensajeError = x.MensajeError,
+                Cae = x.Cae,
+                Caea = x.Caea,
+                FechaOperacion = x.FechaOperacion,
+                CreatedAt = x.CreatedAt,
+                CreatedBy = x.CreatedBy
+            })
+            .ToListAsync(ct);
+
+        return Ok(items);
     }
 
     /// <summary>
@@ -330,3 +549,10 @@ public record ConvertirPresupuestoRequest(
     DateOnly Fecha,
     DateOnly? FechaVencimiento,
     string? Observacion);
+
+public record ReplaceRemitoAtributosRequest(IReadOnlyList<ReplaceRemitoAtributoRequestItem> Atributos);
+
+public record ReplaceRemitoAtributoRequestItem(
+    string Clave,
+    string? Valor,
+    string? TipoDato);

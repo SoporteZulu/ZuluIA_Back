@@ -10,11 +10,23 @@ public class TerceroListDto
 {
     // ─── Identificación ───────────────────────────────────────────────────────
     public long Id { get; set; }
+    public long NroInterno { get; set; }
+    public DateOnly FechaAlta { get; set; }
+    public DateOnly? FechaRegistro { get; set; }
     public string Legajo { get; set; } = string.Empty;
     public string RazonSocial { get; set; } = string.Empty;
     public string? NombreFantasia { get; set; }
+    public string TipoPersoneria { get; set; } = "JURIDICA";
+    public string? Nombre { get; set; }
+    public string? Apellido { get; set; }
+    public string? Sexo { get; set; }
+    public long? EstadoPersonaId { get; set; }
+    public string? EstadoPersonaDescripcion { get; set; }
+    public long? EstadoCivilId { get; set; }
+    public string? EstadoCivilDescripcion { get; set; }
 
     // ─── Documento e IVA ──────────────────────────────────────────────────────
+    public long CondicionIvaId { get; set; }
     public string NroDocumento { get; set; } = string.Empty;
     public string CondicionIvaDescripcion { get; set; } = string.Empty;
 
@@ -27,15 +39,91 @@ public class TerceroListDto
     public string? Telefono { get; set; }
     public string? Celular { get; set; }
     public string? Email { get; set; }
+    public string? Web { get; set; }
+
+    // ─── Domicilio ────────────────────────────────────────────────────────────
+    public string? Calle { get; set; }
+    public string? Nro { get; set; }
+    public string? Piso { get; set; }
+    public string? Dpto { get; set; }
+    public string? CodigoPostal { get; set; }
+    public long? PaisId { get; set; }
+    public string? PaisDescripcion { get; set; }
+    public long? ProvinciaId { get; set; }
+    public string? ProvinciaDescripcion { get; set; }
+    public long? LocalidadId { get; set; }
+    public long? BarrioId { get; set; }
+    public string? BarrioDescripcion { get; set; }
+    public string GeografiaCompleta { get; set; } = string.Empty;
+    public string UbicacionCompleta { get; set; } = string.Empty;
+    public bool TieneSucursalesEntrega { get; set; }
+    public string? SucursalEntregaPrincipalDescripcion { get; set; }
+    public bool RequiereDefinirEntrega { get; set; }
+    public string? NroIngresosBrutos { get; set; }
+    public string? NroMunicipal { get; set; }
 
     // ─── Localidad (para columna de ubicación en grilla) ─────────────────────
     public string? LocalidadDescripcion { get; set; }
 
     // ─── Comercial (para grilla de clientes con límite de crédito) ───────────
+    public long? MonedaId { get; set; }
+    public string? MonedaDescripcion { get; set; }
+    public long? CategoriaId { get; set; }
+    public string? CategoriaDescripcion { get; set; }
+    public long? CategoriaClienteId { get; set; }
+    public string? CategoriaClienteDescripcion { get; set; }
+    public long? EstadoClienteId { get; set; }
+    public string? EstadoClienteDescripcion { get; set; }
+    public bool? EstadoClienteBloquea { get; set; }
+    public long? CategoriaProveedorId { get; set; }
+    public string? CategoriaProveedorDescripcion { get; set; }
+    public long? EstadoProveedorId { get; set; }
+    public string? EstadoProveedorDescripcion { get; set; }
+    public bool? EstadoProveedorBloquea { get; set; }
     public decimal? LimiteCredito { get; set; }
+    public decimal? LimiteSaldo { get; set; }
+    public string? LimiteCreditoResumen { get; set; }
+    public string? LimiteSaldoResumen { get; set; }
+    public decimal? PorcentajeMaximoDescuento { get; set; }
+    public DateOnly? VigenciaCreditoDesde { get; set; }
+    public DateOnly? VigenciaCreditoHasta { get; set; }
+    public DateOnly? VigenciaLimiteSaldoDesde { get; set; }
+    public DateOnly? VigenciaLimiteSaldoHasta { get; set; }
+    public string? VigenciaCreditoResumen { get; set; }
+    public string? VigenciaLimiteSaldoResumen { get; set; }
     public bool Facturable { get; set; }
+    public long? CobradorId { get; set; }
+    public string? CobradorUserName { get; set; }
+    public string? CobradorNombre { get; set; }
+    public bool AplicaComisionCobrador { get; set; }
+    public decimal PctComisionCobrador { get; set; }
+    public long? VendedorId { get; set; }
+    public string? VendedorUserName { get; set; }
+    public string? VendedorNombre { get; set; }
+    public bool AplicaComisionVendedor { get; set; }
+    public decimal PctComisionVendedor { get; set; }
+    public string? Observacion { get; set; }
+    public bool AccesoUsuarioCliente { get; set; }
+    public string? UsuarioClienteUserName { get; set; }
+    public string? UsuarioClienteGrupoUserName { get; set; }
 
     // ─── Control ──────────────────────────────────────────────────────────────
+    public long? SucursalId { get; set; }
+    public string? SucursalDescripcion { get; set; }
     public bool Activo { get; set; }
+    public bool TieneUsuarioCliente { get; set; }
+    public bool UsuarioClienteActivo { get; set; }
+    public string EstadoVisibleDescripcion { get; set; } = "Activo";
+    public bool EstadoVisibleBloquea { get; set; }
+    public string EstadoOperativo { get; set; } = "ACTIVO";
+    public string EstadoOperativoDescripcion { get; set; } = "Activo";
+    public bool EstadoOperativoBloquea { get; set; }
     public string RolDisplay { get; set; } = string.Empty;
+    public DateTimeOffset CreatedAt { get; set; }
+
+    // ─── Validación comercial para ventas ────────────────────────────────────
+    public bool PuedeVender { get; set; }
+    public bool PuedeComprar { get; set; }
+    public string? MotivoBloqueoVentas { get; set; }
+    public string? MotivoBloqueoCompras { get; set; }
 }

@@ -16,6 +16,12 @@ public class CartaPorteConfiguration : IEntityTypeConfiguration<CartaPorte>
         builder.Property(x => x.ComprobanteId)
                .HasColumnName("comprobante_id");
 
+        builder.Property(x => x.OrdenCargaId)
+               .HasColumnName("orden_carga_id");
+
+        builder.Property(x => x.TransportistaId)
+               .HasColumnName("transportista_id");
+
         builder.Property(x => x.NroCtg)
                .HasColumnName("nro_ctg")
                .HasMaxLength(30);
@@ -38,6 +44,17 @@ public class CartaPorteConfiguration : IEntityTypeConfiguration<CartaPorte>
                .HasColumnName("fecha_emision")
                .IsRequired();
 
+        builder.Property(x => x.FechaSolicitudCtg)
+               .HasColumnName("fecha_solicitud_ctg");
+
+        builder.Property(x => x.IntentosCtg)
+               .HasColumnName("intentos_ctg")
+               .IsRequired();
+
+        builder.Property(x => x.UltimoErrorCtg)
+               .HasColumnName("ultimo_error_ctg")
+               .HasMaxLength(1000);
+
         builder.Property(x => x.Estado)
                .HasColumnName("estado")
                .HasConversion(
@@ -57,6 +74,8 @@ public class CartaPorteConfiguration : IEntityTypeConfiguration<CartaPorte>
 
         builder.HasIndex(x => x.NroCtg);
         builder.HasIndex(x => x.ComprobanteId);
+        builder.HasIndex(x => x.OrdenCargaId);
+        builder.HasIndex(x => x.TransportistaId);
         builder.HasIndex(x => x.Estado);
         builder.HasIndex(x => x.FechaEmision);
     }

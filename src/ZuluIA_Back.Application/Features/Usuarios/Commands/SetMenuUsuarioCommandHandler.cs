@@ -19,7 +19,8 @@ public class SetMenuUsuarioCommandHandler(
             .Where(x => x.UsuarioId == request.UsuarioId)
             .ToListAsync(ct);
 
-        db.MenuUsuario.RemoveRange(existentes);
+        if (existentes.Count > 0)
+            db.MenuUsuario.RemoveRange(existentes);
 
         // Agregar las nuevas
         var nuevos = request.MenuIds
@@ -27,7 +28,9 @@ public class SetMenuUsuarioCommandHandler(
             .Select(menuId => MenuUsuario.Crear(menuId, request.UsuarioId))
             .ToList();
 
-        await db.MenuUsuario.AddRangeAsync(nuevos, ct);
+        foreach (var menu in nuevos)
+            db.MenuUsuario.Add(menu);
+
         await uow.SaveChangesAsync(ct);
 
         return Result.Success();

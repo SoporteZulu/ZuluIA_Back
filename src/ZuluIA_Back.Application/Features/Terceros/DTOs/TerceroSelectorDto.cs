@@ -14,6 +14,8 @@ public class TerceroSelectorDto
     public string Legajo { get; set; } = string.Empty;
     public string RazonSocial { get; set; } = string.Empty;
     public string NroDocumento { get; set; } = string.Empty;
+    public string GeografiaCompleta { get; set; } = string.Empty;
+    public string UbicacionCompleta { get; set; } = string.Empty;
 
     /// <summary>
     /// Texto para mostrar en el combo: "00001 — Empresa SA (20-12345678-9)"

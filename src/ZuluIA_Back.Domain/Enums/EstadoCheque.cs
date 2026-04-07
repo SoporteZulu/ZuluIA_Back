@@ -6,5 +6,8 @@ public enum EstadoCheque
     Depositado,
     Acreditado,
     Rechazado,
-    Entregado
+    Entregado,
+    Anulado,      // Para cheques propios anulados
+    Endosado,     // Para cheques endosados a terceros
+    EnTransito    // Entre depósito y acreditación
 }

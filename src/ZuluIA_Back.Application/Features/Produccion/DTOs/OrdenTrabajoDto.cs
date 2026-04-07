@@ -15,6 +15,7 @@ public class OrdenTrabajoDto
     public DateOnly? FechaFinPrevista { get; set; }
     public DateOnly? FechaFinReal { get; set; }
     public decimal Cantidad { get; set; }
+    public decimal? CantidadProducida { get; set; }
     public string Estado { get; set; } = string.Empty;
     public string? Observacion { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

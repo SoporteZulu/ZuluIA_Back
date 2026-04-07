@@ -6,6 +6,7 @@ namespace ZuluIA_Back.Domain.Interfaces;
 public interface IUsuarioRepository : IRepository<Usuario>
 {
     Task<Usuario?> GetByUserNameAsync(string userName, CancellationToken ct = default);
+    Task<Usuario?> GetByUserNameOrEmailAsync(string login, CancellationToken ct = default);
     Task<Usuario?> GetBySupabaseIdAsync(Guid supabaseId, CancellationToken ct = default);
     Task<Usuario?> GetByIdConSucursalesAsync(long id, CancellationToken ct = default);
     Task<bool> ExisteUserNameAsync(string userName, long? excludeId = null, CancellationToken ct = default);

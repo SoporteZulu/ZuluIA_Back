@@ -15,5 +15,7 @@ public record ImputarComprobantesMasivosCommand(
 public record ImputacionMasivaItemDto(
     long ComprobanteOrigenId,
     long ComprobanteDestinoId,
-    decimal Importe
+    decimal Importe,
+    long? TipoComprobanteOrigenId = null,
+    long? TipoComprobanteDestinoId = null
 );

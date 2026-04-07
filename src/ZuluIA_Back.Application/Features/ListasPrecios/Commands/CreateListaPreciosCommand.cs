@@ -7,5 +7,9 @@ public record CreateListaPreciosCommand(
     string Descripcion,
     long MonedaId,
     DateOnly? VigenciaDesde,
-    DateOnly? VigenciaHasta
+    DateOnly? VigenciaHasta,
+    bool EsPorDefecto = false,
+    long? ListaPadreId = null,
+    int Prioridad = 0,
+    string? Observaciones = null
 ) : IRequest<Result<long>>;

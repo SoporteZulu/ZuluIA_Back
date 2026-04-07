@@ -17,6 +17,10 @@ public class LiquidacionSueldoDto
     public long MonedaId { get; set; }
     public string MonedaSimbolo { get; set; } = string.Empty;
     public bool Pagada { get; set; }
+    public decimal ImporteImputado { get; set; }
+    public decimal SaldoPendiente { get; set; }
+    public DateOnly? FechaPago { get; set; }
+    public long? ComprobanteEmpleadoId { get; set; }
     public string? Observacion { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }

@@ -11,13 +11,28 @@ namespace ZuluIA_Back.Application.Features.Terceros.Commands;
 /// </summary>
 public record CreateTerceroCommand(
     // ─── Identificación obligatoria ───────────────────────────────────────────
-    string Legajo,
+    string? Legajo,
     string RazonSocial,
     string? NombreFantasia,
+    string? TipoPersoneria,
+    string? Nombre,
+    string? Apellido,
+    string? Tratamiento,
+    string? Profesion,
+    long? EstadoPersonaId,
+    long? EstadoCivilId,
+    string? EstadoCivil,
+    string? Nacionalidad,
+    string? Sexo,
+    DateOnly? FechaNacimiento,
+    DateOnly? FechaRegistro,
+    bool EsEntidadGubernamental,
+    string? ClaveFiscal,
+    string? ValorClaveFiscal,
 
     // ─── Documento e IVA ──────────────────────────────────────────────────────
-    long TipoDocumentoId,
-    string NroDocumento,
+    long? TipoDocumentoId,
+    string? NroDocumento,
     long CondicionIvaId,
 
     // ─── Roles (al menos uno requerido) ──────────────────────────────────────
@@ -31,6 +46,8 @@ public record CreateTerceroCommand(
     string? Piso,
     string? Dpto,
     string? CodigoPostal,
+    long? PaisId,
+    long? ProvinciaId,
     long? LocalidadId,
     long? BarrioId,
 
@@ -47,14 +64,31 @@ public record CreateTerceroCommand(
     // ─── Comercial ────────────────────────────────────────────────────────────
     long? MonedaId,
     long? CategoriaId,
+    long? CategoriaClienteId,
+    long? EstadoClienteId,
+    long? CategoriaProveedorId,
+    long? EstadoProveedorId,
     decimal? LimiteCredito,
+    decimal? PorcentajeMaximoDescuento,
+    DateOnly? VigenciaCreditoDesde,
+    DateOnly? VigenciaCreditoHasta,
     bool Facturable,
     long? CobradorId,
+    bool AplicaComisionCobrador,
     decimal PctComisionCobrador,
     long? VendedorId,
+    bool AplicaComisionVendedor,
     decimal PctComisionVendedor,
     string? Observacion,
 
     // ─── Asignación ───────────────────────────────────────────────────────────
-    long? SucursalId
+    long? SucursalId = null,
+
+    // ─── Bloques funcionales ampliados ───────────────────────────────────────
+    TerceroPerfilComercialPayload? PerfilComercial = null,
+    IReadOnlyList<ReplaceTerceroDomicilioItem>? Domicilios = null,
+    IReadOnlyList<ReplaceTerceroContactoItem>? Contactos = null,
+    IReadOnlyList<ReplaceTerceroSucursalEntregaItem>? SucursalesEntrega = null,
+    IReadOnlyList<ReplaceTerceroTransporteItem>? Transportes = null,
+    IReadOnlyList<ReplaceTerceroVentanaCobranzaItem>? VentanasCobranza = null
 ) : IRequest<Result<long>>;

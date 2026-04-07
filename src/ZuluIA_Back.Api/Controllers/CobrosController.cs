@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using ZuluIA_Back.Application.Features.Comprobantes.Queries;
 using ZuluIA_Back.Application.Features.Finanzas.Commands;
 using ZuluIA_Back.Application.Features.Finanzas.Queries;
 
@@ -40,6 +41,31 @@ public class CobrosController(IMediator mediator) : BaseController(mediator)
     {
         var result = await Mediator.Send(new GetCobroDetalleQuery(id), ct);
         return OkOrNotFound(result);
+    }
+
+    /// <summary>
+    /// Retorna comprobantes pendientes de cobro de un cliente
+    /// con cálculo de mora y saldo actualizado.
+    /// </summary>
+    [HttpGet("clientes/{terceroId:long}/pendientes")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetComprobantesClientePendientes(
+        long terceroId,
+        [FromQuery] long? sucursalId = null,
+        [FromQuery] long? monedaId = null,
+        [FromQuery] bool soloVencidos = false,
+        [FromQuery] DateOnly? fechaHasta = null,
+        CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(
+            new GetComprobantesClientePendientesCobroQuery(
+                terceroId,
+                sucursalId,
+                monedaId,
+                soloVencidos,
+                fechaHasta),
+            ct);
+        return Ok(result);
     }
 
     /// <summary>

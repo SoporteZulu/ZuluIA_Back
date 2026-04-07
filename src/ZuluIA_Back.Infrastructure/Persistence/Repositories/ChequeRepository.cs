@@ -15,6 +15,12 @@ public class ChequeRepository(AppDbContext context)
         long? cajaId,
         long? terceroId,
         EstadoCheque? estado,
+        ZuluIA_Back.Domain.Enums.TipoCheque? tipo,
+        bool? esALaOrden,
+        bool? esCruzado,
+        string? banco,
+        string? nroCheque,
+        string? titular,
         DateOnly? desde,
         DateOnly? hasta,
         CancellationToken ct = default)
@@ -29,6 +35,24 @@ public class ChequeRepository(AppDbContext context)
 
         if (estado.HasValue)
             query = query.Where(x => x.Estado == estado.Value);
+
+        if (tipo.HasValue)
+            query = query.Where(x => x.Tipo == tipo.Value);
+
+        if (esALaOrden.HasValue)
+            query = query.Where(x => x.EsALaOrden == esALaOrden.Value);
+
+        if (esCruzado.HasValue)
+            query = query.Where(x => x.EsCruzado == esCruzado.Value);
+
+        if (!string.IsNullOrWhiteSpace(banco))
+            query = query.Where(x => x.Banco.Contains(banco.Trim()));
+
+        if (!string.IsNullOrWhiteSpace(nroCheque))
+            query = query.Where(x => x.NroCheque.Contains(nroCheque.Trim()));
+
+        if (!string.IsNullOrWhiteSpace(titular))
+            query = query.Where(x => x.Titular != null && x.Titular.Contains(titular.Trim()));
 
         if (desde.HasValue)
             query = query.Where(x => x.FechaEmision >= desde.Value);

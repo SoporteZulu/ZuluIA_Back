@@ -120,6 +120,17 @@ public class LiquidacionSueldoConfiguration : IEntityTypeConfiguration<Liquidaci
                .HasColumnName("pagada")
                .HasDefaultValue(false);
 
+        builder.Property(x => x.ImporteImputado)
+               .HasColumnName("importe_imputado")
+               .HasPrecision(18, 4)
+               .HasDefaultValue(0m);
+
+        builder.Property(x => x.FechaPago)
+               .HasColumnName("fecha_pago");
+
+        builder.Property(x => x.ComprobanteEmpleadoId)
+               .HasColumnName("comprobante_empleado_id");
+
         builder.Property(x => x.Observacion)
                .HasColumnName("observacion");
 
@@ -129,5 +140,6 @@ public class LiquidacionSueldoConfiguration : IEntityTypeConfiguration<Liquidaci
         builder.HasIndex(x => new { x.EmpleadoId, x.Anio, x.Mes }).IsUnique();
         builder.HasIndex(x => x.SucursalId);
         builder.HasIndex(x => x.Pagada);
+        builder.HasIndex(x => x.ComprobanteEmpleadoId);
     }
 }

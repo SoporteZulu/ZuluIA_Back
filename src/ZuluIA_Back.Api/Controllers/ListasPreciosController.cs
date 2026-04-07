@@ -1,11 +1,13 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.ListasPrecios.Commands;
 using ZuluIA_Back.Application.Features.ListasPrecios.Queries;
 
 namespace ZuluIA_Back.Api.Controllers;
 
-public class ListasPreciosController(IMediator mediator) : BaseController(mediator)
+public class ListasPreciosController(IMediator mediator, IApplicationDbContext db) : BaseController(mediator)
 {
     /// <summary>
     /// Retorna todas las listas de precios activas.
@@ -18,6 +20,39 @@ public class ListasPreciosController(IMediator mediator) : BaseController(mediat
         CancellationToken ct = default)
     {
         var result = await Mediator.Send(new GetListasPreciosQuery(fecha), ct);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Retorna las listas de precios paginadas con filtros operativos.
+    /// </summary>
+    [HttpGet("paginado")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPaged(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        [FromQuery] long? monedaId = null,
+        [FromQuery] bool? soloActivas = null,
+        [FromQuery] bool? esPorDefecto = null,
+        [FromQuery] bool? soloVigentes = null,
+        [FromQuery] DateOnly? fecha = null,
+        [FromQuery] long? listaPadreId = null,
+        CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(
+            new GetListasPreciosPagedQuery(
+                page,
+                pageSize,
+                search,
+                monedaId,
+                soloActivas,
+                esPorDefecto,
+                soloVigentes,
+                fecha,
+                listaPadreId),
+            ct);
+
         return Ok(result);
     }
 
@@ -45,6 +80,37 @@ public class ListasPreciosController(IMediator mediator) : BaseController(mediat
         CancellationToken ct)
     {
         var result = await Mediator.Send(new GetPrecioItemQuery(id, itemId), ct);
+        return OkOrNotFound(result);
+    }
+
+    /// <summary>
+    /// Resuelve el precio final aplicable para un ítem considerando listas,
+    /// herencia, promociones y precios especiales.
+    /// </summary>
+    [HttpGet("resolver/{itemId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ResolvePrecio(
+        long itemId,
+        [FromQuery] long monedaId,
+        [FromQuery] DateOnly? fecha = null,
+        [FromQuery] long? terceroId = null,
+        [FromQuery] long? listaPreciosId = null,
+        [FromQuery] long? canalVentaId = null,
+        [FromQuery] long? vendedorId = null,
+        CancellationToken ct = default)
+    {
+        var result = await Mediator.Send(
+            new ResolvePrecioListaQuery(
+                itemId,
+                monedaId,
+                fecha ?? DateOnly.FromDateTime(DateTime.Today),
+                terceroId,
+                listaPreciosId,
+                canalVentaId,
+                vendedorId),
+            ct);
+
         return OkOrNotFound(result);
     }
 
@@ -97,6 +163,18 @@ public class ListasPreciosController(IMediator mediator) : BaseController(mediat
     }
 
     /// <summary>
+    /// Reactiva una lista de precios desactivada.
+    /// </summary>
+    [HttpPatch("{id:long}/activar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Activar(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new ActivateListaPreciosCommand(id), ct);
+        return FromResult(result);
+    }
+
+    /// <summary>
     /// Agrega o actualiza el precio de un ítem dentro de la lista.
     /// Si el ítem ya existe en la lista, actualiza su precio.
     /// Si no existe, lo agrega.
@@ -130,6 +208,58 @@ public class ListasPreciosController(IMediator mediator) : BaseController(mediat
     {
         var result = await Mediator.Send(new RemoveItemDeListaCommand(id, itemId), ct);
         return FromResult(result);
+    }
+
+    // ── Personas asignadas (LISTASPRECIOSPERSONAS) ─────────────────────────────────
+
+    /// <summary>
+    /// Retorna las personas asignadas a una lista de precios.
+    /// VB6: frmListasPrecios / LISTASPRECIOSPERSONAS.
+    /// </summary>
+    [HttpGet("{id:long}/personas")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPersonas(long id, CancellationToken ct)
+    {
+        var lista = await db.ListasPreciosPersonas
+            .AsNoTracking()
+            .Where(x => x.ListaPreciosId == id)
+            .Select(x => new { x.Id, x.ListaPreciosId, x.PersonaId })
+            .ToListAsync(ct);
+        return Ok(lista);
+    }
+
+    /// <summary>
+    /// Asigna una persona a una lista de precios.
+    /// VB6: frmListasPrecios / LISTASPRECIOSPERSONAS (INSERT).
+    /// </summary>
+    [HttpPost("{id:long}/personas/{personaId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AddPersona(long id, long personaId, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new AddPersonaAListaPreciosCommand(id, personaId), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("ya está asignada", StringComparison.OrdinalIgnoreCase) == true
+                ? Conflict(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
+
+        return Ok(new { Id = result.Value });
+    }
+
+    /// <summary>
+    /// Quita una persona de la lista de precios.
+    /// VB6: frmListasPrecios / LISTASPRECIOSPERSONAS (DELETE).
+    /// </summary>
+    [HttpDelete("{id:long}/personas/{personaId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemovePersona(long id, long personaId, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new RemovePersonaDeListaPreciosCommand(id, personaId), ct);
+        if (result.IsFailure)
+            return NotFound(new { error = result.Error });
+
+        return Ok();
     }
 }
 

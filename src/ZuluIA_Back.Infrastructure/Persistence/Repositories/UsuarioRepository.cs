@@ -16,6 +16,19 @@ public class UsuarioRepository(AppDbContext context)
             .FirstOrDefaultAsync(x =>
                 x.UserName == userName.Trim().ToLowerInvariant(), ct);
 
+    public async Task<Usuario?> GetByUserNameOrEmailAsync(
+        string login,
+        CancellationToken ct = default)
+    {
+        var normalizedLogin = login.Trim().ToLowerInvariant();
+
+        return await DbSet
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x =>
+                x.UserName == normalizedLogin ||
+                (x.Email != null && x.Email == normalizedLogin), ct);
+    }
+
     public async Task<Usuario?> GetBySupabaseIdAsync(
         Guid supabaseId,
         CancellationToken ct = default) =>

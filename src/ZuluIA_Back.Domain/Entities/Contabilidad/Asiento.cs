@@ -85,6 +85,15 @@ public class Asiento : AuditableEntity
         SetUpdated(userId);
     }
 
+    public void Renumerar(long numero, long? userId)
+    {
+        if (numero <= 0)
+            throw new InvalidOperationException("El número del asiento debe ser mayor a 0.");
+
+        Numero = numero;
+        SetUpdated(userId);
+    }
+
     public decimal TotalDebe => _lineas.Sum(x => x.Debe);
     public decimal TotalHaber => _lineas.Sum(x => x.Haber);
     public bool Balancea => Math.Abs(TotalDebe - TotalHaber) <= 0.01m;

@@ -10,8 +10,7 @@ namespace ZuluIA_Back.Api.Controllers;
 
 public class OrdenesTrabajosController(
     IMediator mediator,
-    IOrdenTrabajoRepository repo,
-    IApplicationDbContext db)
+    IOrdenTrabajoRepository repo)
     : BaseController(mediator)
 {
     /// <summary>
@@ -94,13 +93,11 @@ public class OrdenesTrabajosController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Iniciar(long id, CancellationToken ct)
     {
-        var ot = await repo.GetByIdAsync(id, ct);
-        if (ot is null)
-            return NotFound(new { error = $"No se encontró la OT con ID {id}." });
-
-        ot.Iniciar(null);
-        repo.Update(ot);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new IniciarOrdenTrabajoCommand(id), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("no se encontro", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Orden de trabajo iniciada correctamente." });
     }
@@ -132,13 +129,11 @@ public class OrdenesTrabajosController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Cancelar(long id, CancellationToken ct)
     {
-        var ot = await repo.GetByIdAsync(id, ct);
-        if (ot is null)
-            return NotFound(new { error = $"No se encontró la OT con ID {id}." });
-
-        ot.Cancelar(null);
-        repo.Update(ot);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new CancelarOrdenTrabajoCommand(id), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("no se encontro", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Orden de trabajo cancelada correctamente." });
     }

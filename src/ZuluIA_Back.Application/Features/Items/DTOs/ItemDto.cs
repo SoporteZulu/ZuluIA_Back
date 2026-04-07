@@ -1,18 +1,50 @@
 ﻿namespace ZuluIA_Back.Application.Features.Items.DTOs;
 
+public class ItemListaPrecioDto
+{
+    public long ListaId { get; set; }
+    public string ListaDescripcion { get; set; } = string.Empty;
+    public long MonedaId { get; set; }
+    public DateOnly? VigenciaDesde { get; set; }
+    public DateOnly? VigenciaHasta { get; set; }
+    public bool Activa { get; set; }
+    public decimal Precio { get; set; }
+    public decimal DescuentoPct { get; set; }
+    public decimal PrecioFinal { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
+public class ItemAtributoComercialDto
+{
+    public long Id { get; set; }
+    public long AtributoComercialId { get; set; }
+    public string AtributoCodigo { get; set; } = string.Empty;
+    public string AtributoDescripcion { get; set; } = string.Empty;
+    public string TipoDato { get; set; } = string.Empty;
+    public string Valor { get; set; } = string.Empty;
+}
+
 public class ItemDto
 {
     public long Id { get; set; }
     public string Codigo { get; set; } = string.Empty;
+    public string? CodigoAlternativo { get; set; }
     public string? CodigoBarras { get; set; }
     public string Descripcion { get; set; } = string.Empty;
     public string? DescripcionAdicional { get; set; }
     public long? CategoriaId { get; set; }
     public string? CategoriaDescripcion { get; set; }
+    public long? MarcaId { get; set; }
+    public string? MarcaDescripcion { get; set; }
     public long UnidadMedidaId { get; set; }
     public string? UnidadMedidaDescripcion { get; set; }
     public long AlicuotaIvaId { get; set; }
     public decimal AlicuotaIvaPorcentaje { get; set; }
+    public long? AlicuotaIvaCompraId { get; set; }
+    public decimal? AlicuotaIvaCompraPorcentaje { get; set; }
+    public string? AlicuotaIvaCompraDescripcion { get; set; }
+    public long? ImpuestoInternoId { get; set; }
+    public string? ImpuestoInternoDescripcion { get; set; }
     public long MonedaId { get; set; }
     public bool EsProducto { get; set; }
     public bool EsServicio { get; set; }
@@ -20,11 +52,37 @@ public class ItemDto
     public bool ManejaStock { get; set; }
     public decimal PrecioCosto { get; set; }
     public decimal PrecioVenta { get; set; }
+    public decimal Stock { get; set; }
+    public decimal StockDisponible { get; set; }
+    public decimal StockComprometido { get; set; }
+    public decimal StockReservado { get; set; }
+    public decimal StockEnTransito { get; set; }
     public decimal StockMinimo { get; set; }
     public decimal? StockMaximo { get; set; }
+    public decimal? PuntoReposicion { get; set; }
+    public decimal? StockSeguridad { get; set; }
+    public decimal? Peso { get; set; }
+    public decimal? Volumen { get; set; }
+    public bool EsTrazable { get; set; }
+    public bool PermiteFraccionamiento { get; set; }
+    public int? DiasVencimientoLimite { get; set; }
+    public long? DepositoDefaultId { get; set; }
+    public string? DepositoDefaultDescripcion { get; set; }
     public string? CodigoAfip { get; set; }
     public long? SucursalId { get; set; }
     public bool Activo { get; set; }
+    public bool AplicaVentas { get; set; }
+    public bool AplicaCompras { get; set; }
+    public decimal? PorcentajeGanancia { get; set; }
+    public decimal? PorcentajeMaximoDescuento { get; set; }
+    public bool EsRpt { get; set; }
+    public bool EsSistema { get; set; }
+    public bool EsPack { get; set; }
+    public decimal? PrecioVentaCalculado { get; set; }
+    public bool PuedeEditar { get; set; }
+    public IReadOnlyList<ItemListaPrecioDto> ListasPrecios { get; set; } = [];
+    public IReadOnlyList<ItemAtributoComercialDto> AtributosComerciales { get; set; } = [];
+    public IReadOnlyList<ItemPackComponenteDto> Componentes { get; set; } = [];
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }

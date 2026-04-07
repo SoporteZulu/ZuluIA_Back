@@ -1,0 +1,9 @@
+curl: (56) Recv failure: Connection was reset
+curl: (7) Failed to connect to localhost port 5001 after 2235 ms: Could not connect to server
+curl devolvi형 c형digo 7 para /swagger/v1/swagger.json.
+En C:\Zulu\ZuluIA_Back\scripts\smoke\Invoke-ZuluIAApiSmoke.ps1: 478 Car쟠ter: 17
++ ...             throw "curl devolvi형 c형digo $curlExitCode para $current ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (curl devolvi형 ...1/swagger.json.:String) [], RuntimeException
+    + FullyQualifiedErrorId : curl devolvi형 c형digo 7 para /swagger/v1/swagger.json.
+ 

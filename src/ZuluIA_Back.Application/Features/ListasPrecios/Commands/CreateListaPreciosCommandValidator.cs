@@ -13,6 +13,18 @@ public class CreateListaPreciosCommandValidator : AbstractValidator<CreateListaP
         RuleFor(x => x.MonedaId)
             .GreaterThan(0).WithMessage("La moneda es obligatoria.");
 
+        RuleFor(x => x.ListaPadreId)
+            .GreaterThan(0)
+            .When(x => x.ListaPadreId.HasValue)
+            .WithMessage("La lista padre es inválida.");
+
+        RuleFor(x => x.Prioridad)
+            .GreaterThanOrEqualTo(0)
+            .WithMessage("La prioridad no puede ser negativa.");
+
+        RuleFor(x => x.Observaciones)
+            .MaximumLength(500);
+
         RuleFor(x => x.VigenciaHasta)
             .GreaterThanOrEqualTo(x => x.VigenciaDesde)
             .When(x => x.VigenciaDesde.HasValue && x.VigenciaHasta.HasValue)

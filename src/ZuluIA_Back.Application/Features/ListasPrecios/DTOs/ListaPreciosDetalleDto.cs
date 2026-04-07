@@ -11,6 +11,10 @@ public class ListaPreciosDetalleDto
     public DateOnly? VigenciaDesde { get; set; }
     public DateOnly? VigenciaHasta { get; set; }
     public bool Activa { get; set; }
+    public bool EsPorDefecto { get; set; }
+    public long? ListaPadreId { get; set; }
+    public int Prioridad { get; set; }
+    public string? Observaciones { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public IReadOnlyList<ListaPreciosItemDto> Items { get; set; } = [];

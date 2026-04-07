@@ -13,6 +13,9 @@ public interface IItemRepository : IRepository<Item>
         long? categoriaId,
         bool? soloActivos,
         bool? soloConStock,
+        bool? soloProductos,
+        bool? soloServicios,
+        bool? soloVendibles,
         CancellationToken ct = default);
 
     // Paginado con filtros básicos (por productos/servicios y sucursal)

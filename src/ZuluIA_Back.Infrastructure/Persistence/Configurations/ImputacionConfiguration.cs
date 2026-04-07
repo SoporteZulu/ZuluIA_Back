@@ -25,6 +25,24 @@ public class ImputacionConfiguration : IEntityTypeConfiguration<Imputacion>
         builder.Property(x => x.Fecha)
                .HasColumnName("fecha").IsRequired();
 
+        builder.Property(x => x.Anulada)
+               .HasColumnName("anulada")
+               .HasDefaultValue(false)
+               .IsRequired();
+
+        builder.Property(x => x.FechaDesimputacion)
+               .HasColumnName("fecha_desimputacion");
+
+        builder.Property(x => x.MotivoDesimputacion)
+               .HasColumnName("motivo_desimputacion")
+               .HasMaxLength(500);
+
+        builder.Property(x => x.DesimputadaAt)
+               .HasColumnName("desimputada_at");
+
+        builder.Property(x => x.DesimputadaBy)
+               .HasColumnName("desimputada_by");
+
         builder.Property(x => x.CreatedAt)
                .HasColumnName("created_at");
 
@@ -34,5 +52,6 @@ public class ImputacionConfiguration : IEntityTypeConfiguration<Imputacion>
         builder.HasIndex(x => x.ComprobanteOrigenId);
         builder.HasIndex(x => x.ComprobanteDestinoId);
         builder.HasIndex(x => x.Fecha);
+        builder.HasIndex(x => x.Anulada);
     }
 }

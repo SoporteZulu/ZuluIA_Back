@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Storage;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Infrastructure.Persistence;
@@ -10,6 +11,27 @@ public class UnitOfWork(AppDbContext context) : IUnitOfWork
 
     public async Task<int> SaveChangesAsync(CancellationToken ct = default) =>
         await context.SaveChangesAsync(ct);
+
+    public async Task ExecuteInTransactionAsync(Func<CancellationToken, Task> operation, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        var strategy = context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await context.Database.BeginTransactionAsync(ct);
+            try
+            {
+                await operation(ct);
+                await transaction.CommitAsync(ct);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
+        });
+    }
 
     public async Task BeginTransactionAsync(CancellationToken ct = default) =>
         _transaction = await context.Database.BeginTransactionAsync(ct);

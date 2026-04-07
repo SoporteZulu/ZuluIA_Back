@@ -1,0 +1,27 @@
+using MediatR;
+using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Domain.Common;
+using ZuluIA_Back.Domain.Entities.Extras;
+using ZuluIA_Back.Domain.Interfaces;
+
+namespace ZuluIA_Back.Application.Features.Extras.Commands;
+
+public class RotateIntegradoraApiKeyCommandHandler(
+    IRepository<Integradora> repo,
+    IUnitOfWork uow,
+    ICurrentUserService currentUser)
+    : IRequestHandler<RotateIntegradoraApiKeyCommand, Result>
+{
+    public async Task<Result> Handle(RotateIntegradoraApiKeyCommand request, CancellationToken ct)
+    {
+        var entity = await repo.GetByIdAsync(request.Id, ct);
+        if (entity is null)
+            return Result.Failure($"Integradora {request.Id} no encontrada.");
+
+        entity.RotarApiKey(request.NuevaApiKey, currentUser.UserId);
+        repo.Update(entity);
+        await uow.SaveChangesAsync(ct);
+
+        return Result.Success();
+    }
+}

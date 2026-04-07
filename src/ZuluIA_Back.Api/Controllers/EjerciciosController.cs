@@ -10,8 +10,7 @@ namespace ZuluIA_Back.Api.Controllers;
 
 public class EjerciciosController(
     IMediator mediator,
-    IEjercicioRepository repo,
-    IApplicationDbContext db)
+    IEjercicioRepository repo)
     : BaseController(mediator)
 {
     /// <summary>
@@ -99,13 +98,11 @@ public class EjerciciosController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Cerrar(long id, CancellationToken ct)
     {
-        var ejercicio = await repo.GetByIdAsync(id, ct);
-        if (ejercicio is null)
-            return NotFound(new { error = $"No se encontró el ejercicio con ID {id}." });
-
-        ejercicio.Cerrar();
-        repo.Update(ejercicio);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new CerrarEjercicioCommand(id), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("No se encontró", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Ejercicio cerrado correctamente." });
     }
@@ -119,13 +116,11 @@ public class EjerciciosController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Reabrir(long id, CancellationToken ct)
     {
-        var ejercicio = await repo.GetByIdAsync(id, ct);
-        if (ejercicio is null)
-            return NotFound(new { error = $"No se encontró el ejercicio con ID {id}." });
-
-        ejercicio.Reabrir();
-        repo.Update(ejercicio);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new ReabrirEjercicioCommand(id), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("No se encontró", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Ejercicio reabierto correctamente." });
     }
@@ -142,13 +137,14 @@ public class EjerciciosController(
         [FromBody] AsignarSucursalEjercicioRequest request,
         CancellationToken ct)
     {
-        var ejercicio = await repo.GetByIdConSucursalesAsync(id, ct);
-        if (ejercicio is null)
-            return NotFound(new { error = $"No se encontró el ejercicio con ID {id}." });
+        var result = await Mediator.Send(
+            new AsignarSucursalEjercicioCommand(id, request.SucursalId, request.UsaContabilidad),
+            ct);
 
-        ejercicio.AsignarSucursal(request.SucursalId, request.UsaContabilidad);
-        repo.Update(ejercicio);
-        await db.SaveChangesAsync(ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("No se encontró", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new { mensaje = "Sucursal asignada al ejercicio correctamente." });
     }

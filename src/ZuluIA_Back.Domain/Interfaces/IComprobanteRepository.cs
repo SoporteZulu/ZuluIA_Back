@@ -37,4 +37,25 @@ public interface IComprobanteRepository : IRepository<Comprobante>
         long terceroId,
         long? sucursalId,
         CancellationToken ct = default);
+
+    Task<IReadOnlyList<Comprobante>> GetDevolucionesPendientesAutorizacionAsync(
+        long? sucursalId,
+        DateOnly? desde,
+        DateOnly? hasta,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<Comprobante>> GetDevolucionesByMotivoAsync(
+        MotivoDevolucion motivo,
+        long? terceroId,
+        DateOnly? desde,
+        DateOnly? hasta,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<Comprobante>> GetPedidosPendientesAsync(
+        long? terceroId,
+        long? sucursalId,
+        bool? soloAtrasados,
+        DateOnly? fechaEntregaDesde,
+        DateOnly? fechaEntregaHasta,
+        CancellationToken ct = default);
 }

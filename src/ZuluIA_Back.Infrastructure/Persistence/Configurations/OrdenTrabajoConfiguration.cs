@@ -44,6 +44,10 @@ public class OrdenTrabajoConfiguration : IEntityTypeConfiguration<OrdenTrabajo>
                .HasPrecision(18, 4)
                .IsRequired();
 
+        builder.Property(x => x.CantidadProducida)
+               .HasColumnName("cantidad_producida")
+               .HasPrecision(18, 4);
+
         builder.Property(x => x.Estado)
                .HasColumnName("estado")
                .HasConversion(

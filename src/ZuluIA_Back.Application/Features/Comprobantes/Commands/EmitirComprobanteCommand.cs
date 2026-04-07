@@ -12,7 +12,18 @@ public record ComprobanteItemInput(
     decimal DescuentoPct,
     long AlicuotaIvaId,
     long? DepositoId,
-    short Orden);
+    short Orden,
+    string? Lote = null,
+    string? Serie = null,
+    DateOnly? FechaVencimiento = null,
+    long? UnidadMedidaId = null,
+    string? ObservacionRenglon = null,
+    decimal? PrecioListaOriginal = null,
+    decimal? ComisionVendedorRenglon = null,
+    long? ComprobanteItemOrigenId = null,
+    decimal? CantidadDocumentoOrigen = null,
+    decimal? PrecioDocumentoOrigen = null
+);
 
 public record EmitirComprobanteCommand(
     long? Id, // Si es null, crea; si tiene valor, emite el comprobante existente

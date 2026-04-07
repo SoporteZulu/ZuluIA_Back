@@ -23,4 +23,13 @@ public class Localidad : AuditableEntity
             CodigoPostal = codigoPostal?.Trim()
         };
     }
+
+    public void Actualizar(long provinciaId, string descripcion, string? codigoPostal = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(descripcion);
+
+        ProvinciaId = provinciaId;
+        Descripcion = descripcion.Trim();
+        CodigoPostal = codigoPostal?.Trim();
+    }
 }

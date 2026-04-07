@@ -12,6 +12,11 @@ public class Imputacion : BaseEntity
     public long ComprobanteDestinoId { get; private set; }
     public decimal Importe { get; private set; }
     public DateOnly Fecha { get; private set; }
+    public bool Anulada { get; private set; }
+    public DateOnly? FechaDesimputacion { get; private set; }
+    public string? MotivoDesimputacion { get; private set; }
+    public DateTimeOffset? DesimputadaAt { get; private set; }
+    public long? DesimputadaBy { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public long? CreatedBy { get; private set; }
 
@@ -38,8 +43,21 @@ public class Imputacion : BaseEntity
             ComprobanteDestinoId = comprobanteDestinoId,
             Importe              = importe,
             Fecha                = fecha,
+            Anulada              = false,
             CreatedAt            = DateTimeOffset.UtcNow,
             CreatedBy            = userId
         };
+    }
+
+    public void Desimputar(DateOnly fecha, string? motivo, long? userId)
+    {
+        if (Anulada)
+            throw new InvalidOperationException("La imputación ya fue desimputada.");
+
+        FechaDesimputacion = fecha;
+        MotivoDesimputacion = motivo?.Trim();
+        DesimputadaAt = DateTimeOffset.UtcNow;
+        DesimputadaBy = userId;
+        Anulada = true;
     }
 }

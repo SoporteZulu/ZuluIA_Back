@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Finanzas.Commands;
 using ZuluIA_Back.Application.Features.Finanzas.DTOs;
 using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Interfaces;
@@ -117,22 +118,23 @@ public class CedulonesController(
         [FromBody] CreateCedulonRequest request,
         CancellationToken ct)
     {
-        var cedulon = Domain.Entities.Finanzas.Cedulon.Crear(
-            request.TerceroId,
-            request.SucursalId,
-            request.PlanPagoId,
-            request.NroCedulon,
-            request.FechaEmision,
-            request.FechaVencimiento,
-            request.Importe,
-            null);
+        var result = await Mediator.Send(
+            new CreateCedulonCommand(
+                request.TerceroId,
+                request.SucursalId,
+                request.PlanPagoId,
+                request.NroCedulon,
+                request.FechaEmision,
+                request.FechaVencimiento,
+                request.Importe),
+            ct);
 
-        await repo.AddAsync(cedulon, ct);
-        await db.SaveChangesAsync(ct);
+        if (result.IsFailure)
+            return BadRequest(new { error = result.Error });
 
         return CreatedAtRoute("GetCedulonById",
-            new { id = cedulon.Id },
-            new { id = cedulon.Id });
+            new { id = result.Value },
+            new { id = result.Value });
     }
 
     /// <summary>
@@ -147,20 +149,39 @@ public class CedulonesController(
         [FromBody] PagarCedulonRequest request,
         CancellationToken ct)
     {
-        var cedulon = await repo.GetByIdAsync(id, ct);
-        if (cedulon is null)
-            return NotFound(new { error = $"No se encontró el cedulón con ID {id}." });
-
-        cedulon.RegistrarPago(request.Importe, null);
-        repo.Update(cedulon);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new PagarCedulonCommand(id, request.Importe), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("No se encontro", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
 
         return Ok(new
         {
             mensaje = "Pago registrado correctamente.",
-            importePagado = cedulon.ImportePagado,
-            saldoPendiente = cedulon.Importe - cedulon.ImportePagado,
-            estado = cedulon.Estado.ToString().ToUpperInvariant()
+            importePagado = result.Value.ImportePagado,
+            saldoPendiente = result.Value.SaldoPendiente,
+            estado = result.Value.Estado
+        });
+    }
+
+    /// <summary>
+    /// Marca un cedulón como vencido.
+    /// </summary>
+    [HttpPost("{id:long}/vencer")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Vencer(long id, CancellationToken ct)
+    {
+        var result = await Mediator.Send(new VencerCedulonCommand(id), ct);
+        if (result.IsFailure)
+            return result.Error?.Contains("No se encontro", StringComparison.OrdinalIgnoreCase) == true
+                ? NotFound(new { error = result.Error })
+                : BadRequest(new { error = result.Error });
+
+        return Ok(new
+        {
+            mensaje = "Cedulón marcado como vencido correctamente.",
+            estado = result.Value
         });
     }
 

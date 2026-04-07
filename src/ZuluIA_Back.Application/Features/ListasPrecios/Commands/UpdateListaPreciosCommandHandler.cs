@@ -24,7 +24,11 @@ public class UpdateListaPreciosCommandHandler(
             request.MonedaId,
             request.VigenciaDesde,
             request.VigenciaHasta,
-            currentUser.UserId);
+            currentUser.UserId,
+            request.EsPorDefecto,
+            request.ListaPadreId,
+            request.Prioridad,
+            request.Observaciones);
 
         repo.Update(lista);
         await uow.SaveChangesAsync(ct);

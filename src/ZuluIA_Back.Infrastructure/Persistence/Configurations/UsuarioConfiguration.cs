@@ -28,6 +28,10 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
                .HasColumnName("email")
                .HasMaxLength(150);
 
+        builder.Property(x => x.PasswordHash)
+               .HasColumnName("password_hash")
+               .HasMaxLength(500);
+
         builder.Property(x => x.Activo)
                .HasColumnName("activo")
                .HasDefaultValue(true);

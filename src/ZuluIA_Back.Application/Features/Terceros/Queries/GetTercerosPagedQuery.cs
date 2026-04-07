@@ -20,8 +20,13 @@ public record GetTercerosPagedQuery(
     bool? SoloEmpleados = null,
 
     // ─── Filtros dimensionales ────────────────────────────────────────────────
-    bool? SoloActivos = true,   // Por defecto muestra solo activos
+    bool? SoloActivos = true,   // true: solo activos; false/null: todos
     long? CondicionIvaId = null,
     long? CategoriaId = null,
+    long? EstadoPersonaId = null,
+    long? CategoriaClienteId = null,
+    long? EstadoClienteId = null,
+    long? CategoriaProveedorId = null,
+    long? EstadoProveedorId = null,
     long? SucursalId = null
 ) : IRequest<PagedResult<TerceroListDto>>;

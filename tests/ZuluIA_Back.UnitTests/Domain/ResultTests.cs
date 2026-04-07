@@ -62,4 +62,20 @@ public class ResultTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be("valor");
     }
+
+    [Fact]
+    public void Failure_ErrorVacio_LanzaGuardException()
+    {
+        var act = () => Result.Failure("");
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Failure_ErrorEspacios_LanzaGuardException()
+    {
+        var act = () => Result.Failure("   ");
+
+        act.Should().Throw<InvalidOperationException>();
+    }
 }

@@ -2,14 +2,17 @@
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Items.DTOs;
+using ZuluIA_Back.Application.Features.Items.Services;
+using ZuluIA_Back.Application.Features.ListasPrecios.Services;
 using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Application.Features.Items.Queries;
 
 public class GetItemPrecioQueryHandler(
     IItemRepository itemRepo,
-    IListaPreciosRepository preciosRepo,
-    IApplicationDbContext db)
+    IApplicationDbContext db,
+    PrecioListaResolutionService precioListaResolutionService,
+    ItemCommercialStockService itemCommercialStockService)
     : IRequestHandler<GetItemPrecioQuery, ItemPrecioDto?>
 {
     public async Task<ItemPrecioDto?> Handle(
@@ -19,6 +22,9 @@ public class GetItemPrecioQueryHandler(
         var item = await itemRepo.GetByIdAsync(request.ItemId, ct);
         if (item is null) return null;
 
+        if (!item.Activo || !item.AplicaVentas || item.EsFinanciero || (!item.EsProducto && !item.EsServicio))
+            return null;
+
         var alicuota = await db.AlicuotasIva
             .AsNoTracking()
             .Where(x => x.Id == item.AlicuotaIvaId)
@@ -27,27 +33,28 @@ public class GetItemPrecioQueryHandler(
 
         var precioVenta = item.PrecioVenta;
 
-        // Resolver precio desde lista si se especificó
-        if (request.ListaPreciosId.HasValue)
+        if (request.MonedaId.HasValue && request.Fecha.HasValue)
         {
-            var precioLista = await preciosRepo.GetPrecioItemAsync(
-                request.ListaPreciosId.Value, request.ItemId, ct);
-
-            if (precioLista is not null)
-                precioVenta = precioLista.PrecioFinal;
-        }
-        else if (request.MonedaId.HasValue && request.Fecha.HasValue)
-        {
-            // Resolver automáticamente por moneda y fecha
-            var precioAuto = await preciosRepo.ResolverPrecioItemAsync(
+            var precioResuelto = await precioListaResolutionService.ResolveAsync(
                 request.ItemId,
                 request.MonedaId.Value,
                 request.Fecha.Value,
-                ct);
+                request.TerceroId,
+                request.ListaPreciosId,
+                request.CanalVentaId,
+                request.VendedorId,
+                item.CategoriaId,
+                ct: ct);
 
-            if (precioAuto is not null)
-                precioVenta = precioAuto.PrecioFinal;
+            if (precioResuelto is not null)
+            {
+                precioVenta = precioResuelto.PrecioFinal;
+            }
         }
+
+        var stockSnapshot = item.ManejaStock
+            ? await itemCommercialStockService.GetSnapshotAsync(item.Id, ct)
+            : default;
 
         return new ItemPrecioDto
         {
@@ -60,7 +67,14 @@ public class GetItemPrecioQueryHandler(
             PrecioCosto           = item.PrecioCosto,
             PrecioVenta           = precioVenta,
             MonedaId              = item.MonedaId,
-            ManejaStock           = item.ManejaStock
+            ManejaStock           = item.ManejaStock,
+            Activo                = item.Activo,
+            AplicaVentas          = item.AplicaVentas,
+            EsVendible            = item.Activo && item.AplicaVentas && !item.EsFinanciero,
+            Stock                 = stockSnapshot.Stock,
+            StockComprometido     = stockSnapshot.StockComprometido,
+            StockReservado        = stockSnapshot.StockReservado,
+            StockDisponible       = stockSnapshot.StockDisponible
         };
     }
 }

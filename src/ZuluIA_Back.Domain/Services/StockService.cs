@@ -1,11 +1,11 @@
-ï»¿using ZuluIA_Back.Domain.Entities.Stock;
+using ZuluIA_Back.Domain.Entities.Stock;
 using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Domain.Services;
 
 /// <summary>
-/// Servicio de dominio que centraliza toda la lÃ³gica de movimientos de stock.
+/// Servicio de dominio que centraliza toda la lógica de movimientos de stock.
 /// Garantiza que por cada movimiento de stock se registre su trazabilidad.
 /// </summary>
 public class StockService(
@@ -15,7 +15,7 @@ public class StockService(
     /// <summary>
     /// Registra un ingreso de stock y su movimiento asociado.
     /// </summary>
-    public async Task<MovimientoStock> IngresarAsync(
+    public virtual async Task<MovimientoStock> IngresarAsync(
         long itemId,
         long depositoId,
         decimal cantidad,
@@ -42,7 +42,7 @@ public class StockService(
     /// <summary>
     /// Registra un egreso de stock y su movimiento asociado.
     /// </summary>
-    public async Task<MovimientoStock> EgresarAsync(
+    public virtual async Task<MovimientoStock> EgresarAsync(
         long itemId,
         long depositoId,
         decimal cantidad,
@@ -68,10 +68,10 @@ public class StockService(
     }
 
     /// <summary>
-    /// Ajusta el stock a una cantidad especÃ­fica.
+    /// Ajusta el stock a una cantidad específica.
     /// Genera el movimiento correspondiente (positivo o negativo).
     /// </summary>
-    public async Task<MovimientoStock> AjustarAsync(
+    public virtual async Task<MovimientoStock> AjustarAsync(
         long itemId,
         long depositoId,
         decimal nuevaCantidad,
@@ -97,10 +97,10 @@ public class StockService(
     }
 
     /// <summary>
-    /// Transfiere stock entre dos depÃ³sitos.
+    /// Transfiere stock entre dos depósitos.
     /// Genera dos movimientos: salida del origen y entrada al destino.
     /// </summary>
-    public async Task TransferirAsync(
+    public virtual async Task TransferirAsync(
         long itemId,
         long depositoOrigenId,
         long depositoDestinoId,
@@ -111,7 +111,7 @@ public class StockService(
     {
         if (depositoOrigenId == depositoDestinoId)
             throw new InvalidOperationException(
-                "El depÃ³sito de origen y destino no pueden ser el mismo.");
+                "El depósito de origen y destino no pueden ser el mismo.");
 
         await EgresarAsync(
             itemId, depositoOrigenId, cantidad,

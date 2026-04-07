@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
+using ZuluIA_Back.Application.Features.Extras.Commands;
 using ZuluIA_Back.Application.Features.Extras.DTOs;
 
 namespace ZuluIA_Back.Api.Controllers;
@@ -58,17 +59,19 @@ public class BusquedasController(
         [FromBody] CreateBusquedaRequest request,
         CancellationToken ct)
     {
-        var busqueda = Domain.Entities.Extras.Busqueda.Crear(
-            request.Nombre,
-            request.Modulo,
-            request.FiltrosJson,
-            request.UsuarioId,
-            request.EsGlobal);
+        var result = await Mediator.Send(
+            new CreateBusquedaCommand(
+                request.Nombre,
+                request.Modulo,
+                request.FiltrosJson,
+                request.UsuarioId,
+                request.EsGlobal),
+            ct);
 
-        await db.Busquedas.AddAsync(busqueda, ct);
-        await db.SaveChangesAsync(ct);
+        if (result.IsFailure)
+            return BadRequest(new { error = result.Error });
 
-        return Ok(new { id = busqueda.Id });
+        return Ok(new { id = result.Value });
     }
 
     /// <summary>
@@ -82,19 +85,16 @@ public class BusquedasController(
         [FromBody] UpdateBusquedaRequest request,
         CancellationToken ct)
     {
-        var busqueda = await db.Busquedas
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
+        var result = await Mediator.Send(
+            new UpdateBusquedaCommand(
+                id,
+                request.Nombre,
+                request.FiltrosJson,
+                request.EsGlobal),
+            ct);
 
-        if (busqueda is null)
-            return NotFound(new { error = $"No se encontró la búsqueda con ID {id}." });
-
-        busqueda.Actualizar(
-            request.Nombre,
-            request.FiltrosJson,
-            request.EsGlobal);
-
-        db.Busquedas.Update(busqueda);
-        await db.SaveChangesAsync(ct);
+        if (result.IsFailure)
+            return NotFound(new { error = result.Error });
 
         return Ok(new { mensaje = "Búsqueda actualizada correctamente." });
     }
@@ -107,14 +107,9 @@ public class BusquedasController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(long id, CancellationToken ct)
     {
-        var busqueda = await db.Busquedas
-            .FirstOrDefaultAsync(x => x.Id == id, ct);
-
-        if (busqueda is null)
-            return NotFound(new { error = $"No se encontró la búsqueda con ID {id}." });
-
-        db.Busquedas.Remove(busqueda);
-        await db.SaveChangesAsync(ct);
+        var result = await Mediator.Send(new DeleteBusquedaCommand(id), ct);
+        if (result.IsFailure)
+            return NotFound(new { error = result.Error });
 
         return Ok(new { mensaje = "Búsqueda eliminada correctamente." });
     }

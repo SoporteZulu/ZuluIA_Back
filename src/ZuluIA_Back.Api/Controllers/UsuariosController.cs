@@ -1,10 +1,13 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using ZuluIA_Back.Api.Security;
 using ZuluIA_Back.Application.Features.Usuarios.Commands;
 using ZuluIA_Back.Application.Features.Usuarios.Queries;
 
 namespace ZuluIA_Back.Api.Controllers;
 
+[RequirePermission("USUARIOS.ADMIN")]
+[AuditCriticalOperation("USUARIOS_ADMIN")]
 public class UsuariosController(IMediator mediator) : BaseController(mediator)
 {
     /// <summary>
@@ -116,6 +119,7 @@ public class UsuariosController(IMediator mediator) : BaseController(mediator)
     /// Desactiva un usuario (soft delete).
     /// </summary>
     [HttpDelete("{id:long}")]
+    [RequirePermission("USUARIOS.DELETE")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(long id, CancellationToken ct)
@@ -128,6 +132,7 @@ public class UsuariosController(IMediator mediator) : BaseController(mediator)
     /// Reemplaza los ítems de menú asignados a un usuario.
     /// </summary>
     [HttpPut("{id:long}/menu")]
+    [RequirePermission("USUARIOS.MENU")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SetMenu(
@@ -144,6 +149,7 @@ public class UsuariosController(IMediator mediator) : BaseController(mediator)
     /// Establece o actualiza el valor de un permiso para el usuario.
     /// </summary>
     [HttpPut("{id:long}/permisos/{seguridadId:long}")]
+    [RequirePermission("USUARIOS.PERMISOS")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SetPermiso(
@@ -161,6 +167,7 @@ public class UsuariosController(IMediator mediator) : BaseController(mediator)
     /// Crea o actualiza un parámetro personalizado del usuario (upsert).
     /// </summary>
     [HttpPut("{id:long}/parametros")]
+    [RequirePermission("USUARIOS.PARAMETROS")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SetParametro(

@@ -20,7 +20,9 @@ public class ComprobanteRepository(AppDbContext context)
         DateOnly? hasta,
         CancellationToken ct = default)
     {
-        var query = DbSet.AsNoTracking();
+        IQueryable<Comprobante> query = DbSet
+            .AsNoTracking()
+            .Include(x => x.Cot);
 
         if (sucursalId.HasValue)
             query = query.Where(x => x.SucursalId == sucursalId.Value);
@@ -57,6 +59,8 @@ public class ComprobanteRepository(AppDbContext context)
         CancellationToken ct = default) =>
         await DbSet
             .Include(x => x.Items)
+            .Include(x => x.Cot)
+            .Include(x => x.Atributos)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
 
     public async Task<Comprobante?> GetByNumeroAsync(
@@ -67,6 +71,8 @@ public class ComprobanteRepository(AppDbContext context)
         CancellationToken ct = default) =>
         await DbSet
             .Include(x => x.Items)
+            .Include(x => x.Cot)
+            .Include(x => x.Atributos)
             .AsNoTracking()
             .FirstOrDefaultAsync(x =>
                 x.SucursalId         == sucursalId         &&
@@ -95,6 +101,110 @@ public class ComprobanteRepository(AppDbContext context)
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<Comprobante>> GetDevolucionesPendientesAutorizacionAsync(
+        long? sucursalId,
+        DateOnly? desde,
+        DateOnly? hasta,
+        CancellationToken ct = default)
+    {
+        var query = DbSet
+            .AsNoTracking()
+            .Include(x => x.Items)
+            .Where(x =>
+                x.MotivoDevolucion.HasValue &&
+                !x.AutorizadorDevolucionId.HasValue &&
+                x.Estado != EstadoComprobante.Anulado &&
+                !x.IsDeleted);
+
+        if (sucursalId.HasValue)
+            query = query.Where(x => x.SucursalId == sucursalId.Value);
+
+        if (desde.HasValue)
+            query = query.Where(x => x.Fecha >= desde.Value);
+
+        if (hasta.HasValue)
+            query = query.Where(x => x.Fecha <= hasta.Value);
+
+        return await query
+            .OrderByDescending(x => x.Fecha)
+            .ThenByDescending(x => x.Id)
+            .ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<Comprobante>> GetDevolucionesByMotivoAsync(
+        MotivoDevolucion motivo,
+        long? terceroId,
+        DateOnly? desde,
+        DateOnly? hasta,
+        CancellationToken ct = default)
+    {
+        var query = DbSet
+            .AsNoTracking()
+            .Include(x => x.Items)
+            .Where(x =>
+                x.MotivoDevolucion == motivo &&
+                x.Estado != EstadoComprobante.Anulado &&
+                !x.IsDeleted);
+
+        if (terceroId.HasValue)
+            query = query.Where(x => x.TerceroId == terceroId.Value);
+
+        if (desde.HasValue)
+            query = query.Where(x => x.Fecha >= desde.Value);
+
+        if (hasta.HasValue)
+            query = query.Where(x => x.Fecha <= hasta.Value);
+
+        return await query
+            .OrderByDescending(x => x.Fecha)
+            .ThenByDescending(x => x.Id)
+            .ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<Comprobante>> GetPedidosPendientesAsync(
+        long? terceroId,
+        long? sucursalId,
+        bool? soloAtrasados,
+        DateOnly? fechaEntregaDesde,
+        DateOnly? fechaEntregaHasta,
+        CancellationToken ct = default)
+    {
+        var hoy = DateOnly.FromDateTime(DateTime.Today);
+
+        var query = DbSet
+            .AsNoTracking()
+            .Include(x => x.Items)
+            .Where(x =>
+                x.EstadoPedido.HasValue &&
+                x.Estado != EstadoComprobante.Anulado &&
+                !x.IsDeleted &&
+                x.EstadoPedido != EstadoPedido.Cerrado &&
+                x.EstadoPedido != EstadoPedido.Anulado &&
+                x.EstadoPedido != EstadoPedido.Completado);
+
+        if (terceroId.HasValue)
+            query = query.Where(x => x.TerceroId == terceroId.Value);
+
+        if (sucursalId.HasValue)
+            query = query.Where(x => x.SucursalId == sucursalId.Value);
+
+        if (fechaEntregaDesde.HasValue)
+            query = query.Where(x => x.FechaEntregaCompromiso.HasValue && x.FechaEntregaCompromiso.Value >= fechaEntregaDesde.Value);
+
+        if (fechaEntregaHasta.HasValue)
+            query = query.Where(x => x.FechaEntregaCompromiso.HasValue && x.FechaEntregaCompromiso.Value <= fechaEntregaHasta.Value);
+
+        if (soloAtrasados == true)
+            query = query.Where(x => x.FechaEntregaCompromiso.HasValue && x.FechaEntregaCompromiso.Value < hoy);
+        else if (soloAtrasados == false)
+            query = query.Where(x => !x.FechaEntregaCompromiso.HasValue || x.FechaEntregaCompromiso.Value >= hoy);
+
+        return await query
+            .OrderBy(x => x.FechaEntregaCompromiso ?? x.Fecha)
+            .ThenByDescending(x => x.Id)
+            .ToListAsync(ct);
+    }
+
     public async Task<long> GetProximoNumeroAsync(
         long puntoFacturacionId,
         long tipoComprobanteId,
@@ -114,5 +224,7 @@ public class ComprobanteRepository(AppDbContext context)
     public override async Task<Comprobante?> GetByIdAsync(long id, CancellationToken ct = default) =>
         await DbSet
             .Include(x => x.Items)
+            .Include(x => x.Cot)
+            .Include(x => x.Atributos)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
 }
