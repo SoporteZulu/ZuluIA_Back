@@ -4,16 +4,16 @@ using ZuluIA_Back.Domain.Entities.CRM;
 
 namespace ZuluIA_Back.Infrastructure.Persistence.Configurations;
 
-public class CrmInteresConfiguration : IEntityTypeConfiguration<CrmInteres>
+public class CrmSegmentoMiembroConfiguration : IEntityTypeConfiguration<CrmSegmentoMiembro>
 {
-    public void Configure(EntityTypeBuilder<CrmInteres> builder)
+    public void Configure(EntityTypeBuilder<CrmSegmentoMiembro> builder)
     {
-        builder.ToTable("CRMINTERESES");
+        builder.ToTable("CRMSEGMENTOS_MIEMBROS");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).HasColumnName("id").UseIdentityColumn();
 
-        builder.Property(x => x.Codigo).HasColumnName("codigo").HasMaxLength(30).IsRequired();
-        builder.Property(x => x.Descripcion).HasColumnName("descripcion").HasMaxLength(200).IsRequired();
+        builder.Property(x => x.SegmentoId).HasColumnName("segmento_id").IsRequired();
+        builder.Property(x => x.ClienteId).HasColumnName("cliente_id").IsRequired();
         builder.Property(x => x.Activo).HasColumnName("activo").HasDefaultValue(true);
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
         builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
@@ -21,7 +21,6 @@ public class CrmInteresConfiguration : IEntityTypeConfiguration<CrmInteres>
         builder.Property(x => x.CreatedBy).HasColumnName("created_by");
         builder.Property(x => x.UpdatedBy).HasColumnName("updated_by");
 
-        builder.HasIndex(x => x.Codigo).IsUnique();
-        builder.HasIndex(x => x.Activo);
+        builder.HasIndex(x => new { x.SegmentoId, x.ClienteId }).IsUnique();
     }
 }

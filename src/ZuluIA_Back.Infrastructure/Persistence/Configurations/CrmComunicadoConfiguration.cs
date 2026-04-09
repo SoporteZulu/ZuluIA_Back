@@ -20,8 +20,14 @@ public class CrmComunicadoConfiguration : IEntityTypeConfiguration<CrmComunicado
         builder.Property(x => x.Asunto).HasColumnName("asunto").HasMaxLength(300).IsRequired();
         builder.Property(x => x.Contenido).HasColumnName("contenido");
         builder.Property(x => x.UsuarioId).HasColumnName("usuario_id");
+        builder.Property(x => x.CreatedAt).HasColumnName("created_at");
+        builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+        builder.Property(x => x.DeletedAt).HasColumnName("deleted_at");
+        builder.Property(x => x.CreatedBy).HasColumnName("created_by");
+        builder.Property(x => x.UpdatedBy).HasColumnName("updated_by");
 
         builder.HasIndex(x => new { x.SucursalId, x.Fecha });
         builder.HasIndex(x => x.TerceroId);
+        builder.HasIndex(x => x.CampanaId);
     }
 }

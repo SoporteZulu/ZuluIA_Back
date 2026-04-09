@@ -72,6 +72,7 @@ public interface IApplicationDbContext
     DbSet<EstadoProveedor> EstadosProveedores { get; }
     DbSet<EstadoPersonaCatalogo> EstadosPersonas { get; }
     DbSet<EstadoCivilCatalogo> EstadosCiviles { get; }
+    DbSet<TipoRelacionContactoCatalogo> TiposRelacionesContacto { get; }
 
     // ─── Catálogos de referencia ──────────────────────────────────────────────
     DbSet<Domain.Entities.Referencia.TipoDocumento> TiposDocumento { get; }
@@ -317,12 +318,20 @@ public interface IApplicationDbContext
     DbSet<ImpuestoPorSucursal> ImpuestosPorSucursal { get; }
     DbSet<ImpuestoPorTipoComprobante> ImpuestosPorTipoComprobante { get; }
     DbSet<Contacto> Contactos { get; }
+    DbSet<CrmCliente> CrmClientes { get; }
     DbSet<CrmCampana> CrmCampanas { get; }
+    DbSet<CrmContacto> CrmContactos { get; }
     DbSet<CrmComunicado> CrmComunicados { get; }
     DbSet<CrmInteres> CrmIntereses { get; }
+    DbSet<CrmInteraccion> CrmInteracciones { get; }
     DbSet<CrmMotivo> CrmMotivos { get; }
+    DbSet<CrmOportunidad> CrmOportunidades { get; }
     DbSet<CrmSeguimiento> CrmSeguimientos { get; }
+    DbSet<CrmSegmento> CrmSegmentos { get; }
+    DbSet<CrmSegmentoMiembro> CrmSegmentosMiembros { get; }
+    DbSet<CrmTarea> CrmTareas { get; }
     DbSet<CrmTipoComunicado> CrmTiposComunicado { get; }
+    DbSet<CrmUsuarioPerfil> CrmUsuariosPerfiles { get; }
     DbSet<Presupuesto> Presupuestos { get; }
     DbSet<PresupuestoItem> PresupuestosItems { get; }
     DbSet<ObjetivoVenta> ObjetivosVenta { get; }

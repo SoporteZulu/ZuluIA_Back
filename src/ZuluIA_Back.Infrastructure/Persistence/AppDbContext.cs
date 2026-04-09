@@ -79,6 +79,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<EstadoProveedor> EstadosProveedores => Set<EstadoProveedor>();
     public DbSet<EstadoPersonaCatalogo> EstadosPersonas => Set<EstadoPersonaCatalogo>();
     public DbSet<EstadoCivilCatalogo> EstadosCiviles => Set<EstadoCivilCatalogo>();
+    public DbSet<TipoRelacionContactoCatalogo> TiposRelacionesContacto => Set<TipoRelacionContactoCatalogo>();
 
     // ─── Catálogos de referencia ──────────────────────────────────────────────
     public DbSet<TipoDocumento> TiposDocumento => Set<TipoDocumento>();
@@ -310,12 +311,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<ImpuestoPorSucursal> ImpuestosPorSucursal => Set<ImpuestoPorSucursal>();
     public DbSet<ImpuestoPorTipoComprobante> ImpuestosPorTipoComprobante => Set<ImpuestoPorTipoComprobante>();
     public DbSet<Contacto> Contactos => Set<Contacto>();
+    public DbSet<CrmCliente> CrmClientes => Set<CrmCliente>();
     public DbSet<CrmCampana> CrmCampanas => Set<CrmCampana>();
+    public DbSet<CrmContacto> CrmContactos => Set<CrmContacto>();
     public DbSet<CrmComunicado> CrmComunicados => Set<CrmComunicado>();
     public DbSet<CrmInteres> CrmIntereses => Set<CrmInteres>();
+    public DbSet<CrmInteraccion> CrmInteracciones => Set<CrmInteraccion>();
     public DbSet<CrmMotivo> CrmMotivos => Set<CrmMotivo>();
+    public DbSet<CrmOportunidad> CrmOportunidades => Set<CrmOportunidad>();
     public DbSet<CrmSeguimiento> CrmSeguimientos => Set<CrmSeguimiento>();
+    public DbSet<CrmSegmento> CrmSegmentos => Set<CrmSegmento>();
+    public DbSet<CrmSegmentoMiembro> CrmSegmentosMiembros => Set<CrmSegmentoMiembro>();
+    public DbSet<CrmTarea> CrmTareas => Set<CrmTarea>();
     public DbSet<CrmTipoComunicado> CrmTiposComunicado => Set<CrmTipoComunicado>();
+    public DbSet<CrmUsuarioPerfil> CrmUsuariosPerfiles => Set<CrmUsuarioPerfil>();
     public DbSet<Presupuesto> Presupuestos => Set<Presupuesto>();
     public DbSet<PresupuestoItem> PresupuestosItems => Set<PresupuestoItem>();
     public DbSet<ObjetivoVenta> ObjetivosVenta => Set<ObjetivoVenta>();
