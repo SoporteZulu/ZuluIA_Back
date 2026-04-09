@@ -7,6 +7,7 @@ using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Api.Controllers;
 
+[Route("api/ordenes-compra")]
 public class OrdenesCompraController(IMediator mediator, IApplicationDbContext db)
     : BaseController(mediator)
 {
@@ -91,21 +92,60 @@ public class OrdenesCompraController(IMediator mediator, IApplicationDbContext d
     }
 
     /// <summary>
+    /// Crea una orden de compra a partir de un comprobante base existente.
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Crear([FromBody] CrearOrdenCompraCompatRequest request, CancellationToken ct)
+    {
+        var result = await Mediator.Send(
+            new CrearOrdenCompraDesdeComprobanteCommand(
+                request.ComprobanteId,
+                request.ProveedorId,
+                request.FechaEntregaReq,
+                request.CondicionesEntrega),
+            ct);
+
+        return result.IsSuccess
+            ? CreatedAtAction(nameof(GetById), new { id = result.Value }, new { id = result.Value })
+            : BadRequest(new { error = result.Error });
+    }
+
+    /// <summary>
     /// Marca una orden de compra como recibida.
     /// </summary>
     [HttpPost("{id:long}/recibir")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Recibir(long id, CancellationToken ct)
+    public async Task<IActionResult> Recibir(long id, [FromBody] RecibirOrdenCompraCompatRequest? request, CancellationToken ct)
     {
-        var result = await Mediator.Send(new RecibirOrdenCompraCommand(id), ct);
-        if (result.IsFailure)
-            return result.Error?.Contains("no se encontro", StringComparison.OrdinalIgnoreCase) == true
-                ? NotFound(new { error = result.Error })
-                : BadRequest(new { error = result.Error });
+        if (request?.CantidadRecibida is null or <= 0)
+        {
+            var simpleResult = await Mediator.Send(new RecibirOrdenCompraCommand(id), ct);
+            if (simpleResult.IsFailure)
+                return simpleResult.Error?.Contains("no se encontro", StringComparison.OrdinalIgnoreCase) == true
+                    ? NotFound(new { error = simpleResult.Error })
+                    : BadRequest(new { error = simpleResult.Error });
 
-        return Ok(new { mensaje = "Orden de compra marcada como recibida." });
+            return Ok(new { mensaje = "Orden de compra marcada como recibida." });
+        }
+
+        var fechaRecepcion = request.FechaRecepcion ?? DateOnly.FromDateTime(DateTime.Today);
+        var result = await Mediator.Send(
+            new RegistrarRecepcionOrdenCompraCommand(
+                id,
+                fechaRecepcion,
+                request.CantidadRecibida.Value,
+                request.TipoComprobanteRemitoId,
+                request.RemitoValorizado,
+                request.Observacion),
+            ct);
+
+        return result.IsSuccess
+            ? Ok(new { id = result.Value })
+            : BadRequest(new { error = result.Error });
     }
 
     /// <summary>
@@ -126,3 +166,16 @@ public class OrdenesCompraController(IMediator mediator, IApplicationDbContext d
         return Ok(new { mensaje = "Orden de compra cancelada." });
     }
 }
+
+public record CrearOrdenCompraCompatRequest(
+    long ComprobanteId,
+    long ProveedorId,
+    DateOnly? FechaEntregaReq,
+    string? CondicionesEntrega);
+
+public record RecibirOrdenCompraCompatRequest(
+    DateOnly? FechaRecepcion,
+    decimal? CantidadRecibida,
+    long? TipoComprobanteRemitoId,
+    bool RemitoValorizado,
+    string? Observacion);

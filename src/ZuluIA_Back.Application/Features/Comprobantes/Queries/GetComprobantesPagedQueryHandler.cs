@@ -121,7 +121,7 @@ public class GetComprobantesPagedQueryHandler(
             ComprobanteOrigenFecha      = c.ComprobanteOrigenId.HasValue
                 ? origenes.GetValueOrDefault(c.ComprobanteOrigenId.Value)?.Fecha
                 : null,
-            Estado                      = c.Estado,
+            Estado                      = c.Estado.ToString().ToUpperInvariant(),
             Cae                         = c.Cae
             //TieneCae                    = !string.IsNullOrEmpty(c.Cae)
         }).ToList();

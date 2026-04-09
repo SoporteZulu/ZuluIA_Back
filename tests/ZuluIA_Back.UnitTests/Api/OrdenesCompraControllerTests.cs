@@ -95,6 +95,30 @@ public class OrdenesCompraControllerTests
     }
 
     [Fact]
+    public async Task Crear_CuandoTieneExito_DevuelveCreatedAtAction()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<CrearOrdenCompraDesdeComprobanteCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success(21L));
+        var controller = CreateController(mediator: mediator);
+
+        var result = await controller.Crear(
+            new CrearOrdenCompraCompatRequest(15, 9, new DateOnly(2026, 4, 20), "Entrega pactada"),
+            CancellationToken.None);
+
+        var created = result.Should().BeOfType<CreatedAtActionResult>().Subject;
+        created.ActionName.Should().Be(nameof(OrdenesCompraController.GetById));
+        AssertAnonymousProperty(created.Value!, "id", 21L);
+        await mediator.Received(1).Send(
+            Arg.Is<CrearOrdenCompraDesdeComprobanteCommand>(x =>
+                x.ComprobanteId == 15 &&
+                x.ProveedorId == 9 &&
+                x.FechaEntregaReq == new DateOnly(2026, 4, 20) &&
+                x.CondicionesEntrega == "Entrega pactada"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Recibir_CuandoNoSeEncuentra_DevuelveNotFound()
     {
         var mediator = Substitute.For<IMediator>();
@@ -102,7 +126,7 @@ public class OrdenesCompraControllerTests
             .Returns(Result.Failure("Orden no se encontro."));
         var controller = CreateController(mediator: mediator);
 
-        var result = await controller.Recibir(7, CancellationToken.None);
+        var result = await controller.Recibir(7, null, CancellationToken.None);
 
         result.Should().BeOfType<NotFoundObjectResult>()
             .Which.Value!.ToString().Should().Contain("no se encontro");
@@ -116,7 +140,7 @@ public class OrdenesCompraControllerTests
             .Returns(Result.Failure("La orden ya fue recibida."));
         var controller = CreateController(mediator: mediator);
 
-        var result = await controller.Recibir(7, CancellationToken.None);
+        var result = await controller.Recibir(7, null, CancellationToken.None);
 
         result.Should().BeOfType<BadRequestObjectResult>()
             .Which.Value!.ToString().Should().Contain("ya fue recibida");
@@ -130,10 +154,36 @@ public class OrdenesCompraControllerTests
             .Returns(Result.Success());
         var controller = CreateController(mediator: mediator);
 
-        var result = await controller.Recibir(7, CancellationToken.None);
+        var result = await controller.Recibir(7, null, CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         AssertAnonymousProperty(ok.Value!, "mensaje", "Orden de compra marcada como recibida.");
+    }
+
+    [Fact]
+    public async Task Recibir_CuandoTienePayloadDetallado_DevuelveOkConId()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<RegistrarRecepcionOrdenCompraCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success(55L));
+        var controller = CreateController(mediator: mediator);
+
+        var result = await controller.Recibir(
+            7,
+            new RecibirOrdenCompraCompatRequest(new DateOnly(2026, 4, 21), 2.5m, 12, true, "Parcial"),
+            CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        AssertAnonymousProperty(ok.Value!, "id", 55L);
+        await mediator.Received(1).Send(
+            Arg.Is<RegistrarRecepcionOrdenCompraCommand>(x =>
+                x.OrdenCompraId == 7 &&
+                x.FechaRecepcion == new DateOnly(2026, 4, 21) &&
+                x.CantidadRecibida == 2.5m &&
+                x.TipoComprobanteRemitoId == 12 &&
+                x.RemitoValorizado &&
+                x.Observacion == "Parcial"),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

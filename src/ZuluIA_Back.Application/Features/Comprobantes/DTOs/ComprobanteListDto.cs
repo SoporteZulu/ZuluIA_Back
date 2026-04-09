@@ -12,8 +12,10 @@ public class ComprobanteListDto
     public short Prefijo { get; set; }
     public long Numero { get; set; }
     public string NumeroFormateado { get; set; } = string.Empty;
+    public string NroComprobante => NumeroFormateado;
     public DateOnly Fecha { get; set; }
     public DateOnly? FechaVencimiento { get; set; }
+    public DateOnly? FechaVto => FechaVencimiento;
     public long TerceroId { get; set; }
     public string TerceroRazonSocial { get; set; } = string.Empty;
     public string? TerceroLegajo { get; set; }
@@ -33,7 +35,7 @@ public class ComprobanteListDto
     public long? ComprobanteOrigenId { get; set; }
     public string? ComprobanteOrigenNumero { get; set; }
     public DateOnly? ComprobanteOrigenFecha { get; set; }
-    public EstadoComprobante Estado { get; set; }
+    public string Estado { get; set; } = string.Empty;
     public string? Cae { get; set; }
     public bool TieneCae => !string.IsNullOrWhiteSpace(Cae);
     public long? NotaDebitoId { get; set; }

@@ -12,9 +12,12 @@ public class ComprobanteItemDto
     public decimal CantidadBonificada { get; set; }
     public decimal PrecioUnitario { get; set; }
     public decimal DescuentoPct { get; set; }
+    public decimal Descuento => DescuentoPct;
     public long AlicuotaIvaId { get; set; }
     public decimal PorcentajeIva { get; set; }
+    public decimal AlicuotaIvaPct => PorcentajeIva;
     public decimal SubtotalNeto { get; set; }
+    public decimal Subtotal => SubtotalNeto;
     public decimal IvaImporte { get; set; }
     public decimal TotalLinea { get; set; }
     public long? DepositoId { get; set; }

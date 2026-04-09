@@ -1,10 +1,12 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 using ZuluIA_Back.Application.Common.Extensions;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Comprobantes.Commands;
 using ZuluIA_Back.Application.Features.Comprobantes.DTOs;
+using ZuluIA_Back.Domain.Entities.Comprobantes;
 using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Api.Controllers;
@@ -15,6 +17,213 @@ public class ImputacionesController(
     IApplicationDbContext db)
     : BaseController(mediator)
 {
+    /// <summary>
+    /// Retorna una vista agregada de imputaciones de compras para reemplazar el seguimiento local del frontend.
+    /// </summary>
+    [HttpGet("compras")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetCompras(
+        [FromQuery] long? sucursalId = null,
+        [FromQuery] long? proveedorId = null,
+        [FromQuery] string? estado = null,
+        CancellationToken ct = default)
+    {
+        var tiposCompra = await db.TiposComprobante
+            .AsNoTrackingSafe()
+            .Where(x => x.Activo && x.EsCompra && x.AfectaCuentaCorriente)
+            .Select(x => new
+            {
+                x.Id,
+                x.Descripcion
+            })
+            .ToListAsync(ct);
+
+        var tipoIds = tiposCompra.Select(x => x.Id).ToList();
+
+        var query = db.Comprobantes
+            .AsNoTrackingSafe()
+            .Where(x => tipoIds.Contains(x.TipoComprobanteId));
+
+        if (sucursalId.HasValue)
+            query = query.Where(x => x.SucursalId == sucursalId.Value);
+
+        if (proveedorId.HasValue)
+            query = query.Where(x => x.TerceroId == proveedorId.Value);
+
+        var comprobantes = await query
+            .Where(x => x.Estado != Domain.Enums.EstadoComprobante.Anulado && x.Estado != Domain.Enums.EstadoComprobante.Borrador)
+            .OrderByDescending(x => x.Fecha)
+            .ThenByDescending(x => x.Id)
+            .ToListAsync(ct);
+
+        var comprobanteIds = comprobantes.Select(x => x.Id).ToList();
+        var proveedoresIds = comprobantes.Select(x => x.TerceroId).Distinct().ToList();
+        var monedaIds = comprobantes.Select(x => x.MonedaId).Distinct().ToList();
+        var createdByIds = comprobantes.Where(x => x.CreatedBy.HasValue).Select(x => x.CreatedBy!.Value).Distinct().ToList();
+
+        var proveedores = await db.Terceros
+            .AsNoTrackingSafe()
+            .Where(x => proveedoresIds.Contains(x.Id))
+            .Select(x => new { x.Id, x.RazonSocial })
+            .ToDictionarySafeAsync(x => x.Id, x => x.RazonSocial, ct);
+
+        var monedas = await db.Monedas
+            .AsNoTrackingSafe()
+            .Where(x => monedaIds.Contains(x.Id))
+            .Select(x => new { x.Id, x.Codigo })
+            .ToDictionarySafeAsync(x => x.Id, x => x.Codigo, ct);
+
+        var usuarios = await db.Usuarios
+            .AsNoTrackingSafe()
+            .Where(x => createdByIds.Contains(x.Id))
+            .Select(x => new { x.Id, Nombre = x.NombreCompleto ?? x.UserName })
+            .ToDictionarySafeAsync(x => x.Id, x => x.Nombre, ct);
+
+        var ordenes = await db.OrdenesCompraMeta
+            .AsNoTrackingSafe()
+            .Where(x => comprobanteIds.Contains(x.ComprobanteId))
+            .ToDictionarySafeAsync(x => x.ComprobanteId, ct);
+
+        var recepciones = await db.Comprobantes
+            .AsNoTrackingSafe()
+            .Where(x => x.ComprobanteOrigenId.HasValue && comprobanteIds.Contains(x.ComprobanteOrigenId.Value))
+            .Select(x => new
+            {
+                x.Id,
+                x.ComprobanteOrigenId,
+                Numero = x.Numero.Formateado,
+                x.Fecha
+            })
+            .ToListAsync(ct);
+
+        var imputaciones = await db.Imputaciones
+            .AsNoTrackingSafe()
+            .Where(x => comprobanteIds.Contains(x.ComprobanteDestinoId))
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync(ct);
+
+        var origenIds = imputaciones.Select(x => x.ComprobanteOrigenId).Distinct().ToList();
+        var comprobantesOrigen = await db.Comprobantes
+            .AsNoTrackingSafe()
+            .Where(x => origenIds.Contains(x.Id))
+            .Select(x => new
+            {
+                x.Id,
+                x.TipoComprobanteId,
+                x.TerceroId,
+                Numero = x.Numero.Formateado
+            })
+            .ToDictionarySafeAsync(x => x.Id, ct);
+
+        var tiposOrigenIds = comprobantesOrigen.Values.Select(x => x.TipoComprobanteId).Distinct().ToList();
+        var tiposOrigen = await db.TiposComprobante
+            .AsNoTrackingSafe()
+            .Where(x => tiposOrigenIds.Contains(x.Id))
+            .Select(x => new { x.Id, x.Descripcion })
+            .ToDictionarySafeAsync(x => x.Id, x => x.Descripcion, ct);
+
+        var tercerosOrigenIds = comprobantesOrigen.Values.Select(x => x.TerceroId).Distinct().ToList();
+        var tercerosOrigen = await db.Terceros
+            .AsNoTrackingSafe()
+            .Where(x => tercerosOrigenIds.Contains(x.Id))
+            .Select(x => new { x.Id, x.RazonSocial })
+            .ToDictionarySafeAsync(x => x.Id, x => x.RazonSocial, ct);
+
+        var tiposCompraMap = tiposCompra.ToDictionary(x => x.Id, x => x.Descripcion);
+
+        var rows = comprobantes
+            .Select(comprobante =>
+            {
+                var activas = imputaciones
+                    .Where(x => x.ComprobanteDestinoId == comprobante.Id && !x.Anulada)
+                    .ToList();
+                var anuladas = imputaciones
+                    .Where(x => x.ComprobanteDestinoId == comprobante.Id && x.Anulada)
+                    .ToList();
+
+                var totalImputado = activas.Sum(x => x.Importe);
+                var recepcion = recepciones
+                    .Where(x => x.ComprobanteOrigenId == comprobante.Id)
+                    .OrderByDescending(x => x.Fecha)
+                    .FirstOrDefault();
+
+                var tipoDescripcion = tiposCompraMap.GetValueOrDefault(comprobante.TipoComprobanteId, "Compra");
+                var tipo = tipoDescripcion.Contains("import", StringComparison.OrdinalIgnoreCase)
+                    ? "Importación"
+                    : "Compras";
+
+                var estadoLegado = comprobante.Saldo <= 0
+                    ? "IMPUTADA"
+                    : (anuladas.Count > 0 || activas.Count > 0 ? "OBSERVADA" : "PENDIENTE");
+
+                var distribucion = activas.Count > 0
+                    ? activas.Select(x =>
+                    {
+                        var origen = comprobantesOrigen.GetValueOrDefault(x.ComprobanteOrigenId);
+                        var porcentaje = comprobante.Total == 0
+                            ? 0m
+                            : Math.Round((x.Importe / comprobante.Total) * 100m, 2);
+
+                        return new CompraImputacionDistribucionDto(
+                            x.Id.ToString(CultureInfo.InvariantCulture),
+                            origen is not null ? tiposOrigen.GetValueOrDefault(origen.TipoComprobanteId, "Aplicación") : "Aplicación",
+                            origen is not null ? tercerosOrigen.GetValueOrDefault(origen.TerceroId, "Documento origen") : "Documento origen",
+                            porcentaje,
+                            x.Importe);
+                    }).ToList()
+                    :
+                    [
+                        new CompraImputacionDistribucionDto(
+                            $"pendiente-{comprobante.Id}",
+                            tipoDescripcion,
+                            "Pendiente de imputación",
+                            100m,
+                            comprobante.Total)
+                    ];
+
+                var detalles = new List<string>
+                {
+                    $"Saldo pendiente: {comprobante.Saldo:0.##} {monedas.GetValueOrDefault(comprobante.MonedaId, "ARS")}",
+                    $"Total imputado activo: {totalImputado:0.##} {monedas.GetValueOrDefault(comprobante.MonedaId, "ARS")}",
+                    activas.Count > 0
+                        ? $"Aplicaciones activas: {activas.Count}"
+                        : "Sin aplicaciones activas registradas."
+                };
+
+                if (anuladas.Count > 0)
+                    detalles.Add($"Desimputaciones detectadas: {anuladas.Count}");
+
+                if (recepcion is not null)
+                    detalles.Add($"Última recepción visible: {recepcion.Numero}");
+
+                if (ordenes.TryGetValue(comprobante.Id, out var orden))
+                    detalles.Add($"Orden asociada: OC-{orden.Id}");
+
+                return new CompraImputacionResumenDto(
+                    comprobante.Id,
+                    tipo,
+                    proveedores.GetValueOrDefault(comprobante.TerceroId, $"Proveedor #{comprobante.TerceroId}"),
+                    comprobante.Numero.Formateado,
+                    distribucion[0].Cuenta,
+                    distribucion[0].CentroCosto,
+                    estadoLegado,
+                    comprobante.Fecha,
+                    comprobante.Total,
+                    ordenes.TryGetValue(comprobante.Id, out var ordenCompra) ? $"OC-{ordenCompra.Id}" : null,
+                    recepcion?.Numero,
+                    comprobante.CreatedBy.HasValue ? usuarios.GetValueOrDefault(comprobante.CreatedBy.Value, "Sin responsable") : "Sin responsable",
+                    monedas.GetValueOrDefault(comprobante.MonedaId, "ARS"),
+                    tipoDescripcion,
+                    comprobante.Observacion ?? "Sin observaciones registradas.",
+                    detalles,
+                    distribucion);
+            })
+            .Where(x => string.IsNullOrWhiteSpace(estado) || string.Equals(x.Estado, estado, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return Ok(rows);
+    }
+
     /// <summary>
     /// Retorna las imputaciones de un comprobante como origen
     /// (lo que este comprobante cancela en otros).
@@ -307,3 +516,29 @@ public class ImputacionesController(
             : BadRequest(new { error = result.Error });
     }
 }
+
+public sealed record CompraImputacionResumenDto(
+    long Id,
+    string Tipo,
+    string Proveedor,
+    string Comprobante,
+    string Cuenta,
+    string CentroCosto,
+    string Estado,
+    DateOnly Fecha,
+    decimal Importe,
+    string? OrdenCompraReferencia,
+    string? RecepcionReferencia,
+    string Responsable,
+    string Moneda,
+    string CircuitoOrigen,
+    string Observacion,
+    IReadOnlyList<string> DetallesClave,
+    IReadOnlyList<CompraImputacionDistribucionDto> Distribucion);
+
+public sealed record CompraImputacionDistribucionDto(
+    string Id,
+    string Cuenta,
+    string CentroCosto,
+    decimal Porcentaje,
+    decimal Importe);
