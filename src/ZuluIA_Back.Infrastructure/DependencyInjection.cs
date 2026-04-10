@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Logistica.Services;
 using ZuluIA_Back.Domain.Entities.Auditoria;
@@ -44,10 +45,7 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var connectionString =
-            Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
-            ?? configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Connection string no configurada.");
+        var connectionString = ResolveConnectionString(configuration);
 
         services.AddDbContext<AppDbContext>(options =>
         {
@@ -301,5 +299,58 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasherService, Pbkdf2PasswordHasherService>();
 
         return services;
+    }
+
+    private static string ResolveConnectionString(IConfiguration configuration)
+    {
+        var environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        var envConnectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
+        var configuredConnectionString = configuration.GetConnectionString("DefaultConnection");
+
+        if (string.Equals(environmentName, "Production", StringComparison.OrdinalIgnoreCase)
+            && LooksLocalConnection(envConnectionString)
+            && !string.IsNullOrWhiteSpace(configuredConnectionString))
+        {
+            try
+            {
+                var envBuilder = new NpgsqlConnectionStringBuilder(envConnectionString);
+                var configuredBuilder = new NpgsqlConnectionStringBuilder(configuredConnectionString);
+
+                envBuilder.Host = configuredBuilder.Host;
+                envBuilder.Port = configuredBuilder.Port;
+
+                if (!string.IsNullOrWhiteSpace(configuredBuilder.Database))
+                    envBuilder.Database = configuredBuilder.Database;
+
+                return envBuilder.ConnectionString;
+            }
+            catch (ArgumentException)
+            {
+            }
+        }
+
+        return envConnectionString
+            ?? configuredConnectionString
+            ?? throw new InvalidOperationException("Connection string no configurada.");
+    }
+
+    private static bool LooksLocalConnection(string? connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return false;
+
+        try
+        {
+            var builder = new NpgsqlConnectionStringBuilder(connectionString);
+            var host = builder.Host ?? string.Empty;
+            return host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                || host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
+                || host.Equals("::1", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (ArgumentException)
+        {
+            return connectionString.Contains("localhost", StringComparison.OrdinalIgnoreCase)
+                || connectionString.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase);
+        }
     }
 }
