@@ -18,19 +18,21 @@ public class DepositosController(IMediator mediator, IApplicationDbContext db)
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetBySucursal(
         [FromQuery] long? sucursalId,
-        CancellationToken ct)
+        [FromQuery] bool incluirInactivos = false,
+        CancellationToken ct = default)
     {
         if (sucursalId.HasValue)
         {
             var result = await Mediator.Send(
-                new GetDepositosBySucursalQuery(sucursalId.Value), ct);
+                new GetDepositosBySucursalQuery(sucursalId.Value, incluirInactivos), ct);
             return Ok(result);
         }
 
         var depositos = await db.Depositos
             .AsNoTracking()
-            .Where(x => x.Activo)
+            .Where(x => incluirInactivos || x.Activo)
             .OrderBy(x => x.SucursalId)
+            .ThenByDescending(x => x.Activo)
             .ThenByDescending(x => x.EsDefault)
             .ThenBy(x => x.Descripcion)
             .Select(x => new DepositoDto

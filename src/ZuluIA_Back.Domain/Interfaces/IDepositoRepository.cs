@@ -4,6 +4,11 @@ namespace ZuluIA_Back.Domain.Interfaces;
 
 public interface IDepositoRepository : IRepository<Deposito>
 {
+    Task<IReadOnlyList<Deposito>> GetBySucursalAsync(
+        long sucursalId,
+        bool incluirInactivos = false,
+        CancellationToken ct = default);
+
     Task<IReadOnlyList<Deposito>> GetActivosBySucursalAsync(
         long sucursalId,
         CancellationToken ct = default);
