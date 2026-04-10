@@ -206,7 +206,7 @@ public class GetRemitosPagedQueryHandler(IApplicationDbContext db)
             EsValorizado = x.EsValorizado,
             Total = x.Total,
             Saldo = x.Saldo,
-            Estado = x.Estado,
+            Estado = x.Estado.ToString().ToUpperInvariant(),
             Cae = x.Cae
         }).ToList();
 

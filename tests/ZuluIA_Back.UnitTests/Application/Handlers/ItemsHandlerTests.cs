@@ -354,7 +354,7 @@ public class GetDepositosBySucursalQueryHandlerTests
         var depositos = new List<Deposito> { Deposito.Crear(1, "Depósito A", false) }.AsReadOnly();
         var dtos = new List<DepositoDto> { new() { Id = 1, Descripcion = "Depósito A" } }.AsReadOnly();
 
-        _repo.GetActivosBySucursalAsync(1, Arg.Any<CancellationToken>()).Returns(depositos);
+        _repo.GetBySucursalAsync(1, false, Arg.Any<CancellationToken>()).Returns(depositos);
         _mapper.Map<IReadOnlyList<DepositoDto>>(depositos).Returns(dtos);
 
         var result = await Sut().Handle(new GetDepositosBySucursalQuery(1), CancellationToken.None);

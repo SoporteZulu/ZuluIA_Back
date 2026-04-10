@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Items.Commands;
+using ZuluIA_Back.Application.Features.Items.DTOs;
 using ZuluIA_Back.Application.Features.Items.Queries;
 
 namespace ZuluIA_Back.Api.Controllers;
@@ -11,17 +12,41 @@ public class DepositosController(IMediator mediator, IApplicationDbContext db)
     : BaseController(mediator)
 {
     /// <summary>
-    /// Retorna los depósitos activos de una sucursal.
+    /// Retorna los depósitos activos de una sucursal o todos los activos si no se informa sucursal.
     /// </summary>
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetBySucursal(
-        [FromQuery] long sucursalId,
-        CancellationToken ct)
+        [FromQuery] long? sucursalId,
+        [FromQuery] bool incluirInactivos = false,
+        CancellationToken ct = default)
     {
-        var result = await Mediator.Send(
-            new GetDepositosBySucursalQuery(sucursalId), ct);
-        return Ok(result);
+        if (sucursalId.HasValue)
+        {
+            var result = await Mediator.Send(
+                new GetDepositosBySucursalQuery(sucursalId.Value, incluirInactivos), ct);
+            return Ok(result);
+        }
+
+        var depositos = await db.Depositos
+            .AsNoTracking()
+            .Where(x => incluirInactivos || x.Activo)
+            .OrderBy(x => x.SucursalId)
+            .ThenByDescending(x => x.Activo)
+            .ThenByDescending(x => x.EsDefault)
+            .ThenBy(x => x.Descripcion)
+            .Select(x => new DepositoDto
+            {
+                Id = x.Id,
+                SucursalId = x.SucursalId,
+                Descripcion = x.Descripcion,
+                EsDefault = x.EsDefault,
+                Activo = x.Activo,
+                CreatedAt = x.CreatedAt
+            })
+            .ToListAsync(ct);
+
+        return Ok(depositos);
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using FluentValidation;
 using MediatR;
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Domain.Common;
@@ -27,8 +28,38 @@ public record UpdateCrmInteresCommand(long Id, string Descripcion) : IRequest<Re
 public record DeactivateCrmInteresCommand(long Id) : IRequest<Result>;
 public record ActivateCrmInteresCommand(long Id) : IRequest<Result>;
 
-public record CreateCrmCampanaCommand(long SucursalId, string Nombre, string? Descripcion, DateOnly FechaInicio, DateOnly FechaFin, decimal? Presupuesto) : IRequest<Result<long>>;
-public record UpdateCrmCampanaCommand(long Id, string Nombre, string? Descripcion, DateOnly FechaInicio, DateOnly FechaFin, decimal? Presupuesto) : IRequest<Result>;
+public record CreateCrmCampanaCommand(
+    long SucursalId,
+    string Nombre,
+    string? Descripcion,
+    DateOnly FechaInicio,
+    DateOnly FechaFin,
+    decimal? Presupuesto,
+    string TipoCampana,
+    string Objetivo,
+    long? SegmentoObjetivoId,
+    decimal? PresupuestoGastado,
+    long? ResponsableId,
+    string? Notas,
+    int LeadsGenerados,
+    int OportunidadesGeneradas,
+    int NegociosGanados) : IRequest<Result<long>>;
+public record UpdateCrmCampanaCommand(
+    long Id,
+    string Nombre,
+    string? Descripcion,
+    DateOnly FechaInicio,
+    DateOnly FechaFin,
+    decimal? Presupuesto,
+    string TipoCampana,
+    string Objetivo,
+    long? SegmentoObjetivoId,
+    decimal? PresupuestoGastado,
+    long? ResponsableId,
+    string? Notas,
+    int LeadsGenerados,
+    int OportunidadesGeneradas,
+    int NegociosGanados) : IRequest<Result>;
 public record CloseCrmCampanaCommand(long Id) : IRequest<Result>;
 
 public record CreateCrmComunicadoCommand(long SucursalId, long TerceroId, long? CampanaId, long? TipoId, DateOnly Fecha, string Asunto, string? Contenido, long? UsuarioId) : IRequest<Result<long>>;
@@ -46,6 +77,10 @@ public class CreateContactoCrmCommandHandler(IApplicationDbContext db)
     {
         try
         {
+            var tipoRelacionValidation = await CrmWorkspaceReferenceValidation.ValidateTipoRelacionContactoAsync(db, request.TipoRelacionId, ct);
+            if (tipoRelacionValidation is not null)
+                return Result.Failure<long>(tipoRelacionValidation);
+
             var entity = Contacto.Crear(request.PersonaId, request.PersonaContactoId, request.TipoRelacionId);
             db.Contactos.Add(entity);
             await db.SaveChangesAsync(ct);
@@ -55,6 +90,10 @@ public class CreateContactoCrmCommandHandler(IApplicationDbContext db)
         {
             return Result.Failure<long>(ex.Message);
         }
+        catch (DbUpdateException ex) when (CrmLocalSchemaCompatibility.TryTranslate(ex, out var schemaError))
+        {
+            return Result.Failure<long>(schemaError);
+        }
     }
 }
 
@@ -63,13 +102,28 @@ public class UpdateContactoCrmCommandHandler(IApplicationDbContext db)
 {
     public async Task<Result> Handle(UpdateContactoCrmCommand request, CancellationToken ct)
     {
-        var entity = await db.Contactos.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
-        if (entity is null)
-            return Result.Failure($"Contacto {request.Id} no encontrado.");
+        try
+        {
+            var tipoRelacionValidation = await CrmWorkspaceReferenceValidation.ValidateTipoRelacionContactoAsync(db, request.TipoRelacionId, ct);
+            if (tipoRelacionValidation is not null)
+                return Result.Failure(tipoRelacionValidation);
 
-        entity.ActualizarTipoRelacion(request.TipoRelacionId);
-        await db.SaveChangesAsync(ct);
-        return Result.Success();
+            var entity = await db.Contactos.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
+            if (entity is null)
+                return Result.Failure($"Contacto {request.Id} no encontrado.");
+
+            entity.ActualizarTipoRelacion(request.TipoRelacionId);
+            await db.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (DbException ex) when (CrmLocalSchemaCompatibility.TryTranslate(ex, out var schemaError))
+        {
+            return Result.Failure(schemaError);
+        }
+        catch (DbUpdateException ex) when (CrmLocalSchemaCompatibility.TryTranslate(ex, out var schemaError))
+        {
+            return Result.Failure(schemaError);
+        }
     }
 }
 
@@ -78,13 +132,24 @@ public class DeleteContactoCrmCommandHandler(IApplicationDbContext db)
 {
     public async Task<Result> Handle(DeleteContactoCrmCommand request, CancellationToken ct)
     {
-        var entity = await db.Contactos.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
-        if (entity is null)
-            return Result.Failure($"Contacto {request.Id} no encontrado.");
+        try
+        {
+            var entity = await db.Contactos.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
+            if (entity is null)
+                return Result.Failure($"Contacto {request.Id} no encontrado.");
 
-        db.Contactos.Remove(entity);
-        await db.SaveChangesAsync(ct);
-        return Result.Success();
+            db.Contactos.Remove(entity);
+            await db.SaveChangesAsync(ct);
+            return Result.Success();
+        }
+        catch (DbException ex) when (CrmLocalSchemaCompatibility.TryTranslate(ex, out var schemaError))
+        {
+            return Result.Failure(schemaError);
+        }
+        catch (DbUpdateException ex) when (CrmLocalSchemaCompatibility.TryTranslate(ex, out var schemaError))
+        {
+            return Result.Failure(schemaError);
+        }
     }
 }
 
@@ -281,7 +346,35 @@ public class CreateCrmCampanaCommandHandler(IApplicationDbContext db)
     {
         try
         {
-            var entity = CrmCampana.Crear(request.SucursalId, request.Nombre, request.Descripcion, request.FechaInicio, request.FechaFin, request.Presupuesto, userId: null);
+            var sucursalValidation = await CrmWorkspaceReferenceValidation.ValidateSucursalAsync(db, request.SucursalId, ct);
+            if (sucursalValidation is not null)
+                return Result.Failure<long>(sucursalValidation);
+
+            var segmentoValidation = await CrmWorkspaceReferenceValidation.ValidateSegmentoAsync(db, request.SegmentoObjetivoId, ct);
+            if (segmentoValidation is not null)
+                return Result.Failure<long>(segmentoValidation);
+
+            var responsableValidation = await CrmWorkspaceReferenceValidation.ValidateUsuarioActivoAsync(db, request.ResponsableId, "responsable CRM", ct);
+            if (responsableValidation is not null)
+                return Result.Failure<long>(responsableValidation);
+
+            var entity = CrmCampana.Crear(
+                request.SucursalId,
+                request.Nombre,
+                request.Descripcion,
+                request.FechaInicio,
+                request.FechaFin,
+                request.Presupuesto,
+                userId: null,
+                request.TipoCampana,
+                request.Objetivo,
+                request.SegmentoObjetivoId,
+                request.PresupuestoGastado,
+                request.ResponsableId,
+                request.Notas,
+                request.LeadsGenerados,
+                request.OportunidadesGeneradas,
+                request.NegociosGanados);
             db.CrmCampanas.Add(entity);
             await db.SaveChangesAsync(ct);
             return Result.Success(entity.Id);
@@ -298,11 +391,34 @@ public class UpdateCrmCampanaCommandHandler(IApplicationDbContext db)
 {
     public async Task<Result> Handle(UpdateCrmCampanaCommand request, CancellationToken ct)
     {
+        var segmentoValidation = await CrmWorkspaceReferenceValidation.ValidateSegmentoAsync(db, request.SegmentoObjetivoId, ct);
+        if (segmentoValidation is not null)
+            return Result.Failure(segmentoValidation);
+
+        var responsableValidation = await CrmWorkspaceReferenceValidation.ValidateUsuarioActivoAsync(db, request.ResponsableId, "responsable CRM", ct);
+        if (responsableValidation is not null)
+            return Result.Failure(responsableValidation);
+
         var entity = await db.CrmCampanas.FirstOrDefaultAsync(x => x.Id == request.Id, ct);
         if (entity is null)
             return Result.Failure($"Campana {request.Id} no encontrada.");
 
-        entity.Actualizar(request.Nombre, request.Descripcion, request.FechaInicio, request.FechaFin, request.Presupuesto, userId: null);
+        entity.Actualizar(
+            request.Nombre,
+            request.Descripcion,
+            request.FechaInicio,
+            request.FechaFin,
+            request.Presupuesto,
+            userId: null,
+            request.TipoCampana,
+            request.Objetivo,
+            request.SegmentoObjetivoId,
+            request.PresupuestoGastado,
+            request.ResponsableId,
+            request.Notas,
+            request.LeadsGenerados,
+            request.OportunidadesGeneradas,
+            request.NegociosGanados);
         await db.SaveChangesAsync(ct);
         return Result.Success();
     }
@@ -530,7 +646,14 @@ public class CreateCrmCampanaCommandValidator : AbstractValidator<CreateCrmCampa
     {
         RuleFor(x => x.SucursalId).GreaterThan(0);
         RuleFor(x => x.Nombre).NotEmpty();
+        RuleFor(x => x.TipoCampana).Must(CrmDomainRules.IsValidTipoCampana).WithMessage("El tipo de campaña CRM no es válido.");
+        RuleFor(x => x.Objetivo).Must(CrmDomainRules.IsValidObjetivoCampana).WithMessage("El objetivo de campaña CRM no es válido.");
         RuleFor(x => x.FechaFin).GreaterThanOrEqualTo(x => x.FechaInicio);
+        RuleFor(x => x.Presupuesto).GreaterThanOrEqualTo(0).When(x => x.Presupuesto.HasValue);
+        RuleFor(x => x.PresupuestoGastado).GreaterThanOrEqualTo(0).When(x => x.PresupuestoGastado.HasValue);
+        RuleFor(x => x.LeadsGenerados).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.OportunidadesGeneradas).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.NegociosGanados).GreaterThanOrEqualTo(0);
     }
 }
 
@@ -540,7 +663,14 @@ public class UpdateCrmCampanaCommandValidator : AbstractValidator<UpdateCrmCampa
     {
         RuleFor(x => x.Id).GreaterThan(0);
         RuleFor(x => x.Nombre).NotEmpty();
+        RuleFor(x => x.TipoCampana).Must(CrmDomainRules.IsValidTipoCampana).WithMessage("El tipo de campaña CRM no es válido.");
+        RuleFor(x => x.Objetivo).Must(CrmDomainRules.IsValidObjetivoCampana).WithMessage("El objetivo de campaña CRM no es válido.");
         RuleFor(x => x.FechaFin).GreaterThanOrEqualTo(x => x.FechaInicio);
+        RuleFor(x => x.Presupuesto).GreaterThanOrEqualTo(0).When(x => x.Presupuesto.HasValue);
+        RuleFor(x => x.PresupuestoGastado).GreaterThanOrEqualTo(0).When(x => x.PresupuestoGastado.HasValue);
+        RuleFor(x => x.LeadsGenerados).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.OportunidadesGeneradas).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.NegociosGanados).GreaterThanOrEqualTo(0);
     }
 }
 

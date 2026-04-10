@@ -173,16 +173,20 @@ public class GetItemsPagedQueryHandler(
             ? await itemCommercialStockService.GetSnapshotsAsync(itemIds, ct)
             : new Dictionary<long, ItemCommercialStockSnapshot>();
 
-        var stockEnTransitoPorItem = itemIds.Count > 0
-            ? await (
-                from td in db.TransferenciasDepositoDetalles.AsNoTracking()
-                join t in db.TransferenciasDeposito.AsNoTracking()
-                    on td.TransferenciaDepositoId equals t.Id
-                where itemIds.Contains(td.ItemId)
-                      && t.Estado == EstadoTransferenciaDeposito.EnTransito
-                      && !t.IsDeleted
-                group td by td.ItemId into g
-                select new { ItemId = g.Key, Cantidad = g.Sum(x => x.Cantidad) })
+        var transferenciasEnTransitoIds = itemIds.Count > 0
+            ? await db.TransferenciasDeposito
+                .AsNoTracking()
+                .Where(x => x.Estado == EstadoTransferenciaDeposito.EnTransito)
+                .Select(x => x.Id)
+                .ToListAsync(ct)
+            : new List<long>();
+
+        var stockEnTransitoPorItem = itemIds.Count > 0 && transferenciasEnTransitoIds.Count > 0
+            ? await db.TransferenciasDepositoDetalles
+                .AsNoTracking()
+                .Where(x => itemIds.Contains(x.ItemId) && transferenciasEnTransitoIds.Contains(x.TransferenciaDepositoId))
+                .GroupBy(x => x.ItemId)
+                .Select(x => new { ItemId = x.Key, Cantidad = x.Sum(td => td.Cantidad) })
                 .ToDictionaryAsync(x => x.ItemId, x => x.Cantidad, ct)
             : new Dictionary<long, decimal>();
 

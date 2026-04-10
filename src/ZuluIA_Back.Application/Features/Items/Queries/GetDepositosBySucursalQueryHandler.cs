@@ -14,7 +14,7 @@ public class GetDepositosBySucursalQueryHandler(
         GetDepositosBySucursalQuery request,
         CancellationToken ct)
     {
-        var depositos = await repo.GetActivosBySucursalAsync(request.SucursalId, ct);
+        var depositos = await repo.GetBySucursalAsync(request.SucursalId, request.IncluirInactivos, ct);
         return mapper.Map<IReadOnlyList<DepositoDto>>(depositos);
     }
 }

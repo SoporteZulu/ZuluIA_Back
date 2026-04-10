@@ -152,7 +152,7 @@ public class GetNotasDebitoPagedQueryHandler(IApplicationDbContext db)
             ComprobanteOrigenFecha = x.ComprobanteOrigenId.HasValue
                 ? comprobantesOrigen.GetValueOrDefault(x.ComprobanteOrigenId.Value)?.Fecha
                 : null,
-            Estado = x.Estado,
+            Estado = x.Estado.ToString().ToUpperInvariant(),
             Cae = x.Cae
         }).ToList();
 

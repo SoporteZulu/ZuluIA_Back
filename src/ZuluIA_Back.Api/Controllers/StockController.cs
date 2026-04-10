@@ -5,6 +5,7 @@ using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Stock.Commands;
 using ZuluIA_Back.Application.Features.Stock.Queries;
 using ZuluIA_Back.Domain.Entities.Stock;
+using ZuluIA_Back.Domain.Enums;
 
 namespace ZuluIA_Back.Api.Controllers;
 
@@ -197,53 +198,22 @@ public class StockController(IMediator mediator, IApplicationDbContext db)
     public async Task<IActionResult> GetMovimientos(
         [FromQuery] long? itemId = null,
         [FromQuery] long? depositoId = null,
+        [FromQuery] string? tipo = null,
         [FromQuery] DateOnly? desde = null,
         [FromQuery] DateOnly? hasta = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
-        var query = db.MovimientosStock.AsNoTracking();
+        TipoMovimientoStock? tipoEnum = null;
+        if (!string.IsNullOrWhiteSpace(tipo) && Enum.TryParse<TipoMovimientoStock>(tipo, true, out var parsedTipo))
+            tipoEnum = parsedTipo;
 
-        if (itemId.HasValue)
-            query = query.Where(m => m.ItemId == itemId.Value);
+        var result = await Mediator.Send(
+            new GetMovimientosStockPagedQuery(page, pageSize, itemId, depositoId, tipoEnum, desde, hasta),
+            ct);
 
-        if (depositoId.HasValue)
-            query = query.Where(m => m.DepositoId == depositoId.Value);
-
-        if (desde.HasValue)
-            query = query.Where(m => DateOnly.FromDateTime(m.Fecha.Date) >= desde.Value);
-
-        if (hasta.HasValue)
-            query = query.Where(m => DateOnly.FromDateTime(m.Fecha.Date) <= hasta.Value);
-
-        var total = await query.CountAsync(ct);
-
-        var items = await query
-            .OrderByDescending(m => m.Fecha)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(m => new
-            {
-                m.Id,
-                m.ItemId,
-                m.DepositoId,
-                m.Fecha,
-                TipoMovimiento = m.TipoMovimiento.ToString(),
-                m.Cantidad,
-                m.SaldoResultante,
-                m.Observacion
-            })
-            .ToListAsync(ct);
-
-        return Ok(new
-        {
-            items,
-            page,
-            pageSize,
-            totalCount = total,
-            totalPages = (int)Math.Ceiling(total / (double)pageSize)
-        });
+        return Ok(result);
     }
 
     // ── Inventarios / Conteos físicos ─────────────────────────────────────────

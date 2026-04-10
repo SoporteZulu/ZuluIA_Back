@@ -154,15 +154,18 @@ public class GetItemByIdQueryHandler(
 
         var stockSnapshot = await itemCommercialStockService.GetSnapshotAsync(request.Id, ct);
 
-        var stockEnTransito = await (
-            from td in db.TransferenciasDepositoDetalles.AsNoTracking()
-            join t in db.TransferenciasDeposito.AsNoTracking()
-                on td.TransferenciaDepositoId equals t.Id
-            where td.ItemId == request.Id
-                  && t.Estado == EstadoTransferenciaDeposito.EnTransito
-                  && !t.IsDeleted
-            select td.Cantidad)
-            .SumAsync(ct);
+        var transferenciasEnTransitoIds = await db.TransferenciasDeposito
+            .AsNoTracking()
+            .Where(x => x.Estado == EstadoTransferenciaDeposito.EnTransito)
+            .Select(x => x.Id)
+            .ToListAsync(ct);
+
+        var stockEnTransito = transferenciasEnTransitoIds.Count > 0
+            ? await db.TransferenciasDepositoDetalles
+                .AsNoTracking()
+                .Where(x => x.ItemId == request.Id && transferenciasEnTransitoIds.Contains(x.TransferenciaDepositoId))
+                .SumAsync(x => x.Cantidad, ct)
+            : 0m;
 
         return new ItemDto
         {

@@ -10,6 +10,7 @@ using ZuluIA_Back.Domain.Interfaces;
 
 namespace ZuluIA_Back.Api.Controllers;
 
+[Route("api/formulas-produccion")]
 public class FormulasProduccionController(
     IMediator mediator,
     IFormulaProduccionRepository repo,

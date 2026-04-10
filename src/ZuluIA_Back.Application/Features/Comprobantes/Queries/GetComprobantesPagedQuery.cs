@@ -11,6 +11,8 @@ public record GetComprobantesPagedQuery(
     long? SucursalId = null,
     long? TerceroId = null,
     long? TipoComprobanteId = null,
+    bool? EsVenta = null,
+    bool? EsCompra = null,
     EstadoComprobante? Estado = null,
     DateOnly? Desde = null,
     DateOnly? Hasta = null

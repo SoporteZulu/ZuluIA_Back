@@ -14,8 +14,10 @@ public class ComprobanteDetalleDto
     public short Prefijo { get; set; }
     public long Numero { get; set; }
     public string NumeroFormateado { get; set; } = string.Empty;
+    public string NroComprobante => NumeroFormateado;
     public DateOnly Fecha { get; set; }
     public DateOnly? FechaVencimiento { get; set; }
+    public DateOnly? FechaVto => FechaVencimiento;
     public long TerceroId { get; set; }
     public string TerceroRazonSocial { get; set; } = string.Empty;
     public string TerceroCuit { get; set; } = string.Empty;
@@ -115,6 +117,7 @@ public class ComprobanteDetalleDto
     public string? Cae { get; set; }
     public string? Caea { get; set; }
     public DateOnly? FechaVtoCae { get; set; }
+    public DateOnly? CaeFechaVto => FechaVtoCae;
     public string? QrData { get; set; }
     public string EstadoAfip { get; set; } = string.Empty;
     public string? UltimoErrorAfip { get; set; }

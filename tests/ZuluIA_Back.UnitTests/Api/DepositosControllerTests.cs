@@ -27,13 +27,37 @@ public class DepositosControllerTests
             .Returns(data);
         var controller = CreateController(mediator, db);
 
-        var result = await controller.GetBySucursal(7, CancellationToken.None);
+        var result = await controller.GetBySucursal(7, false, CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         ok.Value.Should().BeSameAs(data);
         await mediator.Received(1).Send(
             Arg.Is<GetDepositosBySucursalQuery>(query => query.SucursalId == 7),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetBySucursal_SinSucursalId_DevuelveTodosLosActivosOrdenados()
+    {
+        var mediator = Substitute.For<IMediator>();
+        var db = Substitute.For<IApplicationDbContext>();
+        db.Depositos.Returns(MockDbSetHelper.CreateMockDbSet([
+            BuildDeposito(3, 2, "Secundario", false, true),
+            BuildDeposito(2, 1, "Principal", true, true),
+            BuildDeposito(1, 1, "Auxiliar", false, true),
+            BuildDeposito(4, 1, "Inactivo", false, false)
+        ]));
+        var controller = CreateController(mediator, db);
+
+        var result = await controller.GetBySucursal(null, false, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<DepositoDto>>().Subject;
+        items.Should().HaveCount(3);
+        items[0].Id.Should().Be(2);
+        items[1].Id.Should().Be(1);
+        items[2].Id.Should().Be(3);
+        await mediator.DidNotReceive().Send(Arg.Any<GetDepositosBySucursalQuery>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

@@ -86,7 +86,7 @@ public class GetNotasDebitoByOrigenQueryHandler(IApplicationDbContext db)
             MonedaSimbolo = monedas.GetValueOrDefault(x.MonedaId)?.Simbolo ?? "$",
             Total = x.Total,
             Saldo = x.Saldo,
-            Estado = x.Estado,
+            Estado = x.Estado.ToString().ToUpperInvariant(),
             Cae = x.Cae,
             MotivoDebitoId = x.MotivoDebitoId,
             MotivoDebitoDescripcion = x.MotivoDebitoId.HasValue

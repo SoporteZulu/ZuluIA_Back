@@ -1,0 +1,10 @@
+using System;
+using Npgsql;
+var cs = "Host=localhost;Port=5432;Database=zuluia_back_local;Username=postgres;Password=Alejandro.-25;Include Error Detail=true";
+var conn = new NpgsqlConnection(cs);
+conn.Open();
+var cmd = new NpgsqlCommand(@"select table_name,column_name from information_schema.columns where table_schema = 'public' and table_name in ('terceros','CONTACTOS','tipos_relaciones_contacto') order by table_name,column_name", conn);
+var reader = cmd.ExecuteReader();
+while (reader.Read()) Console.WriteLine(reader.GetString(0) + "|" + reader.GetString(1));
+reader.Close();
+conn.Close();

@@ -10,7 +10,9 @@ using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.CRM.Commands;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.CRM;
+using ZuluIA_Back.Domain.Entities.Sucursales;
 using ZuluIA_Back.Domain.Entities.Terceros;
+using ZuluIA_Back.Domain.Entities.Usuarios;
 using ZuluIA_Back.UnitTests.Helpers;
 
 namespace ZuluIA_Back.UnitTests.Api;
@@ -343,18 +345,81 @@ public class CrmControllerTests
     }
 
     [Fact]
-    public async Task CreateCampana_CuandoTieneExito_DevuelveCreatedAtAction()
+    public async Task GetCampanaById_CuandoExiste_DevuelvePayload()
+    {
+        CrmCampana[] campanas = [BuildCampana(14, 10, "Camp", new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 31), 100, true)];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(campanas: campanas));
+
+        var result = await controller.GetCampanaById(14, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        AssertAnonymousProperty(ok.Value!, "Id", "14");
+        AssertAnonymousProperty(ok.Value!, "Nombre", "Camp");
+    }
+
+    [Fact]
+    public async Task CreateCampana_CuandoTieneExito_DevuelveCreatedConPayload()
     {
         var mediator = Substitute.For<IMediator>();
         mediator.Send(Arg.Any<CreateCrmCampanaCommand>(), Arg.Any<CancellationToken>())
             .Returns(Result.Success(14L));
         var controller = CreateController(mediator, BuildDb());
 
-        var result = await controller.CreateCampana(new CrmCampanaRequest(10, "Camp", null, new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 31), 100), CancellationToken.None);
+        var result = await controller.CreateCampana(
+            new CrmCampanaRequest(
+                10,
+                "Camp",
+                "email",
+                "generacion_leads",
+                null,
+                new DateTimeOffset(new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc)),
+                new DateTimeOffset(new DateTime(2026, 3, 31, 0, 0, 0, DateTimeKind.Utc)),
+                100,
+                0,
+                null,
+                "Notas",
+                1,
+                2,
+                3),
+            CancellationToken.None);
 
-        var created = result.Should().BeOfType<CreatedAtActionResult>().Subject;
-        created.ActionName.Should().Be(nameof(CrmController.GetCampanas));
-        AssertAnonymousProperty(created.Value!, "Id", 14L);
+        var created = result.Should().BeOfType<ObjectResult>().Subject;
+        created.StatusCode.Should().Be(StatusCodes.Status201Created);
+        AssertAnonymousProperty(created.Value!, "Id", "14");
+    }
+
+    [Fact]
+    public async Task CreateCampana_SinSucursalExplicita_UsaSucursalActivaPorDefecto()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<CreateCrmCampanaCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success(14L));
+        Sucursal[] sucursales = [BuildSucursal(10, true)];
+        CrmCampana[] campanas = [BuildCampana(14, 10, "Camp", new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 31), 100, true)];
+        var controller = CreateController(mediator, BuildDb(campanas: campanas, sucursales: sucursales));
+
+        var result = await controller.CreateCampana(
+            new CrmCampanaRequest(
+                null,
+                "Camp",
+                "email",
+                "generacion_leads",
+                null,
+                new DateTimeOffset(new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc)),
+                new DateTimeOffset(new DateTime(2026, 3, 31, 0, 0, 0, DateTimeKind.Utc)),
+                100,
+                0,
+                null,
+                "Notas",
+                1,
+                2,
+                3),
+            CancellationToken.None);
+
+        result.Should().BeOfType<ObjectResult>();
+        await mediator.Received(1).Send(
+            Arg.Is<CreateCrmCampanaCommand>(x => x.SucursalId == 10),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -415,6 +480,398 @@ public class CrmControllerTests
         var result = await controller.DeleteComunicado(9, CancellationToken.None);
 
         result.Should().BeOfType<OkResult>();
+    }
+
+    [Fact]
+    public async Task GetClientes_FiltraPorBusquedaYDevuelveIdComoTexto()
+    {
+        Tercero[] terceros =
+        [
+            BuildTercero(10, "Acme SA", "80012345-6", "ventas@acme.com"),
+            BuildTercero(11, "Beta SRL", "80099999-1", "contacto@beta.com")
+        ];
+        CrmCliente[] clientes =
+        [
+            BuildCrmCliente(10, "prospecto", "pyme", "Retail", "Paraguay", "Asuncion", "Centro", "Palma 123", "web", "nuevo"),
+            BuildCrmCliente(11, "activo", "corporativo", "Agro", "Paraguay", "Central", "Luque", "Ruta 1", "referido", "fidelizado")
+        ];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(terceros: terceros, clientesCrm: clientes));
+
+        var result = await controller.GetClientes("acme", CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var items = ((IEnumerable)ok.Value!).Cast<object>().ToList();
+        items.Should().HaveCount(1);
+        AssertAnonymousProperty(items[0], "Id", "10");
+        AssertAnonymousProperty(items[0], "Nombre", "Acme SA");
+    }
+
+    [Fact]
+    public async Task GetOportunidades_AplicaFiltrosAvanzados()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        CrmOportunidad[] oportunidades =
+        [
+            BuildCrmOportunidad(8, 10, "Pipeline Acme", "lead", today.AddDays(3), 2500m, 7),
+            BuildCrmOportunidad(9, 10, "Pipeline Beta", "propuesta", today.AddDays(10), 5000m, 8)
+        ];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(oportunidadesCrm: oportunidades));
+
+        var result = await controller.GetOportunidades(
+            clienteId: "10",
+            responsableId: "7",
+            etapa: "lead",
+            busqueda: "Acme",
+            fechaCierreDesde: today,
+            fechaCierreHasta: today.AddDays(5),
+            ct: CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var items = ((IEnumerable)ok.Value!).Cast<object>().ToList();
+        items.Should().HaveCount(1);
+        AssertAnonymousProperty(items[0], "Id", "8");
+    }
+
+    [Fact]
+    public async Task GetSegmentos_CalculaCantidadClientesSegunCriterios()
+    {
+        Tercero[] terceros =
+        [
+            BuildTercero(10, "Acme SA", "80012345-6", "ventas@acme.com"),
+            BuildTercero(11, "Beta SRL", "80099999-1", "contacto@beta.com")
+        ];
+        CrmCliente[] clientes =
+        [
+            BuildCrmCliente(10, "prospecto", "pyme", "Retail", "Paraguay", "Asuncion", "Centro", "Palma 123", "web", "nuevo"),
+            BuildCrmCliente(11, "activo", "corporativo", "Agro", "Paraguay", "Central", "Luque", "Ruta 1", "referido", "fidelizado")
+        ];
+        CrmSegmento[] segmentos =
+        [
+            BuildCrmSegmento(1, "PYME", "Segmento PyME", "[{\"Campo\":\"segmento\",\"Operador\":\"igual\",\"Valor\":\"pyme\"}]", "dinamico")
+        ];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(terceros: terceros, clientesCrm: clientes, segmentosCrm: segmentos));
+
+        var result = await controller.GetSegmentos(CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var items = ((IEnumerable)ok.Value!).Cast<object>().ToList();
+        items.Should().HaveCount(1);
+        AssertAnonymousProperty(items[0], "CantidadClientes", 1);
+    }
+
+    [Fact]
+    public async Task GetUsuariosCrm_UsaPerfilYDivideNombreCompleto()
+    {
+        Usuario[] usuarios = [BuildUsuario(7, "juan.perez", "Juan Perez", "juan@crm.com", true)];
+        CrmUsuarioPerfil[] perfiles = [BuildCrmUsuarioPerfil(1, 7, "supervisor", true)];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(usuarios: usuarios, usuariosCrm: perfiles));
+
+        var result = await controller.GetUsuariosCrm(CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var items = ((IEnumerable)ok.Value!).Cast<object>().ToList();
+        items.Should().HaveCount(1);
+        AssertAnonymousProperty(items[0], "Nombre", "Juan");
+        AssertAnonymousProperty(items[0], "Apellido", "Perez");
+        AssertAnonymousProperty(items[0], "Rol", "supervisor");
+    }
+
+    [Fact]
+    public async Task GetCrmContactoById_CuandoExiste_DevuelvePayload()
+    {
+        CrmContacto[] contactos = [BuildCrmContacto(5, 10, "Ana", "Lopez", "Compras")];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(crmContactos: contactos));
+
+        var result = await controller.GetCrmContactoById(5, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        AssertAnonymousProperty(ok.Value!, "Id", "5");
+        AssertAnonymousProperty(ok.Value!, "Nombre", "Ana");
+    }
+
+    [Fact]
+    public async Task GetOportunidadById_CuandoExiste_DevuelvePayload()
+    {
+        CrmOportunidad[] oportunidades = [BuildCrmOportunidad(8, 10, "Pipeline", "lead")];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(oportunidadesCrm: oportunidades));
+
+        var result = await controller.GetOportunidadById(8, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        AssertAnonymousProperty(ok.Value!, "Id", "8");
+        AssertAnonymousProperty(ok.Value!, "Titulo", "Pipeline");
+    }
+
+    [Fact]
+    public async Task GetInteraccionById_CuandoExiste_DevuelvePayload()
+    {
+        CrmInteraccion[] interacciones = [BuildCrmInteraccion(9, 10, "llamada", "telefono")];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(interaccionesCrm: interacciones));
+
+        var result = await controller.GetInteraccionById(9, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        AssertAnonymousProperty(ok.Value!, "Id", "9");
+        AssertAnonymousProperty(ok.Value!, "TipoInteraccion", "llamada");
+    }
+
+    [Fact]
+    public async Task GetTareaById_CuandoExiste_DevuelvePayload()
+    {
+        CrmTarea[] tareas = [BuildCrmTarea(11, 10, "Seguimiento")];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(tareasCrm: tareas));
+
+        var result = await controller.GetTareaById(11, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        AssertAnonymousProperty(ok.Value!, "Id", "11");
+        AssertAnonymousProperty(ok.Value!, "Titulo", "Seguimiento");
+    }
+
+    [Fact]
+    public async Task GetSegmentoById_CuandoExiste_DevuelvePayload()
+    {
+        Tercero[] terceros = [BuildTercero(10, "Acme SA", "80012345-6", "ventas@acme.com")];
+        CrmCliente[] clientes = [BuildCrmCliente(10, "prospecto", "pyme", "Retail", "Paraguay", "Asuncion", "Centro", "Palma 123", "web", "nuevo")];
+        CrmSegmento[] segmentos = [BuildCrmSegmento(4, "PYME", "Segmento PyME", "[]", "dinamico")];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(terceros: terceros, clientesCrm: clientes, segmentosCrm: segmentos));
+
+        var result = await controller.GetSegmentoById(4, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        AssertAnonymousProperty(ok.Value!, "Id", "4");
+        AssertAnonymousProperty(ok.Value!, "Nombre", "PYME");
+    }
+
+    [Fact]
+    public async Task GetSegmentoMiembros_CuandoSegmentoEsEstatico_DevuelveMembresiaManual()
+    {
+        Tercero[] terceros = [BuildTercero(10, "Acme SA", "80012345-6", "ventas@acme.com")];
+        CrmCliente[] clientes = [BuildCrmCliente(10, "prospecto", "pyme", "Retail", "Paraguay", "Asuncion", "Centro", "Palma 123", "web", "nuevo")];
+        CrmSegmento[] segmentos = [BuildCrmSegmento(4, "VIP", "Manual", "[]", "estatico")];
+        CrmSegmentoMiembro[] miembros = [BuildCrmSegmentoMiembro(1, 4, 10)];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(terceros: terceros, clientesCrm: clientes, segmentosCrm: segmentos, segmentosMiembrosCrm: miembros));
+
+        var result = await controller.GetSegmentoMiembros(4, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var items = ((IEnumerable)ok.Value!).Cast<object>().ToList();
+        items.Should().HaveCount(1);
+        AssertAnonymousProperty(items[0], "Id", "10");
+    }
+
+    [Fact]
+    public async Task PreviewSegmento_CuandoEsDinamico_DevuelveClientesCoincidentes()
+    {
+        Tercero[] terceros =
+        [
+            BuildTercero(10, "Acme SA", "80012345-6", "ventas@acme.com"),
+            BuildTercero(11, "Beta SRL", "80099999-1", "contacto@beta.com")
+        ];
+        CrmCliente[] clientes =
+        [
+            BuildCrmCliente(10, "prospecto", "pyme", "Retail", "Paraguay", "Asuncion", "Centro", "Palma 123", "web", "nuevo"),
+            BuildCrmCliente(11, "activo", "corporativo", "Agro", "Paraguay", "Central", "Luque", "Ruta 1", "referido", "fidelizado")
+        ];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(terceros: terceros, clientesCrm: clientes));
+
+        var result = await controller.PreviewSegmento(
+            new CrmSegmentoPreviewRequest([new CrmSegmentCriterionRequest("segmento", "igual", "pyme")], "dinamico"),
+            CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        AssertAnonymousProperty(ok.Value!, "CantidadClientes", 1);
+    }
+
+    [Fact]
+    public async Task GetReportes_CuandoHayDatos_DevuelveResumenComercialYMarketing()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        Tercero[] terceros = [BuildTercero(10, "Acme SA", "80012345-6", "ventas@acme.com")];
+        CrmCliente[] clientes = [BuildCrmCliente(10, "activo", "pyme", "Retail", "Paraguay", "Asuncion", "Centro", "Palma 123", "web", "en_riesgo", 7)];
+        CrmOportunidad[] oportunidades = [BuildCrmOportunidad(8, 10, "Pipeline", "lead", today.AddDays(-1), 2500m, 7)];
+        CrmInteraccion[] interacciones = [BuildCrmInteraccion(9, 10, "llamada", "telefono", DateTimeOffset.UtcNow.AddDays(-35), 7)];
+        CrmCampana[] campanas = [BuildCampana(14, 10, "Camp", today.AddDays(-5), today.AddDays(5), 100m, 120m, 7, 10, 4, 2, true)];
+        Usuario[] usuarios = [BuildUsuario(7, "juan.perez", "Juan Perez", "juan@crm.com", true)];
+        CrmUsuarioPerfil[] perfiles = [BuildCrmUsuarioPerfil(1, 7, "comercial", true)];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(terceros: terceros, clientesCrm: clientes, oportunidadesCrm: oportunidades, interaccionesCrm: interacciones, campanas: campanas, usuarios: usuarios, usuariosCrm: perfiles));
+
+        var result = await controller.GetReportes(ct: CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var resumenComercial = ok.Value!.GetType().GetProperty("ResumenComercial")!.GetValue(ok.Value!);
+        var resumenMarketing = ok.Value!.GetType().GetProperty("ResumenMarketing")!.GetValue(ok.Value!);
+        var pipelinePorEtapa = ((IEnumerable)ok.Value!.GetType().GetProperty("PipelinePorEtapa")!.GetValue(ok.Value!)!).Cast<object>().ToList();
+
+        AssertAnonymousProperty(resumenComercial!, "ClientesActivos", 1);
+        AssertAnonymousProperty(resumenComercial!, "PipelineAbierto", 2500m);
+        AssertAnonymousProperty(resumenMarketing!, "CampanasActivas", 1);
+        AssertAnonymousProperty(resumenMarketing!, "Leads", 10);
+        var lead = pipelinePorEtapa.Single(x => Equals(x.GetType().GetProperty("Etapa")!.GetValue(x), "lead"));
+        AssertAnonymousProperty(lead, "Cantidad", 1);
+    }
+
+    [Fact]
+    public async Task GetReportes_AplicaFiltrosAvanzados()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+        Tercero[] terceros =
+        [
+            BuildTercero(10, "Acme SA", "80012345-6", "ventas@acme.com"),
+            BuildTercero(11, "Beta SRL", "80099999-1", "contacto@beta.com")
+        ];
+        CrmCliente[] clientes =
+        [
+            BuildCrmCliente(10, "activo", "pyme", "Retail", "Paraguay", "Asuncion", "Centro", "Palma 123", "web", "nuevo", 7),
+            BuildCrmCliente(11, "activo", "corporativo", "Agro", "Paraguay", "Central", "Luque", "Ruta 1", "referido", "fidelizado", 8)
+        ];
+        CrmOportunidad[] oportunidades =
+        [
+            BuildCrmOportunidad(8, 10, "Pipeline Acme", "lead", today.AddDays(3), 2500m, 7),
+            BuildCrmOportunidad(9, 11, "Pipeline Beta", "lead", today.AddDays(3), 5000m, 8)
+        ];
+        CrmInteraccion[] interacciones =
+        [
+            BuildCrmInteraccion(9, 10, "llamada", "telefono", DateTimeOffset.UtcNow.AddDays(-2), 7),
+            BuildCrmInteraccion(10, 11, "email", "email", DateTimeOffset.UtcNow.AddDays(-40), 8)
+        ];
+        CrmCampana[] campanas =
+        [
+            BuildCampana(14, 10, "Camp Acme", today.AddDays(-2), today.AddDays(2), 100m, 120m, 7, 10, 4, 2, true),
+            BuildCampana(15, 10, "Camp Beta", today.AddDays(-40), today.AddDays(-20), 200m, 180m, 8, 20, 6, 3, false)
+        ];
+        Usuario[] usuarios =
+        [
+            BuildUsuario(7, "juan.perez", "Juan Perez", "juan@crm.com", true),
+            BuildUsuario(8, "ana.lopez", "Ana Lopez", "ana@crm.com", true)
+        ];
+        CrmUsuarioPerfil[] perfiles =
+        [
+            BuildCrmUsuarioPerfil(1, 7, "comercial", true),
+            BuildCrmUsuarioPerfil(2, 8, "comercial", true)
+        ];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(terceros: terceros, clientesCrm: clientes, oportunidadesCrm: oportunidades, interaccionesCrm: interacciones, campanas: campanas, usuarios: usuarios, usuariosCrm: perfiles));
+
+        var result = await controller.GetReportes(
+            responsableId: "7",
+            segmento: "pyme",
+            campanaId: "14",
+            desde: today.AddDays(-5),
+            hasta: today.AddDays(5),
+            ct: CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var resumenComercial = ok.Value!.GetType().GetProperty("ResumenComercial")!.GetValue(ok.Value!);
+        var resumenMarketing = ok.Value!.GetType().GetProperty("ResumenMarketing")!.GetValue(ok.Value!);
+        var actividad = ((IEnumerable)ok.Value!.GetType().GetProperty("ActividadPorUsuario")!.GetValue(ok.Value!)!).Cast<object>().ToList();
+
+        AssertAnonymousProperty(resumenComercial!, "ClientesActivos", 1);
+        AssertAnonymousProperty(resumenComercial!, "PipelineAbierto", 2500m);
+        AssertAnonymousProperty(resumenMarketing!, "CampanasActivas", 1);
+        actividad.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task GetCatalogos_CuandoHayDatos_DevuelveOpcionesYSelectoresActivos()
+    {
+        Tercero[] terceros = [BuildTercero(10, "Acme SA", "80012345-6", "ventas@acme.com")];
+        CrmCliente[] clientes = [BuildCrmCliente(10, "activo", "pyme", "Retail", "Paraguay", "Asuncion", "Centro", "Palma 123", "web", "nuevo", 7)];
+        CrmContacto[] crmContactos = [BuildCrmContacto(5, 10, "Ana", "Lopez", "Compras")];
+        CrmSegmento[] segmentos = [BuildCrmSegmento(4, "VIP", "Manual", "[]", "estatico")];
+        TipoRelacionContactoCatalogo[] tiposRelacion = [BuildTipoRelacionContacto(3, "CLIENTE_CONTACTO", "Cliente / contacto", true)];
+        Usuario[] usuarios = [BuildUsuario(7, "juan.perez", "Juan Perez", "juan@crm.com", true)];
+        CrmUsuarioPerfil[] perfiles = [BuildCrmUsuarioPerfil(1, 7, "comercial", true)];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(terceros: terceros, clientesCrm: clientes, crmContactos: crmContactos, segmentosCrm: segmentos, tiposRelacionContacto: tiposRelacion, usuarios: usuarios, usuariosCrm: perfiles));
+
+        var result = await controller.GetCatalogos(CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var tiposCliente = ((IEnumerable)ok.Value!.GetType().GetProperty("TiposCliente")!.GetValue(ok.Value!)!).Cast<object>().ToList();
+        var tiposRelacionContacto = ((IEnumerable)ok.Value!.GetType().GetProperty("TiposRelacionContacto")!.GetValue(ok.Value!)!).Cast<object>().ToList();
+        var clientesSelector = ((IEnumerable)ok.Value!.GetType().GetProperty("Clientes")!.GetValue(ok.Value!)!).Cast<object>().ToList();
+        var usuariosSelector = ((IEnumerable)ok.Value!.GetType().GetProperty("Usuarios")!.GetValue(ok.Value!)!).Cast<object>().ToList();
+
+        tiposCliente.Should().NotBeEmpty();
+        tiposRelacionContacto.Should().HaveCount(1);
+        clientesSelector.Should().HaveCount(1);
+        usuariosSelector.Should().HaveCount(1);
+        AssertAnonymousProperty(clientesSelector[0], "Id", "10");
+        AssertAnonymousProperty(usuariosSelector[0], "Rol", "comercial");
+    }
+
+    [Fact]
+    public async Task GetTiposRelacion_CuandoHayCatalogo_DevuelveSelectorSemantico()
+    {
+        TipoRelacionContactoCatalogo[] tiposRelacion =
+        [
+            BuildTipoRelacionContacto(3, "CLIENTE_CONTACTO", "Cliente / contacto", true),
+            BuildTipoRelacionContacto(4, "REFERENTE", "Referente", false)
+        ];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(tiposRelacionContacto: tiposRelacion));
+
+        var result = await controller.GetTiposRelacion(true, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var items = ((IEnumerable)ok.Value!).Cast<object>().ToList();
+        items.Should().HaveCount(1);
+        AssertAnonymousProperty(items[0], "Codigo", "CLIENTE_CONTACTO");
+        AssertAnonymousProperty(items[0], "Descripcion", "Cliente / contacto");
+    }
+
+    [Fact]
+    public async Task CerrarOportunidadGanada_CuandoTieneExito_DevuelvePayloadActualizado()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<CloseCrmOportunidadGanadaCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success());
+        CrmOportunidad[] oportunidades = [BuildCrmOportunidad(8, 10, "Pipeline", "cerrado_ganado")];
+        var controller = CreateController(mediator, BuildDb(oportunidadesCrm: oportunidades));
+
+        var result = await controller.CerrarOportunidadGanada(8, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        AssertAnonymousProperty(ok.Value!, "Id", "8");
+    }
+
+    [Fact]
+    public async Task ReasignarOportunidad_CuandoFaltaResponsable_DevuelveBadRequest()
+    {
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb());
+
+        var result = await controller.ReasignarOportunidad(8, new CrmReassignRequest(""), CancellationToken.None);
+
+        result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task CompletarTarea_CuandoTieneExito_DevuelvePayloadActualizado()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<CompleteCrmTareaCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success());
+        var tarea = CrmTarea.Crear(10, null, 7, "Seguimiento", "Detalle", "seguimiento", new DateOnly(2026, 3, 5), "media", "completada", new DateOnly(2026, 3, 6), null);
+        SetProperty(tarea, nameof(CrmTarea.Id), 11L);
+        var controller = CreateController(mediator, BuildDb(tareasCrm: [tarea]));
+
+        var result = await controller.CompletarTarea(11, new CrmCompleteTaskRequest(new DateTimeOffset(new DateTime(2026, 3, 6, 0, 0, 0, DateTimeKind.Utc))), CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        AssertAnonymousProperty(ok.Value!, "Id", "11");
+        AssertAnonymousProperty(ok.Value!, "Estado", "completada");
+    }
+
+    [Fact]
+    public async Task GetUsuarioCrmById_CuandoExiste_DevuelvePayload()
+    {
+        Usuario[] usuarios = [BuildUsuario(7, "juan.perez", "Juan Perez", "juan@crm.com", true)];
+        CrmUsuarioPerfil[] perfiles = [BuildCrmUsuarioPerfil(1, 7, "supervisor", true)];
+        var controller = CreateController(Substitute.For<IMediator>(), BuildDb(usuarios: usuarios, usuariosCrm: perfiles));
+
+        var result = await controller.GetUsuarioCrmById(7, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        AssertAnonymousProperty(ok.Value!, "Id", "7");
+        AssertAnonymousProperty(ok.Value!, "Nombre", "Juan");
     }
 
     [Fact]
@@ -489,29 +946,65 @@ public class CrmControllerTests
 
     private static IApplicationDbContext BuildDb(
         IEnumerable<Contacto>? contactos = null,
+        IEnumerable<TipoRelacionContactoCatalogo>? tiposRelacionContacto = null,
+        IEnumerable<Tercero>? terceros = null,
+        IEnumerable<CrmCliente>? clientesCrm = null,
+        IEnumerable<CrmContacto>? crmContactos = null,
         IEnumerable<CrmTipoComunicado>? tiposComunicado = null,
         IEnumerable<CrmMotivo>? motivos = null,
         IEnumerable<CrmInteres>? intereses = null,
         IEnumerable<CrmCampana>? campanas = null,
         IEnumerable<CrmComunicado>? comunicados = null,
-        IEnumerable<CrmSeguimiento>? seguimientos = null)
+        IEnumerable<CrmSeguimiento>? seguimientos = null,
+        IEnumerable<CrmOportunidad>? oportunidadesCrm = null,
+        IEnumerable<CrmInteraccion>? interaccionesCrm = null,
+        IEnumerable<CrmTarea>? tareasCrm = null,
+        IEnumerable<CrmSegmento>? segmentosCrm = null,
+        IEnumerable<CrmSegmentoMiembro>? segmentosMiembrosCrm = null,
+        IEnumerable<Usuario>? usuarios = null,
+        IEnumerable<CrmUsuarioPerfil>? usuariosCrm = null,
+        IEnumerable<Sucursal>? sucursales = null)
     {
         var db = Substitute.For<IApplicationDbContext>();
         var contactosDbSet = MockDbSetHelper.CreateMockDbSet(contactos);
+        var tiposRelacionContactoDbSet = MockDbSetHelper.CreateMockDbSet(tiposRelacionContacto);
+        var tercerosDbSet = MockDbSetHelper.CreateMockDbSet(terceros);
+        var clientesCrmDbSet = MockDbSetHelper.CreateMockDbSet(clientesCrm);
+        var crmContactosDbSet = MockDbSetHelper.CreateMockDbSet(crmContactos);
         var tiposComunicadoDbSet = MockDbSetHelper.CreateMockDbSet(tiposComunicado);
         var motivosDbSet = MockDbSetHelper.CreateMockDbSet(motivos);
         var interesesDbSet = MockDbSetHelper.CreateMockDbSet(intereses);
         var campanasDbSet = MockDbSetHelper.CreateMockDbSet(campanas);
         var comunicadosDbSet = MockDbSetHelper.CreateMockDbSet(comunicados);
         var seguimientosDbSet = MockDbSetHelper.CreateMockDbSet(seguimientos);
+        var oportunidadesCrmDbSet = MockDbSetHelper.CreateMockDbSet(oportunidadesCrm);
+        var interaccionesCrmDbSet = MockDbSetHelper.CreateMockDbSet(interaccionesCrm);
+        var tareasCrmDbSet = MockDbSetHelper.CreateMockDbSet(tareasCrm);
+        var segmentosCrmDbSet = MockDbSetHelper.CreateMockDbSet(segmentosCrm);
+        var segmentosMiembrosCrmDbSet = MockDbSetHelper.CreateMockDbSet(segmentosMiembrosCrm);
+        var usuariosDbSet = MockDbSetHelper.CreateMockDbSet(usuarios);
+        var usuariosCrmDbSet = MockDbSetHelper.CreateMockDbSet(usuariosCrm);
+        var sucursalesDbSet = MockDbSetHelper.CreateMockDbSet(sucursales);
 
         db.Contactos.Returns(contactosDbSet);
+        db.TiposRelacionesContacto.Returns(tiposRelacionContactoDbSet);
+        db.Terceros.Returns(tercerosDbSet);
+        db.CrmClientes.Returns(clientesCrmDbSet);
+        db.CrmContactos.Returns(crmContactosDbSet);
         db.CrmTiposComunicado.Returns(tiposComunicadoDbSet);
         db.CrmMotivos.Returns(motivosDbSet);
         db.CrmIntereses.Returns(interesesDbSet);
         db.CrmCampanas.Returns(campanasDbSet);
         db.CrmComunicados.Returns(comunicadosDbSet);
         db.CrmSeguimientos.Returns(seguimientosDbSet);
+        db.CrmOportunidades.Returns(oportunidadesCrmDbSet);
+        db.CrmInteracciones.Returns(interaccionesCrmDbSet);
+        db.CrmTareas.Returns(tareasCrmDbSet);
+        db.CrmSegmentos.Returns(segmentosCrmDbSet);
+        db.CrmSegmentosMiembros.Returns(segmentosMiembrosCrmDbSet);
+        db.Usuarios.Returns(usuariosDbSet);
+        db.CrmUsuariosPerfiles.Returns(usuariosCrmDbSet);
+        db.Sucursales.Returns(sucursalesDbSet);
         return db;
     }
 
@@ -519,6 +1012,15 @@ public class CrmControllerTests
     {
         var entity = Contacto.Crear(personaId, personaContactoId, tipoRelacionId);
         SetProperty(entity, nameof(Contacto.Id), id);
+        return entity;
+    }
+
+    private static TipoRelacionContactoCatalogo BuildTipoRelacionContacto(long id, string codigo, string descripcion, bool activo)
+    {
+        var entity = TipoRelacionContactoCatalogo.Crear(codigo, descripcion, null);
+        SetProperty(entity, nameof(TipoRelacionContactoCatalogo.Id), id);
+        if (!activo)
+            entity.Desactivar(null);
         return entity;
     }
 
@@ -569,6 +1071,109 @@ public class CrmControllerTests
     {
         var entity = CrmSeguimiento.Crear(sucursalId, terceroId, motivoId, interesId, campanaId, fecha, descripcion, proximaAccion, usuarioId);
         SetProperty(entity, nameof(CrmSeguimiento.Id), id);
+        return entity;
+    }
+
+    private static Tercero BuildTercero(long id, string razonSocial, string nroDocumento, string? email)
+    {
+        var entity = Tercero.Crear($"CLI-{id}", razonSocial, 1, nroDocumento, 1, true, false, false, null, null);
+        entity.Actualizar(razonSocial, razonSocial, 1, null, null, email, null, ZuluIA_Back.Domain.ValueObjects.Domicilio.Vacio(), null, null, null, null, null, null, true, null, false, 0m, null, false, 0m, null, null);
+        SetProperty(entity, nameof(Tercero.Id), id);
+        return entity;
+    }
+
+    private static CrmCliente BuildCrmCliente(long terceroId, string tipoCliente, string segmento, string? industria, string pais, string? provincia, string? ciudad, string? direccion, string origenCliente, string estadoRelacion, long? responsableId = null)
+    {
+        return CrmCliente.Crear(terceroId, tipoCliente, segmento, industria, pais, provincia, ciudad, direccion, origenCliente, estadoRelacion, responsableId, null, null);
+    }
+
+    private static CrmContacto BuildCrmContacto(long id, long clienteId, string nombre, string apellido, string? cargo)
+    {
+        var entity = CrmContacto.Crear(clienteId, nombre, apellido, cargo, "ana@test.com", "0991000000", "email", "activo", null, null);
+        SetProperty(entity, nameof(CrmContacto.Id), id);
+        return entity;
+    }
+
+    private static CrmOportunidad BuildCrmOportunidad(long id, long clienteId, string titulo, string etapa)
+    {
+        var entity = CrmOportunidad.Crear(clienteId, null, titulo, etapa, 50, 1000m, "USD", new DateOnly(2026, 3, 1), new DateOnly(2026, 3, 31), null, "web", null, null, null);
+        SetProperty(entity, nameof(CrmOportunidad.Id), id);
+        return entity;
+    }
+
+    private static CrmOportunidad BuildCrmOportunidad(long id, long clienteId, string titulo, string etapa, DateOnly fechaEstimadaCierre, decimal montoEstimado, long? responsableId)
+    {
+        var entity = CrmOportunidad.Crear(clienteId, null, titulo, etapa, 50, montoEstimado, "USD", fechaEstimadaCierre.AddDays(-15), fechaEstimadaCierre, responsableId, "web", null, null, null);
+        SetProperty(entity, nameof(CrmOportunidad.Id), id);
+        return entity;
+    }
+
+    private static CrmInteraccion BuildCrmInteraccion(long id, long clienteId, string tipoInteraccion, string canal)
+    {
+        var entity = CrmInteraccion.Crear(clienteId, null, null, tipoInteraccion, canal, new DateTimeOffset(new DateTime(2026, 3, 1, 10, 0, 0, DateTimeKind.Utc)), 7, "exitosa", "Llamada inicial", "[]", null);
+        SetProperty(entity, nameof(CrmInteraccion.Id), id);
+        return entity;
+    }
+
+    private static CrmInteraccion BuildCrmInteraccion(long id, long clienteId, string tipoInteraccion, string canal, DateTimeOffset fechaHora, long usuarioResponsableId)
+    {
+        var entity = CrmInteraccion.Crear(clienteId, null, null, tipoInteraccion, canal, fechaHora, usuarioResponsableId, "exitosa", "Llamada inicial", "[]", null);
+        SetProperty(entity, nameof(CrmInteraccion.Id), id);
+        return entity;
+    }
+
+    private static CrmCampana BuildCampana(long id, long sucursalId, string nombre, DateOnly fechaInicio, DateOnly fechaFin, decimal? presupuesto, decimal? presupuestoGastado, long? responsableId, int leadsGenerados, int oportunidadesGeneradas, int negociosGanados, bool activa)
+    {
+        var entity = CrmCampana.Crear(sucursalId, nombre, null, fechaInicio, fechaFin, presupuesto, null, "email", "generacion_leads", null, presupuestoGastado, responsableId, null, leadsGenerados, oportunidadesGeneradas, negociosGanados);
+        SetProperty(entity, nameof(CrmCampana.Id), id);
+        if (!activa)
+            entity.Cerrar(null);
+        return entity;
+    }
+
+    private static CrmTarea BuildCrmTarea(long id, long clienteId, string titulo)
+    {
+        var entity = CrmTarea.Crear(clienteId, null, 7, titulo, "Detalle", "seguimiento", new DateOnly(2026, 3, 5), "media", "pendiente", null, null);
+        SetProperty(entity, nameof(CrmTarea.Id), id);
+        return entity;
+    }
+
+    private static CrmSegmento BuildCrmSegmento(long id, string nombre, string? descripcion, string criteriosJson, string tipoSegmento)
+    {
+        var entity = CrmSegmento.Crear(nombre, descripcion, criteriosJson, tipoSegmento, null);
+        SetProperty(entity, nameof(CrmSegmento.Id), id);
+        return entity;
+    }
+
+    private static CrmSegmentoMiembro BuildCrmSegmentoMiembro(long id, long segmentoId, long clienteId)
+    {
+        var entity = CrmSegmentoMiembro.Crear(segmentoId, clienteId, null);
+        SetProperty(entity, nameof(CrmSegmentoMiembro.Id), id);
+        return entity;
+    }
+
+    private static Sucursal BuildSucursal(long id, bool casaMatriz)
+    {
+        var entity = Sucursal.Crear("Casa Central", "80012345-6", 1, 1, 1, casaMatriz, null);
+        SetProperty(entity, nameof(Sucursal.Id), id);
+        return entity;
+    }
+
+    private static Usuario BuildUsuario(long id, string userName, string? nombreCompleto, string? email, bool activo)
+    {
+        var entity = Usuario.Crear(userName, nombreCompleto, email, null, null);
+        SetProperty(entity, nameof(Usuario.Id), id);
+        if (!activo)
+            entity.Desactivar(null);
+        return entity;
+    }
+
+    private static CrmUsuarioPerfil BuildCrmUsuarioPerfil(long id, long usuarioId, string rol, bool activo)
+    {
+        var entity = CrmUsuarioPerfil.Crear(usuarioId, rol, null, null);
+        SetProperty(entity, nameof(CrmUsuarioPerfil.Id), id);
+        if (!activo)
+            entity.Actualizar(rol, null, false, null);
         return entity;
     }
 

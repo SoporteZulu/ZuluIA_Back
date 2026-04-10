@@ -10,6 +10,7 @@ using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Compras.Commands;
 using ZuluIA_Back.Domain.Common;
 using ZuluIA_Back.Domain.Entities.Comprobantes;
+using ZuluIA_Back.Domain.Entities.Referencia;
 using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.UnitTests.Helpers;
 
@@ -71,6 +72,28 @@ public class OrdenesCompraControllerTests
     }
 
     [Fact]
+    public async Task GetAll_CuandoFiltraPendientes_IncluyeParcialmenteRecibidasYNormalizaEstado()
+    {
+        var controller = CreateController(db: BuildDb(
+            BuildOrdenes(
+                BuildOrdenCompra(1, 10, 10, new DateOnly(2026, 3, 20), "Entrega 1", EstadoOrdenCompra.Pendiente, true, DateTimeOffset.UtcNow),
+                BuildOrdenCompra(2, 10, 10, new DateOnly(2026, 3, 22), "Entrega 2", EstadoOrdenCompra.ParcialmenteRecibida, true, DateTimeOffset.UtcNow.AddMinutes(-1), 8m, 3m, new DateOnly(2026, 3, 21)),
+                BuildOrdenCompra(3, 11, 10, new DateOnly(2026, 3, 21), "Entrega 3", EstadoOrdenCompra.Recibida, true, DateTimeOffset.UtcNow.AddMinutes(-2)))));
+
+        var result = await controller.GetAll(10, "pendiente", null, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        var items = ((IEnumerable)ok.Value!).Cast<object>().ToList();
+        items.Should().HaveCount(2);
+        var parcial = items.Single(x => Equals(x.GetType().GetProperty("Id")!.GetValue(x), 2L));
+        var pendiente = items.Single(x => Equals(x.GetType().GetProperty("Id")!.GetValue(x), 1L));
+        AssertAnonymousProperty(parcial, "EstadoOc", "PENDIENTE");
+        AssertAnonymousProperty(parcial, "EstadoOperativo", "PARCIALMENTERECIBIDA");
+        AssertAnonymousProperty(parcial, "RecepcionParcial", true);
+        AssertAnonymousProperty(pendiente, "EstadoOc", "PENDIENTE");
+    }
+
+    [Fact]
     public async Task GetById_CuandoNoExiste_DevuelveNotFound()
     {
         var controller = CreateController(db: BuildDb(BuildOrdenes()));
@@ -95,45 +118,143 @@ public class OrdenesCompraControllerTests
     }
 
     [Fact]
+    public async Task GetById_CuandoEstaParcialmenteRecibida_ExponeEstadoCompatibleYEstadoOperativo()
+    {
+        var controller = CreateController(db: BuildDb(
+            BuildOrdenes(BuildOrdenCompra(7, 10, 100, new DateOnly(2026, 3, 20), "Entrega express", EstadoOrdenCompra.ParcialmenteRecibida, true, new DateTimeOffset(2026, 3, 21, 10, 0, 0, TimeSpan.Zero), 10m, 4m, new DateOnly(2026, 3, 22)))));
+
+        var result = await controller.GetById(7, CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        AssertAnonymousProperty(ok.Value!, "EstadoOc", "PENDIENTE");
+        AssertAnonymousProperty(ok.Value!, "EstadoOperativo", "PARCIALMENTERECIBIDA");
+        AssertAnonymousProperty(ok.Value!, "RecepcionParcial", true);
+        AssertAnonymousProperty(ok.Value!, "CantidadRecibida", 4m);
+        AssertAnonymousProperty(ok.Value!, "SaldoPendiente", 6m);
+    }
+
+    [Fact]
+    public async Task Crear_CuandoTieneExito_DevuelveCreatedAtAction()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<CrearOrdenCompraDesdeComprobanteCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success(21L));
+        var controller = CreateController(mediator: mediator);
+
+        var result = await controller.Crear(
+            new CrearOrdenCompraCompatRequest(15, 9, new DateOnly(2026, 4, 20), "Entrega pactada"),
+            CancellationToken.None);
+
+        var created = result.Should().BeOfType<CreatedAtActionResult>().Subject;
+        created.ActionName.Should().Be(nameof(OrdenesCompraController.GetById));
+        AssertAnonymousProperty(created.Value!, "id", 21L);
+        await mediator.Received(1).Send(
+            Arg.Is<CrearOrdenCompraDesdeComprobanteCommand>(x =>
+                x.ComprobanteId == 15 &&
+                x.ProveedorId == 9 &&
+                x.FechaEntregaReq == new DateOnly(2026, 4, 20) &&
+                x.CondicionesEntrega == "Entrega pactada"),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Recibir_CuandoNoSeEncuentra_DevuelveNotFound()
     {
         var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<RecibirOrdenCompraCommand>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Failure("Orden no se encontro."));
-        var controller = CreateController(mediator: mediator);
+        var controller = CreateController(mediator: mediator, db: BuildDb(BuildOrdenes()));
 
-        var result = await controller.Recibir(7, CancellationToken.None);
+        var result = await controller.Recibir(7, null, CancellationToken.None);
 
         result.Should().BeOfType<NotFoundObjectResult>()
-            .Which.Value!.ToString().Should().Contain("no se encontro");
+            .Which.Value!.ToString().Should().Contain("No se encontro la OC con ID 7");
     }
 
     [Fact]
     public async Task Recibir_CuandoFallaPorRegla_DevuelveBadRequest()
     {
         var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<RecibirOrdenCompraCommand>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Failure("La orden ya fue recibida."));
-        var controller = CreateController(mediator: mediator);
+        var controller = CreateController(
+            mediator: mediator,
+            db: BuildDb(BuildOrdenes(
+                BuildOrdenCompra(7, 10, 100, new DateOnly(2026, 3, 20), "Entrega express", EstadoOrdenCompra.Recibida, true, new DateTimeOffset(2026, 3, 21, 10, 0, 0, TimeSpan.Zero), 1m, 1m, null))));
 
-        var result = await controller.Recibir(7, CancellationToken.None);
+        var result = await controller.Recibir(7, null, CancellationToken.None);
 
         result.Should().BeOfType<BadRequestObjectResult>()
-            .Which.Value!.ToString().Should().Contain("ya fue recibida");
+            .Which.Value!.ToString().Should().Contain("recibida completamente");
     }
 
     [Fact]
     public async Task Recibir_CuandoTieneExito_DevuelveOkConMensaje()
     {
         var mediator = Substitute.For<IMediator>();
-        mediator.Send(Arg.Any<RecibirOrdenCompraCommand>(), Arg.Any<CancellationToken>())
-            .Returns(Result.Success());
-        var controller = CreateController(mediator: mediator);
+        mediator.Send(Arg.Any<RegistrarRecepcionOrdenCompraCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success(7L));
+        var controller = CreateController(
+            mediator: mediator,
+            db: BuildDb(
+                BuildOrdenes(BuildOrdenCompra(7, 10, 100, new DateOnly(2026, 3, 20), "Entrega express", EstadoOrdenCompra.Pendiente, true, new DateTimeOffset(2026, 3, 21, 10, 0, 0, TimeSpan.Zero), 4m, 1.5m, null)),
+                tipos: [BuildTipoComprobante(12, "REMITO-COMPRA", "Remito compra", true, true)]));
 
-        var result = await controller.Recibir(7, CancellationToken.None);
+        var result = await controller.Recibir(7, null, CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         AssertAnonymousProperty(ok.Value!, "mensaje", "Orden de compra marcada como recibida.");
+        await mediator.Received(1).Send(
+            Arg.Is<RegistrarRecepcionOrdenCompraCommand>(x =>
+                x.OrdenCompraId == 7 &&
+                x.CantidadRecibida == 2.5m &&
+                x.TipoComprobanteRemitoId == 12 &&
+                x.RemitoValorizado == false),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Recibir_CuandoNoHayTipoRemito_Default_RegistraRecepcionSinTipo()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<RegistrarRecepcionOrdenCompraCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success(7L));
+        var controller = CreateController(
+            mediator: mediator,
+            db: BuildDb(
+                BuildOrdenes(BuildOrdenCompra(7, 10, 100, new DateOnly(2026, 3, 20), "Entrega express", EstadoOrdenCompra.Pendiente, true, new DateTimeOffset(2026, 3, 21, 10, 0, 0, TimeSpan.Zero), 4m, 1m, null))));
+
+        var result = await controller.Recibir(7, null, CancellationToken.None);
+
+        result.Should().BeOfType<OkObjectResult>();
+        await mediator.Received(1).Send(
+            Arg.Is<RegistrarRecepcionOrdenCompraCommand>(x =>
+                x.OrdenCompraId == 7 &&
+                x.CantidadRecibida == 3m &&
+                x.TipoComprobanteRemitoId == null),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Recibir_CuandoTienePayloadDetallado_DevuelveOkConId()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<RegistrarRecepcionOrdenCompraCommand>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Success(55L));
+        var controller = CreateController(mediator: mediator);
+
+        var result = await controller.Recibir(
+            7,
+            new RecibirOrdenCompraCompatRequest(new DateOnly(2026, 4, 21), 2.5m, 12, true, "Parcial"),
+            CancellationToken.None);
+
+        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
+        AssertAnonymousProperty(ok.Value!, "id", 55L);
+        await mediator.Received(1).Send(
+            Arg.Is<RegistrarRecepcionOrdenCompraCommand>(x =>
+                x.OrdenCompraId == 7 &&
+                x.FechaRecepcion == new DateOnly(2026, 4, 21) &&
+                x.CantidadRecibida == 2.5m &&
+                x.TipoComprobanteRemitoId == 12 &&
+                x.RemitoValorizado &&
+                x.Observacion == "Parcial"),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -188,11 +309,12 @@ public class OrdenesCompraControllerTests
         return controller;
     }
 
-    private static IApplicationDbContext BuildDb(IEnumerable<OrdenCompraMeta> ordenes)
+    private static IApplicationDbContext BuildDb(IEnumerable<OrdenCompraMeta> ordenes, IEnumerable<TipoComprobante>? tipos = null)
     {
         var db = Substitute.For<IApplicationDbContext>();
         var ordenesDbSet = MockDbSetHelper.CreateMockDbSet(ordenes);
         db.OrdenesCompraMeta.Returns(ordenesDbSet);
+        db.TiposComprobante.Returns(MockDbSetHelper.CreateMockDbSet(tipos ?? []));
         return db;
     }
 
@@ -201,13 +323,26 @@ public class OrdenesCompraControllerTests
         return ordenes;
     }
 
-    private static OrdenCompraMeta BuildOrdenCompra(long id, long comprobanteId, long proveedorId, DateOnly? fechaEntregaReq, string? condicionesEntrega, EstadoOrdenCompra estado, bool habilitada, DateTimeOffset createdAt)
+    private static OrdenCompraMeta BuildOrdenCompra(long id, long comprobanteId, long proveedorId, DateOnly? fechaEntregaReq, string? condicionesEntrega, EstadoOrdenCompra estado, bool habilitada, DateTimeOffset createdAt, decimal cantidadTotal = 1m, decimal cantidadRecibida = 0m, DateOnly? fechaUltimaRecepcion = null)
     {
-        var entity = OrdenCompraMeta.Crear(comprobanteId, proveedorId, fechaEntregaReq, condicionesEntrega, 1m);
+        var entity = OrdenCompraMeta.Crear(comprobanteId, proveedorId, fechaEntregaReq, condicionesEntrega, cantidadTotal);
         SetProperty(entity, nameof(OrdenCompraMeta.Id), id);
         SetProperty(entity, nameof(OrdenCompraMeta.EstadoOc), estado);
         SetProperty(entity, nameof(OrdenCompraMeta.Habilitada), habilitada);
+        SetProperty(entity, nameof(OrdenCompraMeta.CantidadRecibida), cantidadRecibida);
+        SetProperty(entity, nameof(OrdenCompraMeta.FechaUltimaRecepcion), fechaUltimaRecepcion);
         SetProperty(entity, nameof(OrdenCompraMeta.CreatedAt), createdAt);
+        return entity;
+    }
+
+    private static TipoComprobante BuildTipoComprobante(long id, string codigo, string descripcion, bool esCompra, bool activo)
+    {
+        var entity = (TipoComprobante)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(TipoComprobante));
+        SetProperty(entity, nameof(TipoComprobante.Id), id);
+        SetProperty(entity, nameof(TipoComprobante.Codigo), codigo);
+        SetProperty(entity, nameof(TipoComprobante.Descripcion), descripcion);
+        SetProperty(entity, nameof(TipoComprobante.EsCompra), esCompra);
+        SetProperty(entity, nameof(TipoComprobante.Activo), activo);
         return entity;
     }
 
