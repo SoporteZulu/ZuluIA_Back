@@ -27,7 +27,7 @@ public class DepositosControllerTests
             .Returns(data);
         var controller = CreateController(mediator, db);
 
-        var result = await controller.GetBySucursal(7, CancellationToken.None);
+        var result = await controller.GetBySucursal(7, false, CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         ok.Value.Should().BeSameAs(data);
@@ -49,7 +49,7 @@ public class DepositosControllerTests
         ]));
         var controller = CreateController(mediator, db);
 
-        var result = await controller.GetBySucursal(null, CancellationToken.None);
+        var result = await controller.GetBySucursal(null, false, CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
         var items = ok.Value.Should().BeAssignableTo<IReadOnlyList<DepositoDto>>().Subject;

@@ -8,8 +8,6 @@ namespace ZuluIA_Back.UnitTests.Application;
 
 public class RegistrarDevolucionVentaCommandValidatorTests
 {
-    private readonly RegistrarDevolucionVentaCommandValidator _validator = null!;
-
     private static RegistrarDevolucionVentaCommand Command() => new(
         SucursalId: 1,
         PuntoFacturacionId: 1,
