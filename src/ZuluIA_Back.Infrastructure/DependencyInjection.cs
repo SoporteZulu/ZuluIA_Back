@@ -308,7 +308,7 @@ public static class DependencyInjection
         var configuredConnectionString = configuration.GetConnectionString("DefaultConnection");
 
         if (string.Equals(environmentName, "Production", StringComparison.OrdinalIgnoreCase)
-            && LooksLocalConnection(envConnectionString)
+            && !string.IsNullOrWhiteSpace(envConnectionString)
             && !string.IsNullOrWhiteSpace(configuredConnectionString))
         {
             try
@@ -316,11 +316,20 @@ public static class DependencyInjection
                 var envBuilder = new NpgsqlConnectionStringBuilder(envConnectionString);
                 var configuredBuilder = new NpgsqlConnectionStringBuilder(configuredConnectionString);
 
-                envBuilder.Host = configuredBuilder.Host;
-                envBuilder.Port = configuredBuilder.Port;
+                if (LooksLocalConnection(envConnectionString))
+                {
+                    envBuilder.Host = configuredBuilder.Host;
+                    envBuilder.Port = configuredBuilder.Port;
 
-                if (!string.IsNullOrWhiteSpace(configuredBuilder.Database))
-                    envBuilder.Database = configuredBuilder.Database;
+                    if (!string.IsNullOrWhiteSpace(configuredBuilder.Database))
+                        envBuilder.Database = configuredBuilder.Database;
+                }
+
+                if (string.IsNullOrWhiteSpace(envBuilder.Username) && !string.IsNullOrWhiteSpace(configuredBuilder.Username))
+                    envBuilder.Username = configuredBuilder.Username;
+
+                if (string.IsNullOrWhiteSpace(envBuilder.Password) && !string.IsNullOrWhiteSpace(configuredBuilder.Password))
+                    envBuilder.Password = configuredBuilder.Password;
 
                 return envBuilder.ConnectionString;
             }
