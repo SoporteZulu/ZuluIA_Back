@@ -34,10 +34,13 @@ public class GetStockByItemQueryHandler(IApplicationDbContext db)
             where s.ItemId == request.ItemId
             select new StockPorDepositoDto
             {
+                Id                  = s.Id,
+                ItemId              = s.ItemId,
                 DepositoId          = s.DepositoId,
                 DepositoDescripcion = d.Descripcion,
                 EsDefault           = d.EsDefault,
-                Cantidad            = s.Cantidad
+                Cantidad            = s.Cantidad,
+                UpdatedAt           = s.UpdatedAt
             })
             .OrderByDescending(x => x.EsDefault)
             .ThenBy(x => x.DepositoDescripcion)

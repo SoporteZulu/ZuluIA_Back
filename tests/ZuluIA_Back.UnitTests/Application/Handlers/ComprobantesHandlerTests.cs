@@ -2172,7 +2172,7 @@ public class GetComprobantesPagedQueryHandlerTests
         _repo.GetPagedAsync(
                 Arg.Any<int>(), Arg.Any<int>(),
                 Arg.Any<long?>(), Arg.Any<long?>(),
-                Arg.Any<long?>(), Arg.Any<EstadoComprobante?>(),
+                Arg.Any<long?>(), Arg.Any<bool?>(), Arg.Any<bool?>(), Arg.Any<EstadoComprobante?>(),
                 Arg.Any<DateOnly?>(), Arg.Any<DateOnly?>(),
                 Arg.Any<CancellationToken>())
             .Returns(new PagedResult<Comprobante>([], 1, 20, 0));
@@ -2185,7 +2185,7 @@ public class GetComprobantesPagedQueryHandlerTests
         var mockMonedas7 = MockDbSetHelper.CreateMockDbSet<Moneda>();
         _db.Monedas.Returns(mockMonedas7);
 
-        var query = new GetComprobantesPagedQuery(1, 20, null, null, null, null, null, null);
+        var query = new GetComprobantesPagedQuery(1, 20, null, null, null, null, null, null, null, null);
         var result = await Sut().Handle(query, CancellationToken.None);
 
         result.TotalCount.Should().Be(0);

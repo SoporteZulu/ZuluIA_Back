@@ -33,7 +33,9 @@ public class OrdenesCompraController(IMediator mediator, IApplicationDbContext d
             query = query.Where(x => x.ProveedorId == proveedorId.Value);
 
         if (estadoEnum.HasValue)
-            query = query.Where(x => x.EstadoOc == estadoEnum.Value);
+            query = estadoEnum.Value == EstadoOrdenCompra.Pendiente
+                ? query.Where(x => x.EstadoOc == EstadoOrdenCompra.Pendiente || x.EstadoOc == EstadoOrdenCompra.ParcialmenteRecibida)
+                : query.Where(x => x.EstadoOc == estadoEnum.Value);
 
         if (habilitada.HasValue)
             query = query.Where(x => x.Habilitada == habilitada.Value);
@@ -51,7 +53,9 @@ public class OrdenesCompraController(IMediator mediator, IApplicationDbContext d
                 x.CantidadRecibida,
                 SaldoPendiente = x.CantidadTotal - x.CantidadRecibida,
                 x.FechaUltimaRecepcion,
-                EstadoOc = x.EstadoOc.ToString().ToUpperInvariant(),
+                EstadoOc = NormalizarEstadoOcFrontend(x.EstadoOc),
+                EstadoOperativo = x.EstadoOc.ToString().ToUpperInvariant(),
+                RecepcionParcial = x.EstadoOc == EstadoOrdenCompra.ParcialmenteRecibida,
                 x.Habilitada,
                 x.CreatedAt
             })
@@ -82,7 +86,9 @@ public class OrdenesCompraController(IMediator mediator, IApplicationDbContext d
                 x.CantidadRecibida,
                 SaldoPendiente = x.CantidadTotal - x.CantidadRecibida,
                 x.FechaUltimaRecepcion,
-                EstadoOc = x.EstadoOc.ToString().ToUpperInvariant(),
+                EstadoOc = NormalizarEstadoOcFrontend(x.EstadoOc),
+                EstadoOperativo = x.EstadoOc.ToString().ToUpperInvariant(),
+                RecepcionParcial = x.EstadoOc == EstadoOrdenCompra.ParcialmenteRecibida,
                 x.Habilitada,
                 x.CreatedAt
             })
@@ -123,9 +129,45 @@ public class OrdenesCompraController(IMediator mediator, IApplicationDbContext d
     {
         if (request?.CantidadRecibida is null or <= 0)
         {
-            var simpleResult = await Mediator.Send(new RecibirOrdenCompraCommand(id), ct);
+            var orden = await db.OrdenesCompraMeta
+                .AsNoTracking()
+                .Where(x => x.Id == id)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.CantidadTotal,
+                    x.CantidadRecibida,
+                    x.EstadoOc
+                })
+                .FirstOrDefaultAsync(ct);
+
+            if (orden is null)
+                return NotFound(new { error = $"No se encontro la OC con ID {id}." });
+
+            var saldoPendiente = orden.CantidadTotal - orden.CantidadRecibida;
+            if (saldoPendiente <= 0)
+                return BadRequest(new { error = "La orden ya fue recibida completamente." });
+
+            var tipoComprobanteRemitoId = await db.TiposComprobante
+                .AsNoTracking()
+                .Where(x => x.Activo && x.EsCompra)
+                .Where(x => x.Descripcion.ToUpper().Contains("REMIT") || x.Codigo.ToUpper().Contains("REMIT"))
+                .OrderBy(x => x.Id)
+                .Select(x => (long?)x.Id)
+                .FirstOrDefaultAsync(ct);
+
+            var simpleResult = await Mediator.Send(
+                new RegistrarRecepcionOrdenCompraCommand(
+                    id,
+                    DateOnly.FromDateTime(DateTime.Today),
+                    saldoPendiente,
+                    tipoComprobanteRemitoId,
+                    false,
+                    null),
+                ct);
+
             if (simpleResult.IsFailure)
-                return simpleResult.Error?.Contains("no se encontro", StringComparison.OrdinalIgnoreCase) == true
+                return simpleResult.Error?.Contains("no se encontr", StringComparison.OrdinalIgnoreCase) == true
                     ? NotFound(new { error = simpleResult.Error })
                     : BadRequest(new { error = simpleResult.Error });
 
@@ -165,6 +207,13 @@ public class OrdenesCompraController(IMediator mediator, IApplicationDbContext d
 
         return Ok(new { mensaje = "Orden de compra cancelada." });
     }
+
+    private static string NormalizarEstadoOcFrontend(EstadoOrdenCompra estado)
+        => estado switch
+    {
+        EstadoOrdenCompra.ParcialmenteRecibida => "PENDIENTE",
+        _ => estado.ToString().ToUpperInvariant()
+    };
 }
 
 public record CrearOrdenCompraCompatRequest(

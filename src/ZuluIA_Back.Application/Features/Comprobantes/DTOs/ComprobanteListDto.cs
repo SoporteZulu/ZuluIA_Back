@@ -28,6 +28,10 @@ public class ComprobanteListDto
     public DateOnly? CotFechaVigencia { get; set; }
     public EstadoLogisticoRemito? EstadoLogistico { get; set; }
     public bool EsValorizado { get; set; }
+    public decimal NetoGravado { get; set; }
+    public decimal NetoNoGravado { get; set; }
+    public decimal IvaRi { get; set; }
+    public decimal IvaRni { get; set; }
     public decimal Total { get; set; }
     public decimal Saldo { get; set; }
     public long? MotivoDebitoId { get; set; }
@@ -37,6 +41,11 @@ public class ComprobanteListDto
     public DateOnly? ComprobanteOrigenFecha { get; set; }
     public string Estado { get; set; } = string.Empty;
     public string? Cae { get; set; }
+    public DateOnly? FechaVtoCae { get; set; }
+    public DateOnly? CaeFechaVto => FechaVtoCae;
+    public string? QrData { get; set; }
+    public string? Observacion { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
     public bool TieneCae => !string.IsNullOrWhiteSpace(Cae);
     public long? NotaDebitoId { get; set; }
     public string? NotaDebitoDescripcion { get; set; }

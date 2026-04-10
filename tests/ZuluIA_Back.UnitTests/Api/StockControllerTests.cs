@@ -264,25 +264,52 @@ public class StockControllerTests
     [Fact]
     public async Task GetMovimientos_CuandoFiltraYPagina_DevuelveResultadoEsperado()
     {
-        var db = BuildDb(movimientos:
-        [
-            BuildMovimiento(1, 7, 10, new DateTimeOffset(2026, 3, 21, 12, 0, 0, TimeSpan.Zero), TipoMovimientoStock.AjustePositivo, 2m, 8m, "conteo"),
-            BuildMovimiento(2, 7, 10, new DateTimeOffset(2026, 3, 20, 12, 0, 0, TimeSpan.Zero), TipoMovimientoStock.TransferenciaSalida, -1m, 6m, "traslado"),
-            BuildMovimiento(3, 8, 10, new DateTimeOffset(2026, 3, 19, 12, 0, 0, TimeSpan.Zero), TipoMovimientoStock.StockInicial, 4m, 4m, "inicio")
-        ]);
-        var controller = CreateController(db: db);
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<GetMovimientosStockPagedQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<MovimientoStockDto>(
+            [
+                new MovimientoStockDto
+                {
+                    Id = 1,
+                    ItemId = 7,
+                    ItemCodigo = "ITEM-7",
+                    ItemDescripcion = "Producto 7",
+                    DepositoId = 10,
+                    DepositoDescripcion = "Principal",
+                    Fecha = new DateTimeOffset(2026, 3, 21, 12, 0, 0, TimeSpan.Zero),
+                    TipoMovimiento = TipoMovimientoStock.AjustePositivo.ToString(),
+                    Cantidad = 2m,
+                    SaldoResultante = 8m,
+                    Observacion = "conteo"
+                }
+            ],
+            1,
+            1,
+            2));
+        var controller = CreateController(mediator);
 
-        var result = await controller.GetMovimientos(7, 10, new DateOnly(2026, 3, 20), new DateOnly(2026, 3, 21), 1, 1, CancellationToken.None);
+        var result = await controller.GetMovimientos(7, 10, null, new DateOnly(2026, 3, 20), new DateOnly(2026, 3, 21), 1, 1, CancellationToken.None);
 
         var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        var items = ((IEnumerable)ok.Value!.GetType().GetProperty("items")!.GetValue(ok.Value)!).Cast<object>().ToList();
-        items.Should().ContainSingle();
-        AssertAnonymousProperty(items[0], "Id", 1L);
-        AssertAnonymousProperty(items[0], "TipoMovimiento", TipoMovimientoStock.AjustePositivo.ToString());
-        AssertAnonymousProperty(ok.Value!, "page", 1);
-        AssertAnonymousProperty(ok.Value!, "pageSize", 1);
-        AssertAnonymousProperty(ok.Value!, "totalCount", 2);
-        AssertAnonymousProperty(ok.Value!, "totalPages", 2);
+        var paged = ok.Value.Should().BeOfType<PagedResult<MovimientoStockDto>>().Subject;
+        paged.Items.Should().ContainSingle();
+        paged.Items[0].Id.Should().Be(1L);
+        paged.Items[0].TipoMovimiento.Should().Be(TipoMovimientoStock.AjustePositivo.ToString());
+        paged.Items[0].DepositoDescripcion.Should().Be("Principal");
+        paged.Page.Should().Be(1);
+        paged.PageSize.Should().Be(1);
+        paged.TotalCount.Should().Be(2);
+        paged.TotalPages.Should().Be(2);
+        await mediator.Received(1).Send(
+            Arg.Is<GetMovimientosStockPagedQuery>(q =>
+                q.Page == 1 &&
+                q.PageSize == 1 &&
+                q.ItemId == 7 &&
+                q.DepositoId == 10 &&
+                q.Tipo == null &&
+                q.Desde == new DateOnly(2026, 3, 20) &&
+                q.Hasta == new DateOnly(2026, 3, 21)),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

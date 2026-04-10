@@ -8,7 +8,10 @@ using Xunit;
 using ZuluIA_Back.Api.Controllers;
 using ZuluIA_Back.Application.Common.Interfaces;
 using ZuluIA_Back.Application.Features.Comprobantes.Commands;
+using ZuluIA_Back.Application.Features.Comprobantes.DTOs;
+using ZuluIA_Back.Application.Features.Comprobantes.Queries;
 using ZuluIA_Back.Domain.Common;
+using ZuluIA_Back.Domain.Enums;
 using ZuluIA_Back.Domain.Entities.Referencia;
 using ZuluIA_Back.UnitTests.Helpers;
 
@@ -16,6 +19,33 @@ namespace ZuluIA_Back.UnitTests.Api;
 
 public class ComprobantesControllerTests
 {
+    [Fact]
+    public async Task GetAll_CuandoRecibeFiltrosCompraVenta_MapeaQueryCorrecta()
+    {
+        var mediator = Substitute.For<IMediator>();
+        mediator.Send(Arg.Any<GetComprobantesPagedQuery>(), Arg.Any<CancellationToken>())
+            .Returns(new PagedResult<ComprobanteListDto>([], 1, 20, 0));
+        var db = Substitute.For<IApplicationDbContext>();
+        var controller = CreateController(mediator, db);
+
+        var result = await controller.GetAll(1, 20, 3, 9, null, false, true, "emitido", new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), CancellationToken.None);
+
+        result.Should().BeOfType<OkObjectResult>();
+        await mediator.Received(1).Send(
+            Arg.Is<GetComprobantesPagedQuery>(x =>
+                x.Page == 1 &&
+                x.PageSize == 20 &&
+                x.SucursalId == 3 &&
+                x.TerceroId == 9 &&
+                x.TipoComprobanteId == null &&
+                x.EsVenta == false &&
+                x.EsCompra == true &&
+                x.Estado == EstadoComprobante.Emitido &&
+                x.Desde == new DateOnly(2026, 4, 1) &&
+                x.Hasta == new DateOnly(2026, 4, 30)),
+            Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task Emitir_CuandoRecibeContratoMinimo_CompletaDefaultsYMapeaCommand()
     {

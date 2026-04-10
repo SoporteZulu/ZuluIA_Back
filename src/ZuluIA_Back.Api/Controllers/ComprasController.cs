@@ -180,7 +180,7 @@ public class ComprasController(IMediator mediator, IApplicationDbContext db) : B
                 SucursalId = sucursal.Id,
                 SucursalDescripcion = sucursal.NombreFantasia ?? sucursal.RazonSocial,
                 StockActual = stock.Cantidad,
-                UnidadMedidaDescripcion = unidad != null ? (unidad.Disminutivo ?? unidad.Descripcion) : string.Empty,
+                UnidadMedidaDescripcion = unidad != null ? unidad.Descripcion : string.Empty,
                 CategoriaDescripcion = categoria != null ? categoria.Descripcion : null
             };
 

@@ -181,6 +181,7 @@ public interface IApplicationDbContext
     DbSet<MovimientoStock> MovimientosStock { get; }
     DbSet<MovimientoStockAtributo> MovimientosStockAtributos { get; }
     DbSet<InventarioConteo> InventariosConteo { get; }
+    DbSet<ConteoCiclicoPlan> ConteosCiclicos { get; }
     // ── M9 — Comprobantes ─────────────────────────────────────────
     DbSet<Comprobante> Comprobantes { get; }
     DbSet<AutorizacionComprobante> AutorizacionesComprobantes { get; }

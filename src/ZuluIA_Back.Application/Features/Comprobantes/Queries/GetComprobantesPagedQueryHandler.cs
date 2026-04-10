@@ -20,7 +20,7 @@ public class GetComprobantesPagedQueryHandler(
         var result = await repo.GetPagedAsync(
             request.Page, request.PageSize,
             request.SucursalId, request.TerceroId,
-            request.TipoComprobanteId, request.Estado,
+            request.TipoComprobanteId, request.EsVenta, request.EsCompra, request.Estado,
             request.Desde, request.Hasta, ct);
 
         // Lookup de descripciones y símbolos
@@ -108,6 +108,10 @@ public class GetComprobantesPagedQueryHandler(
             CotFechaVigencia            = cotPorComprobante.GetValueOrDefault(c.Id)?.FechaVigencia,
             EstadoLogistico             = c.EstadoLogistico,
             EsValorizado                = c.EsValorizado,
+            NetoGravado                 = c.NetoGravado,
+            NetoNoGravado               = c.NetoNoGravado,
+            IvaRi                       = c.IvaRi,
+            IvaRni                      = c.IvaRni,
             Total                       = c.Total,
             Saldo                       = c.Saldo,
             MotivoDebitoId              = c.MotivoDebitoId,
@@ -122,7 +126,11 @@ public class GetComprobantesPagedQueryHandler(
                 ? origenes.GetValueOrDefault(c.ComprobanteOrigenId.Value)?.Fecha
                 : null,
             Estado                      = c.Estado.ToString().ToUpperInvariant(),
-            Cae                         = c.Cae
+            Cae                         = c.Cae,
+            FechaVtoCae                = c.FechaVtoCae,
+            QrData                     = c.QrData,
+            Observacion                = c.Observacion,
+            CreatedAt                  = c.CreatedAt
             //TieneCae                    = !string.IsNullOrEmpty(c.Cae)
         }).ToList();
 

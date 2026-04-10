@@ -28,6 +28,8 @@ public class ComprobantesController(IMediator mediator, IApplicationDbContext db
         [FromQuery] long? sucursalId = null,
         [FromQuery] long? terceroId = null,
         [FromQuery] long? tipoComprobanteId = null,
+        [FromQuery] bool? esVenta = null,
+        [FromQuery] bool? esCompra = null,
         [FromQuery] string? estado = null,
         [FromQuery] DateOnly? desde = null,
         [FromQuery] DateOnly? hasta = null,
@@ -41,7 +43,7 @@ public class ComprobantesController(IMediator mediator, IApplicationDbContext db
         var result = await Mediator.Send(
             new GetComprobantesPagedQuery(
                 page, pageSize,
-                sucursalId, terceroId, tipoComprobanteId,
+                sucursalId, terceroId, tipoComprobanteId, esVenta, esCompra,
                 estadoEnum, desde, hasta),
             ct);
 

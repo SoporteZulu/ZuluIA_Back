@@ -15,6 +15,8 @@ public class ComprobanteRepository(AppDbContext context)
         long? sucursalId,
         long? terceroId,
         long? tipoComprobanteId,
+        bool? esVenta,
+        bool? esCompra,
         EstadoComprobante? estado,
         DateOnly? desde,
         DateOnly? hasta,
@@ -32,6 +34,17 @@ public class ComprobanteRepository(AppDbContext context)
 
         if (tipoComprobanteId.HasValue)
             query = query.Where(x => x.TipoComprobanteId == tipoComprobanteId.Value);
+
+        if (esVenta.HasValue || esCompra.HasValue)
+        {
+            var tipoIds = Context.TiposComprobante
+                .AsNoTracking()
+                .Where(x => !esVenta.HasValue || x.EsVenta == esVenta.Value)
+                .Where(x => !esCompra.HasValue || x.EsCompra == esCompra.Value)
+                .Select(x => x.Id);
+
+            query = query.Where(x => tipoIds.Contains(x.TipoComprobanteId));
+        }
 
         if (estado.HasValue)
             query = query.Where(x => x.Estado == estado.Value);

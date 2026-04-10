@@ -174,6 +174,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<MovimientoStock> MovimientosStock => Set<MovimientoStock>();
     public DbSet<MovimientoStockAtributo> MovimientosStockAtributos => Set<MovimientoStockAtributo>();
     public DbSet<InventarioConteo> InventariosConteo => Set<InventarioConteo>();
+    public DbSet<ConteoCiclicoPlan> ConteosCiclicos => Set<ConteoCiclicoPlan>();
     // ── M9 — Comprobantes ─────────────────────────────────────────
     public DbSet<Comprobante> Comprobantes => Set<Comprobante>();
     public DbSet<AutorizacionComprobante> AutorizacionesComprobantes => Set<AutorizacionComprobante>();

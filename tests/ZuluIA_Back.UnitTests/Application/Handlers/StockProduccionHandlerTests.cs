@@ -588,22 +588,35 @@ public class GetStockByItemQueryHandlerTests
     [Fact]
     public async Task Handle_ItemExiste_RetornaStockResumen()
     {
-        // Item with Id = 0 (default), query uses ItemId = 0
         var item = Item.Crear("PROD001", "Producto Test", 1, 1, 1,
-                              true, false, false, true, 100m, 150m, null, 0, null,
+                              true, false, false, true, 100m, 150m, null, 3m, null,
                               null, null, null, null, null);
-        var mockItems68 = MockDbSetHelper.CreateMockDbSet<Item>(new[] { item });
+        item.GetType().GetProperty(nameof(Item.Id))!.SetValue(item, 7L);
+        var deposito = Deposito.Crear(1L, "Principal", true);
+        deposito.GetType().GetProperty(nameof(Deposito.Id))!.SetValue(deposito, 5L);
+        var stock = StockItem.Crear(7L, 5L, 2m);
+        stock.GetType().GetProperty(nameof(StockItem.Id))!.SetValue(stock, 11L);
+        var updatedAt = new DateTimeOffset(2026, 4, 10, 12, 0, 0, TimeSpan.Zero);
+        stock.GetType().GetProperty(nameof(StockItem.UpdatedAt))!.SetValue(stock, updatedAt);
+
+        var mockItems68 = MockDbSetHelper.CreateMockDbSet<Item>([item]);
         _db.Items.Returns(mockItems68);
-        var mockStock69 = MockDbSetHelper.CreateMockDbSet<StockItem>();
+        var mockStock69 = MockDbSetHelper.CreateMockDbSet<StockItem>([stock]);
         _db.Stock.Returns(mockStock69);
-        var mockDepositos70 = MockDbSetHelper.CreateMockDbSet<Deposito>();
+        var mockDepositos70 = MockDbSetHelper.CreateMockDbSet<Deposito>([deposito]);
         _db.Depositos.Returns(mockDepositos70);
 
         var result = await Sut().Handle(
-            new GetStockByItemQuery(0L),
+            new GetStockByItemQuery(7L),
             CancellationToken.None);
 
         result.Should().NotBeNull();
-        result!.StockTotal.Should().Be(0);
+        result!.StockTotal.Should().Be(2m);
+        result.TotalStock.Should().Be(2m);
+        result.Depositos.Should().ContainSingle();
+        result.Depositos[0].Id.Should().Be(11L);
+        result.Depositos[0].ItemId.Should().Be(7L);
+        result.Depositos[0].DepositoId.Should().Be(5L);
+        result.Depositos[0].UpdatedAt.Should().Be(updatedAt);
     }
 }

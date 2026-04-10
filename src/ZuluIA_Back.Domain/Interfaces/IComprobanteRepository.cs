@@ -12,6 +12,8 @@ public interface IComprobanteRepository : IRepository<Comprobante>
         long? sucursalId,
         long? terceroId,
         long? tipoComprobanteId,
+        bool? esVenta,
+        bool? esCompra,
         EstadoComprobante? estado,
         DateOnly? desde,
         DateOnly? hasta,
